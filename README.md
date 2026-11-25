@@ -11,8 +11,7 @@ A book of pages and a timer. Writing is to enscribe oneself into life.
 
 ## How it gets built
 
-Your Mac (Catalina, Xcode 12.4) can't install apps on an iPad running iPadOS 17, so a Mac rented from GitHub builds the app instead.
+Every push to GitHub builds the app on GitHub's Mac (`.github/workflows/build.yml`).
 
-1. Every push to GitHub builds the app and saves `TreeOfLife.ipa` as a download on the run's page (Actions tab → latest run → Artifacts).
-2. **Installing for free (now):** on the iPad, turn on Settings → Privacy & Security → Developer Mode and restart. On the Mac, open Sideloadly (sideloadly.io), plug in the iPad, drop in `TreeOfLife.ipa`, enter your Apple ID and press Start. Then on the iPad go to Settings → General → VPN & Device Management and trust your Apple ID. With a free Apple ID the app stops opening after 7 days. Run Sideloadly again to renew it. Your pages stay saved.
-3. **Later, with the membership:** add a step that signs the app and sends it to TestFlight, so installing no longer needs the Mac.
+- **Until the Apple secrets are added**, the build only checks that the app compiles.
+- **Once the four secrets are added** (Settings → Secrets and variables → Actions: `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`), each build is signed and sent to TestFlight. Install and update it on the iPad through the TestFlight app.
