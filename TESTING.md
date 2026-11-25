@@ -114,3 +114,36 @@ After every build: install it, go down that build's list on the iPad, and tick e
 - [ ] Close and reopen the app: every tuning value is kept
 - [ ] **Reset everything to defaults** puts all values back (goal 5 h, size 88, etc.)
 - [ ] With tuning changed, writing-time rules still hold (erasing doesn't count, both inputs count once)
+
+---
+
+## B1 · The Board (test with a mouse or any touchscreen)
+
+**Open it**
+- [ ] Opens in Chrome or Edge on the Shadow PC or the Mac
+- [ ] More → Full screen fills the screen (or press F11)
+
+**Drawing**
+- [ ] Marker draws a thick line; Pen draws a thin one
+- [ ] A single click/tap makes a dot
+- [ ] All 6 colors work; More → Switch to slate turns the board dark (and black marker becomes white)
+- [ ] Eraser removes any line it touches
+- [ ] Undo and Redo work (also Ctrl+Z / Ctrl+Shift+Z)
+- [ ] Move tool (or mouse wheel) scrolls the board up and down
+- [ ] More → Clear page… asks for a second tap; Undo brings the page back
+
+**Writing clock**
+- [ ] Drawing with Marker or Pen runs the clock (dot goes green); lifting stops it
+- [ ] Erasing and Move don't run the clock
+- [ ] Holding the round "hold" button runs the clock; releasing stops it
+- [ ] Holding the button while drawing counts each second once (compare to a stopwatch)
+- [ ] Drag the small bar above the button to move it; reload the page and it stays there
+
+**Keeping your work**
+- [ ] Reload the page: the drawing and today's total are still there
+- [ ] More → Export page saves a file (on the GitHub Pages version) or shows the data to copy (on the claude.ai preview)
+- [ ] More → Import page with that file brings the page back; Undo returns to what was there
+
+**On the real touch frame (later)**
+- [ ] A finger or stylus draws; a second hand on the board doesn't draw
+- [ ] Holding the thumb button with one hand while writing with the other works

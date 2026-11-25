@@ -41,8 +41,8 @@ Two speeds of change:
 
 ## B · The Board (big-screen Tree of Life)
 TV + IR touch frame + cheap mini PC running the Board in a full-screen web browser. Marker-level, not Pencil-level.
-- ⬜ B1 Board page on the web: one page, marker + eraser + a few colors, the writing clock, an on-screen thumb button. Test with a mouse or any touchscreen before buying hardware
-- ⬜ B2 Palm handling: only the first touch draws, extra touches are ignored (wall-mounted)
+- ✅ B1 Board page on the web (`docs/board/`): one page, marker, pen, eraser, move, 6 colors, undo/redo, white board or slate, the writing clock, a movable thumb button, export/import. Test with a mouse or any touchscreen before buying hardware
+- ✅ B2 Palm handling: only the first touch draws, extra touches are ignored (wall-mounted)
 - ⬜ B3 Move pages by file: open an iPad backup on the Board, and save a Board file the iPad can open
 - ⬜ B4 Automatic sync between iPad and Board (pages + writing time), no files to carry
 - ⬜ B5 Buy hardware only after B1 feels right: TV (have one or budget), IR touch frame (~$175 at 55"), N100-class Windows mini PC
