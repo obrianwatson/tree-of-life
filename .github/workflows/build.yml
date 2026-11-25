@@ -18,16 +18,32 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      # Always: check that the app compiles.
-      - name: Compile check (unsigned)
+      # Until the Apple secrets exist: build unsigned and package an .ipa for Sideloadly.
+      - name: Build unsigned
         if: env.HAS_SIGNING != 'true'
         run: |
           xcodebuild -project TreeOfLife.xcodeproj \
             -scheme TreeOfLife \
             -destination 'generic/platform=iOS' \
             -configuration Release \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             build
+
+      - name: Package .ipa for Sideloadly
+        if: env.HAS_SIGNING != 'true'
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/TreeOfLife.app Payload/
+          zip -qry TreeOfLife.ipa Payload
+
+      - name: Upload .ipa
+        if: env.HAS_SIGNING != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TreeOfLife-ipa
+          path: TreeOfLife.ipa
 
       # Once the Apple secrets are added: sign, archive and send to TestFlight.
       - name: Write App Store Connect key
