@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build for iPad (unsigned; Sideloadly signs it with your Apple ID)
+        run: |
+          xcodebuild -project TreeOfLife.xcodeproj \
+            -target TreeOfLife \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package as .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Release-iphoneos/TreeOfLife.app Payload/
+          zip -qry TreeOfLife.ipa Payload
+
+      - name: Upload the .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: TreeOfLife-ipa
+          path: TreeOfLife.ipa
