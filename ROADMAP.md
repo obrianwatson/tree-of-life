@@ -18,16 +18,16 @@ Status key: ✅ done · 🔨 in progress · ⬜ not started · ⏸ on hold
 - ✅ App icon
 - ⬜ **Install on the iPad** (Sideloadly + cable), then run `TESTING.md → M0`
 
-## M1 · Safety net
-- ⬜ Backup/export: save all pages + writing-time history to the Files app
-- ⬜ Import: restore from that backup (so a reinstall or a revoked certificate loses nothing)
+## M1 · Safety net ✅ (built, not yet on the iPad)
+- ✅ Backup/export: save the page, writing-time history, tuning and thumb-button spot to the Files app
+- ✅ Restore from that backup (checks the file first; changes nothing if it's damaged)
 
 ## M2 · Claude Code in the app ★ priority one
 Two speeds of change:
 **instant** (adjust a setting, no rebuild) and **new feature** (Claude Code changes the code → GitHub builds → you install).
 
-- ⬜ **2.1 Live tuning panel.** Every feel-setting the app has (e.g. how long before a shape locks, button size, ink smoothing) lives in one place you can change in the app, effective on the next stroke.
-- ⬜ **2.2 Claude Code on GitHub.** Add the official Claude Code GitHub Action. Write `@claude …` in a GitHub issue and Claude Code edits the app, commits, and a new build starts. Owner-only, so strangers can't spend your account. Works from Safari on the iPad even before 2.3.
+- ✅ **2.1 Live tuning panel** (built, not yet on the iPad): daily goal, thumb button size and visibility, page warmth, max zoom, fingers-can-draw. Every feel-setting the app has (e.g. how long before a shape locks, button size, ink smoothing) lives in one place you can change in the app, effective on the next stroke.
+- ⬜ **2.2 Claude Code on GitHub.** Sign-in: Claude plan token (`CLAUDE_CODE_OAUTH_TOKEN`), made with `claude setup-token` on a computer running macOS 13+, Windows 10+ or Linux (the 2011 MacBook can't run it). Add the official Claude Code GitHub Action. Write `@claude …` in a GitHub issue and Claude Code edits the app, commits, and a new build starts. Owner-only, so strangers can't spend your account. Works from Safari on the iPad even before 2.3.
 - ⬜ **2.3 "Ask Claude Code" inside the app.** A panel where you describe a change in your own words. It sends the request to GitHub, shows progress (working → building → ready to install), and Claude's reply.
 - ⬜ **2.4 Claude chat inside the app.** Talk to Claude on a page. It can see the page you point at and change the live tuning values directly ("give me a little longer before the shape locks").
 - ⬜ **2.5 Cable-free updates.** Needed so 2.2–2.3 can update the app without the Mac: TestFlight (Apple membership) or a UDID signing service with over-the-air install. Until then each new build is installed with Sideloadly + cable.

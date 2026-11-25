@@ -12,8 +12,6 @@ final class WritingClock: ObservableObject {
     private var banked: [String: TimeInterval]
     private let storeKey = "dailyWritingSeconds"
 
-    static let dailyGoal: TimeInterval = 5 * 60 * 60
-
     init() {
         banked = (UserDefaults.standard.dictionary(forKey: storeKey) as? [String: TimeInterval]) ?? [:]
     }
@@ -46,6 +44,17 @@ final class WritingClock: ObservableObject {
             total += max(0, now.timeIntervalSince(max(start, dayStart)))
         }
         return total
+    }
+
+    /// Every day's banked writing time, for backups.
+    var history: [String: TimeInterval] { banked }
+
+    /// Used when restoring a backup.
+    func replaceHistory(_ newHistory: [String: TimeInterval]) {
+        releaseAll()
+        banked = newHistory
+        UserDefaults.standard.set(banked, forKey: storeKey)
+        objectWillChange.send()
     }
 
     private func transition(_ change: () -> Void) {

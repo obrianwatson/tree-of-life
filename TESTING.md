@@ -50,3 +50,43 @@ After every build: install it, go down that build's list on the iPad, and tick e
 **Notes from this build**
 - How the ink felt compared to Goodnotes:
 - Anything wrong:
+
+---
+
+## M1 · Backup and restore
+
+**Export**
+- [ ] Write something recognizable on the page (e.g. today's date and a small drawing)
+- [ ] Tap the box icon (top right) → Export backup… → save to On My iPad or iCloud Drive
+- [ ] "Backup saved." appears
+- [ ] The file shows in the Files app, named TreeOfLife-backup-(date)-(time)
+
+**Restore**
+- [ ] Draw something new after the backup (e.g. a big X)
+- [ ] Box icon → Restore from backup… → pick the file
+- [ ] The app asks "Restore this backup?" first; Cancel changes nothing
+- [ ] Restore again and confirm: the page goes back to before the X
+- [ ] Today's writing total goes back to what it was in the backup
+- [ ] The thumb button moves back to its spot in the backup
+- [ ] "Backup restored." appears
+
+**Bad files**
+- [ ] Try restoring any other .json file (or a copy of the backup edited in Files): "That file isn't a Tree of Life backup… Nothing was changed." and the page is untouched
+
+**After reinstalling (do this once, when you next re-sideload)**
+- [ ] Export a backup first, reinstall, then restore: everything comes back
+
+---
+
+## M2.1 · Live tuning panel
+
+- [ ] Tap the sliders icon (top right): the Tuning panel opens beside the page
+- [ ] **Daily goal:** move it to 3 h → the top reads "of 3:00:00" right away
+- [ ] **Thumb button size:** slide it → the button grows and shrinks live
+- [ ] **Thumb button visibility:** slide it low → the button fades; holding it still turns it green
+- [ ] **Page warmth:** 0% = white paper, 100% = warm cream, changes live
+- [ ] **Maximum zoom:** set 2× → pinching stops at 2×; set 10× → you can zoom much further
+- [ ] **Fingers can draw:** on → a finger draws (and the clock counts it); off → a finger scrolls again
+- [ ] Close and reopen the app: every tuning value is kept
+- [ ] **Reset everything to defaults** puts all values back (goal 5 h, size 88, etc.)
+- [ ] With tuning changed, writing-time rules still hold (erasing doesn't count, both inputs count once)
