@@ -2,6 +2,30 @@
 
 After every build: install it, go down that build's list on the iPad, and tick each box only when it worked. Anything that fails, note what you did and what happened, then tell Claude.
 
+## Before the first test session (gather once)
+
+**Things**
+- [ ] Lightning to USB-A cable that carries data (Apple's own cable does; some cheap "charging only" cables don't)
+- [ ] iPad charged above 50%, with at least 1 GB free (Settings → General → iPad Storage)
+- [ ] Apple Pencil charged (plug it into the iPad's Lightning port for a few minutes)
+- [ ] Goodnotes open on the iPad, for side-by-side ink comparison
+- [ ] A phone stopwatch, to check the writing clock against real time
+- [ ] 45 minutes without interruptions
+
+**On the Mac (can be done now)**
+- [ ] Sideloadly downloaded from sideloadly.io and opened once (allow it in System Preferences → Security & Privacy if macOS blocks it)
+- [ ] Latest TreeOfLife.ipa downloaded from GitHub (Actions → newest green run → Artifacts → TreeOfLife-ipa) and unzipped
+- [ ] Your Apple ID email and password at hand, plus a device that receives your two-factor codes
+
+**On the iPad**
+- [ ] Screen recording in Control Center (Settings → Control Center → add Screen Recording), so problems can be recorded and shown to Claude
+- [ ] Note: the Developer Mode switch only appears in Settings → Privacy & Security **after** Sideloadly has tried installing the app once. So the order is: install → turn on Developer Mode → restart → trust your Apple ID → open the app.
+
+**How to report a problem**
+- What you did (step by step), what you expected, what happened, and a screen recording if you can.
+
+---
+
 ## Every build (always run these first)
 - [ ] The build on GitHub (Actions tab) shows a green check
 - [ ] The app installs and opens without crashing
