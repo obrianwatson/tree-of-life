@@ -1,5 +1,37 @@
 # The Tree of Life: Build Checklists
 
+---
+
+## T1 + T2 · Text app on the iPhone 16e and the laptop
+
+**Open it**
+- [ ] Laptop: open **obrianwatson.github.io/tree-of-life/** in **Firefox**
+- [ ] iPhone: open the same address in **Safari** → Share → **Add to Home Screen** → open it from the Home Screen icon (use only this icon from now on; Safari tabs keep separate pages until sync arrives)
+- [ ] The tree icon shows on the Home Screen and the app opens full-screen
+
+**Pages**
+- [ ] Typing works; the first line becomes the page's name in the list
+- [ ] New page makes a page and the keyboard opens right away (iPhone) with no lost first letter
+- [ ] "+" beside a page makes a page inside it; the arrow shows and hides inner pages
+- [ ] The line at the top shows where you are (e.g. Lyrics › Chorus idea)
+- [ ] iPhone: ☰ opens the page list; tapping outside closes it
+- [ ] Close the app completely and reopen: same page, cursor where you left it
+- [ ] Turn on Airplane Mode and reopen: it still opens and you can write
+
+**Writing clock**
+- [ ] Typing turns the dot green and counts (compare to a stopwatch)
+- [ ] Pause for less than 4 s: the clock keeps going; pause longer: it stops, and the pause isn't added
+- [ ] Laptop: holding Option counts; releasing stops
+- [ ] iPhone: the hold button sits just above the keyboard; holding it counts, releasing stops
+- [ ] Typing while holding counts each second once
+- [ ] Settings → "Typing pause that still counts" changes the 4 s; "Daily goal" changes "of 5:00:00"
+
+**Keeping your work**
+- [ ] Settings → Export everything saves a file (iPhone: Files app → Downloads)
+- [ ] Settings → Import that file on the other device: pages appear; "Nothing was deleted"
+- [ ] Settings → Delete this page… needs a second tap; its inner pages move up a level
+
+
 After every build: install it, go down that build's list on the iPad, and tick each box only when it worked. Anything that fails, note what you did and what happened, then tell Claude.
 
 ## Before the first test session (gather once)

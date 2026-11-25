@@ -18,21 +18,23 @@ The Pencil is broken, so the focus is **writing in text**, on the **iPhone 16e**
 - Hosted free on GitHub Pages from this repository.
 - Every device keeps working offline and syncs when it's back online.
 
-## T1 · Pages of text ⬜
-- ⬜ A page you can type on (comfortable on the phone keyboard and the laptop)
-- ⬜ Many pages + a page list, newest first
-- ⬜ Pages inside pages (every page is a folder)
-- ⬜ Saves itself as you type; works with no internet
+## T1 · Pages of text ✅ (built in `docs/`, waiting for you to try)
+- ✅ A page you can type on (comfortable on the phone keyboard and the laptop)
+- ✅ Many pages + a page list, newest first; first line is the page's name
+- ✅ Pages inside pages (every page is a folder); deleting a page moves its inner pages up a level
+- ✅ Saves itself as you type; opens with no internet once loaded
+- ✅ Reopens to the last page with the cursor where you left it
+- ✅ Export everything to a file; import merges (newer version of each page wins, nothing deleted)
 
-## T2 · The writing clock for typing ⬜
-- ⬜ Typing counts as writing time (rule to confirm: how long a pause still counts)
-- ⬜ Hold button: on the iPhone, a thumb button on screen; on the laptop, hold a key or an on-screen button
-- ⬜ Each second counts once; daily total "of 5:00:00"
-- ⬜ Time saved as start/stop moments marked "iPhone" or "Laptop", so both devices merge without double-counting
+## T2 · The writing clock for typing ✅ (built, waiting for you to try)
+- ✅ Typing counts; the clock runs through pauses up to 4 s (adjustable 1–15 s in Settings); a longer pause stops it at your last key
+- ✅ Hold button: on the iPhone, a thumb button just above the keyboard; on the laptop, hold the Option key
+- ✅ Each second counts once; daily total "of 5:00:00" (goal adjustable)
+- ✅ Time saved as start/stop moments marked "iPhone" or "Laptop", so both devices merge without double-counting
 
 ## T3 · Sync between iPhone and laptop ⬜
 - ⬜ Sign in once on each device
-- ⬜ Pages, folders and writing time sync through the cloud (Firebase, to confirm)
+- ⬜ Pages, folders and writing time sync through the cloud (Firebase, confirmed)
 - ⬜ **Pick up where you left off:** opens to the page you were last on, with the cursor where you left it
 - ⬜ Works offline; changes made on both devices while apart are merged, never lost
 - ⬜ Backup/export of everything to a file, and restore

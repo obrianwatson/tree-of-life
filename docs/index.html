@@ -1,3 +1,366 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=board/"><title>Tree of Life</title></head>
-<body><p><a href="board/">Open the Tree of Life Board</a></p></body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tree of Life">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fdfdfb">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Tree of Life</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,500&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a quiet writer's notebook; nothing between you and the words
+   IDEA: a bound book whose pages hold pages, with a clock in the spine
+   PICTURE: the open page itself, edge to edge
+   COLOUR and TYPE: white paper, near-black ink, one deep tree green; Literata for writing, Hanken Grotesk for the frame
+   LAYOUT: page list on the left (a drawer on the phone), the page fills the rest, clock pill in the header */
+:root{color-scheme:light dark;
+  --paper:light-dark(#fdfdfb,#151716);--ink:light-dark(#1c1d1b,#e9ebe7);--muted:light-dark(#6a6b66,#9ea39d);
+  --line:light-dark(#e4e4de,#2a2e2b);--side:light-dark(#f3f3ef,#1c1f1d);--green:light-dark(#1f6b45,#5fc08c);--on:#2e9a4c}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);font:16px/1.5 "Hanken Grotesk",system-ui,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);height:100dvh}
+aside{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;
+  padding:calc(12px + env(safe-area-inset-top)) 10px calc(12px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left))}
+.side-head{display:flex;align-items:center;gap:8px;padding:4px 6px 12px}
+.side-head h1{font-size:18px;font-weight:600;margin:0;flex:1}
+.list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.item{display:flex;align-items:center;gap:2px;border-radius:10px}
+.item.current{background:color-mix(in srgb,var(--green) 13%,transparent)}
+.item .open{flex:1;text-align:left;border:0;background:none;padding:10px 8px;min-height:44px;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .open small{display:block;color:var(--muted);font-size:13px}
+.item .tw,.item .add{width:36px;height:44px;border:0;background:none;color:var(--muted);cursor:pointer;flex:none;font-size:18px}
+.item .tw.leaf{visibility:hidden}
+.btn{height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-weight:500}
+.btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent}
+main{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0}
+header{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line)}
+.menu{display:none}
+.crumbs{flex:1;color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clock{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:var(--side);white-space:nowrap;
+  font-variant-numeric:tabular-nums;font-size:17px}
+.dot{width:10px;height:10px;border-radius:50%;background:#9a9a94}.dot.on{background:var(--on)}
+.goal{font-size:13px;color:var(--muted)}
+textarea#page{width:100%;height:100%;resize:none;border:0;background:transparent;color:var(--ink);
+  font:19px/1.7 Literata,Georgia,serif;padding:28px max(24px,calc((100% - 720px)/2)) 140px;outline:none;-webkit-tap-highlight-color:transparent}
+textarea#page::placeholder{color:var(--muted)}
+.thumb{position:fixed;right:calc(18px + env(safe-area-inset-right));width:86px;height:86px;border-radius:50%;display:none;
+  place-items:center;border:2px solid color-mix(in srgb,var(--ink) 25%,transparent);background:color-mix(in srgb,var(--ink) 8%,var(--paper));
+  color:var(--muted);font-weight:500;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;z-index:5}
+.thumb.on{background:var(--on);border-color:var(--on);color:#fff}
+.touch .thumb{display:grid}
+.hint{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);font-size:13px;color:var(--muted);
+  background:var(--side);padding:6px 12px;border-radius:999px;pointer-events:none;white-space:nowrap}
+.touch .hint{display:none}
+.hint.held{color:#fff;background:var(--on)}
+dialog{border:0;border-radius:16px;padding:22px;width:min(520px,92vw);background:var(--paper);color:var(--ink);box-shadow:0 20px 50px rgb(0 0 0/.3)}
+dialog::backdrop{background:rgb(0 0 0/.35)}
+dialog h2{margin:0 0 4px;font-size:24px;line-height:1.1}
+dialog p{margin:0 0 14px;color:var(--muted)}
+.field{margin:14px 0}
+.field label{display:flex;justify-content:space-between;font-weight:500}
+.field small{display:block;color:var(--muted)}
+input[type=range]{width:100%;height:44px}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.msg{min-height:1.4em;margin-top:10px!important}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+.scrim{display:none}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  aside{position:fixed;inset:0 auto 0 0;width:min(330px,86vw);z-index:10;transform:translateX(-105%);box-shadow:0 0 40px rgb(0 0 0/.25)}
+  .drawer aside{transform:none}
+  .drawer .scrim{display:block;position:fixed;inset:0;background:rgb(0 0 0/.3);z-index:9}
+  .menu{display:inline-grid;place-items:center;width:44px;padding:0}
+  .goal{display:none}
+  header{padding-left:calc(8px + env(safe-area-inset-left))}
+  textarea#page{font-size:18px;padding:20px 18px 160px}
+}
+@media (prefers-reduced-motion:no-preference){aside{transition:transform .2s ease}.thumb,.dot{transition:background .12s}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside aria-label="Pages">
+    <div class="side-head">
+      <h1>Tree of Life</h1>
+      <button class="btn ghost" id="settingsBtn" aria-label="Settings">Settings</button>
+    </div>
+    <div class="list" id="list"></div>
+    <div class="row" style="padding-top:10px">
+      <button class="btn primary" id="newTop" style="flex:1">New page</button>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+  <main>
+    <header>
+      <button class="btn menu" id="menu" aria-label="Show pages">☰</button>
+      <div class="crumbs" id="crumbs"></div>
+      <div class="clock"><span class="dot" id="dot"></span><span id="total">0:00:00</span><span class="goal" id="goal">of 5:00:00</span></div>
+    </header>
+    <textarea id="page" spellcheck="true" autocapitalize="sentences" placeholder="Start writing. The first line becomes the page's name."></textarea>
+  </main>
+</div>
+<div class="thumb" id="thumb" role="button" aria-label="Hold to count writing time"><span id="thumbLabel">hold</span></div>
+<div class="hint" id="hint">Hold Option to count thinking time</div>
+
+<dialog id="settings" aria-labelledby="setTitle">
+  <h2 id="setTitle">Settings</h2>
+  <p>Saved on this device. Sync between your iPhone and laptop comes next.</p>
+  <div class="field">
+    <label for="pause"><span>Typing pause that still counts</span><span id="pauseVal"></span></label>
+    <input type="range" id="pause" min="1" max="15" step="1">
+    <small>After you stop typing, the clock keeps running this long. A longer pause stops it, and the pause itself isn't counted.</small>
+  </div>
+  <div class="field">
+    <label for="goalIn"><span>Daily goal</span><span id="goalVal"></span></label>
+    <input type="range" id="goalIn" min="1" max="12" step="0.5">
+  </div>
+  <div class="row">
+    <button class="btn" id="exp">Export everything</button>
+    <label class="btn" for="imp" style="display:inline-grid;place-items:center">Import</label><input type="file" id="imp" accept=".json,application/json">
+    <button class="btn" id="delPage">Delete this page…</button>
+    <button class="btn primary" id="closeSet">Done</button>
+  </div>
+  <p class="msg" id="msg"></p>
+</dialog>
+
+<script>
+{
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+};
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const isPhone = /iPhone|iPod|Android.+Mobile/.test(navigator.userAgent);
+const DEVICE = isPhone ? "iPhone" : "Laptop";
+const touch = matchMedia("(pointer:coarse)").matches;
+if (touch) document.body.classList.add("touch");
+
+/* ---------- data: pages (each page can hold pages) ---------- */
+const K = { pages: "tol-pages", time: "tol-intervals", ui: "tol-ui" };
+let pages = store.get(K.pages, {});
+let intervals = store.get(K.time, []);
+const ui = Object.assign({ last: null, pause: 4, goal: 5, open: {} }, store.get(K.ui, {}));
+const saveUI = () => store.set(K.ui, ui);
+function savePages() { if (!store.set(K.pages, pages)) say("Couldn't save on this device. Export everything to keep it safe."); }
+
+function newPage(parentId) {
+  const now = Date.now();
+  const p = { id: uid(), parentId: parentId || null, text: "", cursor: 0, createdAt: now, updatedAt: now };
+  pages[p.id] = p; savePages();
+  if (parentId) { ui.open[parentId] = true; }
+  openPage(p.id, true); return p;
+}
+const titleOf = p => (p.text.split("\n").find(l => l.trim()) || "Untitled").trim().slice(0, 80);
+const children = id => Object.values(pages).filter(p => p.parentId === id).sort((a, b) => b.updatedAt - a.updatedAt);
+function path(id) { const out = []; let p = pages[id]; while (p) { out.unshift(p); p = pages[p.parentId]; } return out; }
+const ago = t => {
+  const s = (Date.now() - t) / 1000;
+  if (s < 60) return "just now"; if (s < 3600) return Math.floor(s / 60) + " min ago";
+  if (s < 86400) return Math.floor(s / 3600) + " h ago";
+  return new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+};
+const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function renderList() {
+  const rows = [];
+  const walk = (parentId, depth) => {
+    for (const p of children(parentId)) {
+      const kids = children(p.id).length;
+      rows.push(`<div class="item${p.id === ui.last ? " current" : ""}" style="padding-left:${depth * 16}px">
+        <button class="tw${kids ? "" : " leaf"}" data-tw="${p.id}" aria-label="${ui.open[p.id] ? "Hide" : "Show"} pages inside">${ui.open[p.id] ? "▾" : "▸"}</button>
+        <button class="open" data-open="${p.id}">${esc(titleOf(p))}<small>${kids ? kids + " inside · " : ""}${ago(p.updatedAt)}</small></button>
+        <button class="add" data-add="${p.id}" aria-label="New page inside ${esc(titleOf(p))}">+</button></div>`);
+      if (kids && ui.open[p.id]) walk(p.id, depth + 1);
+    }
+  };
+  walk(null, 0);
+  $("list").innerHTML = rows.join("") || `<p style="color:var(--muted);padding:8px">No pages yet.</p>`;
+}
+$("list").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.open) { openPage(b.dataset.open, true); closeDrawer(); }
+  else if (b.dataset.tw) { ui.open[b.dataset.tw] = !ui.open[b.dataset.tw]; saveUI(); renderList(); }
+  else if (b.dataset.add) { newPage(b.dataset.add); closeDrawer(); }
+});
+$("newTop").onclick = () => { newPage(null); closeDrawer(); };
+
+/* ---------- the page ---------- */
+const ta = $("page");
+function openPage(id, focusNow) {
+  const p = pages[id]; if (!p) return;
+  ui.last = id; saveUI();
+  for (const a of path(id).slice(0, -1)) ui.open[a.id] = true;
+  ta.value = p.text;
+  $("crumbs").textContent = path(id).map(titleOf).join("  ›  ");
+  // pick up where you left off: cursor goes back where it was.
+  // Focus right away (inside the tap) so the phone keyboard opens and no letter is lost.
+  const c = Math.min(p.cursor || 0, ta.value.length);
+  if (focusNow || !touch) ta.focus({ preventScroll: true });
+  try { ta.setSelectionRange(c, c); } catch (e) {}
+  renderList();
+}
+let saveTimer = null;
+function rememberCursor() { const p = pages[ui.last]; if (p) { p.cursor = ta.selectionStart; scheduleSave(); } }
+function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(savePages, 400); }
+ta.addEventListener("input", () => {
+  const p = pages[ui.last]; if (!p) return;
+  p.text = ta.value; p.cursor = ta.selectionStart; p.updatedAt = Date.now();
+  scheduleSave(); typed();
+  $("crumbs").textContent = path(p.id).map(titleOf).join("  ›  ");
+  clearTimeout(listTimer); listTimer = setTimeout(renderList, 800);
+});
+let listTimer = null;
+["keyup", "click", "select"].forEach(ev => ta.addEventListener(ev, rememberCursor));
+window.addEventListener("pagehide", () => { rememberCursor(); savePages(); });
+
+/* ---------- the writing clock ----------
+   Typing runs it; it keeps running through a pause up to the setting, and a longer
+   pause stops it at your last key (the pause isn't counted). Holding Option (laptop)
+   or the thumb button (phone) runs it too. Each second counts once. */
+let holdDown = false, holdSince = null, typeStart = null, typeLast = null, typeTimer = null;
+function bank(start, end) {
+  if (end > start) { intervals.push({ start, end, device: DEVICE }); store.set(K.time, intervals); }
+}
+function typed() {
+  const now = Date.now();
+  if (typeStart === null) typeStart = now;
+  typeLast = now;
+  clearTimeout(typeTimer);
+  typeTimer = setTimeout(endTyping, ui.pause * 1000);
+  paintClock();
+}
+function endTyping() {
+  if (typeStart === null) return;
+  bank(typeStart, typeLast + 400);           // a keystroke itself takes a moment
+  typeStart = typeLast = null; paintClock();
+}
+function setHold(v) {
+  if (v === holdDown) return;
+  holdDown = v;
+  if (v) holdSince = Date.now(); else { bank(holdSince, Date.now()); holdSince = null; }
+  $("thumb").classList.toggle("on", v); $("hint").classList.toggle("held", v);
+  $("thumbLabel").textContent = v ? "writing" : "hold";
+  $("hint").textContent = v ? "Counting while you hold Option" : "Hold Option to count thinking time";
+  paintClock();
+}
+function todaySeconds() {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  const s0 = d.getTime(), now = Date.now();
+  const list = intervals.map(i => [Math.max(i.start, s0), Math.min(i.end, now)]);
+  if (typeStart !== null) list.push([Math.max(typeStart, s0), typeLast + 400]);
+  if (holdSince !== null) list.push([Math.max(holdSince, s0), now]);
+  const spans = list.filter(a => a[1] > a[0]).sort((a, b) => a[0] - b[0]);
+  let total = 0, cs = 0, ce = 0, open = false;
+  for (const [a, b] of spans) {
+    if (!open || a > ce) { if (open) total += ce - cs; cs = a; ce = b; open = true; } else ce = Math.max(ce, b);
+  }
+  if (open) total += ce - cs;
+  return total / 1000;
+}
+const fmt = s => { s = Math.floor(s); return `${Math.floor(s / 3600)}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
+function paintClock() {
+  $("total").textContent = fmt(todaySeconds());
+  $("dot").classList.toggle("on", holdDown || typeStart !== null);
+  $("goal").textContent = "of " + fmt(ui.goal * 3600);
+}
+setInterval(paintClock, 500);
+
+// laptop: hold Option
+document.addEventListener("keydown", e => { if (e.key === "Alt" && !e.repeat) setHold(true); });
+document.addEventListener("keyup", e => { if (e.key === "Alt") setHold(false); });
+window.addEventListener("blur", () => { setHold(false); endTyping(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) { setHold(false); endTyping(); savePages(); } });
+
+// phone: thumb button, kept just above the keyboard
+const thumb = $("thumb");
+thumb.addEventListener("pointerdown", e => { e.preventDefault(); thumb.setPointerCapture(e.pointerId); setHold(true); });
+thumb.addEventListener("pointerup", () => setHold(false));
+thumb.addEventListener("pointercancel", () => setHold(false));
+thumb.addEventListener("contextmenu", e => e.preventDefault());
+function placeThumb() {
+  const vv = window.visualViewport;
+  const bottom = vv ? innerHeight - (vv.height + vv.offsetTop) : 0;
+  thumb.style.bottom = `calc(${Math.max(0, bottom) + 22}px + env(safe-area-inset-bottom))`;
+}
+if (window.visualViewport) { visualViewport.addEventListener("resize", placeThumb); visualViewport.addEventListener("scroll", placeThumb); }
+placeThumb();
+
+/* ---------- drawer (phone) ---------- */
+const closeDrawer = () => $("app").classList.remove("drawer");
+$("menu").onclick = () => { renderList(); $("app").classList.add("drawer"); };
+$("scrim").onclick = closeDrawer;
+
+/* ---------- settings, export, import, delete ---------- */
+const dlg = $("settings"), say = t => { $("msg").textContent = t; };
+function paintSettings() {
+  $("pause").value = ui.pause; $("pauseVal").textContent = ui.pause + " s";
+  $("goalIn").value = ui.goal; $("goalVal").textContent = ui.goal + " h";
+}
+$("settingsBtn").onclick = () => { say(""); paintSettings(); closeDrawer(); dlg.showModal(); };
+$("closeSet").onclick = () => dlg.close();
+$("pause").oninput = e => { ui.pause = +e.target.value; saveUI(); paintSettings(); };
+$("goalIn").oninput = e => { ui.goal = +e.target.value; saveUI(); paintSettings(); paintClock(); };
+$("exp").onclick = () => {
+  const text = JSON.stringify({ format: "tol-text-export", version: 1, exportedAt: new Date().toISOString(),
+                                device: DEVICE, pages, intervals, settings: { pause: ui.pause, goal: ui.goal } }, null, 1);
+  try {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+    a.download = "TreeOfLife-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    say("Saved. On the iPhone it's in the Files app, under Downloads.");
+  } catch (e) { say("This browser blocked the download."); }
+};
+$("imp").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d.format !== "tol-text-export" || typeof d.pages !== "object") throw 0;
+    let added = 0, updated = 0;                      // merge: newer version of each page wins, nothing is deleted
+    for (const p of Object.values(d.pages)) {
+      const mine = pages[p.id];
+      if (!mine) { pages[p.id] = p; added++; } else if (p.updatedAt > mine.updatedAt) { pages[p.id] = p; updated++; }
+    }
+    const seen = new Set(intervals.map(i => `${i.start}:${i.end}:${i.device}`));
+    for (const i of d.intervals || []) if (!seen.has(`${i.start}:${i.end}:${i.device}`)) intervals.push(i);
+    savePages(); store.set(K.time, intervals);
+    renderList(); if (ui.last) openPage(ui.last); paintClock();
+    say(`Imported: ${added} new page${added === 1 ? "" : "s"}, ${updated} updated. Nothing was deleted.`);
+  } catch (err) { say("That file isn't a Tree of Life export. Nothing was changed."); }
+};
+let delArmed = null;
+$("delPage").onclick = () => {
+  const p = pages[ui.last]; if (!p) return;
+  if (!delArmed) {
+    $("delPage").textContent = "Tap again to delete";
+    delArmed = setTimeout(() => { delArmed = null; $("delPage").textContent = "Delete this page…"; }, 3000);
+    return;
+  }
+  clearTimeout(delArmed); delArmed = null; $("delPage").textContent = "Delete this page…";
+  for (const c of children(p.id)) { c.parentId = p.parentId; }  // pages inside move up a level
+  delete pages[p.id]; savePages();
+  const next = Object.values(pages).sort((a, b) => b.updatedAt - a.updatedAt)[0];
+  if (next) openPage(next.id); else newPage(null);
+  say("Page deleted. The pages inside it moved up one level.");
+};
+
+/* ---------- start: open where you left off ---------- */
+if (ui.last && pages[ui.last]) openPage(ui.last);
+else { const recent = Object.values(pages).sort((a, b) => b.updatedAt - a.updatedAt)[0]; recent ? openPage(recent.id) : newPage(null); }
+paintClock();
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
