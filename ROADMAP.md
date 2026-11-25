@@ -2,11 +2,60 @@
 
 A book of pages and a timer. Writing is to enscribe oneself into life.
 
-How we work: one milestone at a time. Each build ends with its checklist in `TESTING.md`. A box is ticked only after it's been tried on the iPad.
+How we work: one milestone at a time. Each build ends with its checklist in `TESTING.md`. A box is ticked only after it's been tried on the real device.
 
 Status key: ✅ done · 🔨 in progress · ⬜ not started · ⏸ on hold
 
 ---
+
+# ▶ NOW: Text Tree of Life on the iPhone 16e + the laptop
+
+The Pencil is broken, so the focus is **writing in text**, on the **iPhone 16e** and the **2011 MacBook**, synced through the cloud so you can pick up where you left off on either one.
+
+**How it's built:** one web app, used on both devices.
+- iPhone: open it in Safari → Share → **Add to Home Screen**. It opens full-screen like an app. No Apple fees, no cable, no TestFlight.
+- Laptop: open it in **Firefox** (Chrome no longer updates on Catalina).
+- Hosted free on GitHub Pages from this repository.
+- Every device keeps working offline and syncs when it's back online.
+
+## T1 · Pages of text ⬜
+- ⬜ A page you can type on (comfortable on the phone keyboard and the laptop)
+- ⬜ Many pages + a page list, newest first
+- ⬜ Pages inside pages (every page is a folder)
+- ⬜ Saves itself as you type; works with no internet
+
+## T2 · The writing clock for typing ⬜
+- ⬜ Typing counts as writing time (rule to confirm: how long a pause still counts)
+- ⬜ Hold button: on the iPhone, a thumb button on screen; on the laptop, hold a key or an on-screen button
+- ⬜ Each second counts once; daily total "of 5:00:00"
+- ⬜ Time saved as start/stop moments marked "iPhone" or "Laptop", so both devices merge without double-counting
+
+## T3 · Sync between iPhone and laptop ⬜
+- ⬜ Sign in once on each device
+- ⬜ Pages, folders and writing time sync through the cloud (Firebase, to confirm)
+- ⬜ **Pick up where you left off:** opens to the page you were last on, with the cursor where you left it
+- ⬜ Works offline; changes made on both devices while apart are merged, never lost
+- ⬜ Backup/export of everything to a file, and restore
+
+## T4 · The book, in text ⬜
+- ⬜ Fold inward / outward
+- ⬜ Rearrange pages; links keep working
+- ⬜ Cross-fold, cross-reference with backlinks, branch, tags
+- ⬜ Open a fold in place, as a tab, or side by side (laptop)
+
+## T5 · Timers anywhere ⬜
+- ⬜ Set a timer at any moment; active or elapsed; chain them; fold them
+
+## T6 · Claude in the app ⬜
+- ⬜ Claude Code on GitHub (`@claude` in an issue) — token step pending on the Shadow PC
+- ⬜ Ask Claude Code from inside the app; Claude chat on a page
+
+---
+
+# ⏸ ON HOLD: iPad + Apple Pencil (resume when the Pencil is replaced)
+Everything below is kept. The native iPad app still builds on GitHub.
+
+
 
 ## M0 · First page and the writing clock ✅ (built, not yet on the iPad)
 - ✅ One page: Pencil writes, fingers scroll and zoom
