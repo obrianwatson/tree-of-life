@@ -22,6 +22,13 @@ Status key: ✅ done · 🔨 in progress · ⬜ not started · ⏸ on hold
 - ✅ Backup/export: save the page, writing-time history, tuning and thumb-button spot to the Files app
 - ✅ Restore from that backup (checks the file first; changes nothing if it's damaged)
 
+## M1.5 · One page language (needed for the Board)
+So the iPad and the Board can read each other's pages.
+- ⬜ Save every stroke in a simple shared form too (points, width, color, time), alongside Apple's own format
+- ⬜ The iPad can open pages written in that shared form (Board pages appear as editable ink)
+- ⬜ Writing time saved as start-and-stop moments (not just totals), each marked "iPad" or "Board", so the two devices merge without double-counting
+- ⬜ Backup file carries the shared form, so the Board can open an iPad backup
+
 ## M2 · Claude Code in the app ★ priority one
 Two speeds of change:
 **instant** (adjust a setting, no rebuild) and **new feature** (Claude Code changes the code → GitHub builds → you install).
@@ -31,6 +38,16 @@ Two speeds of change:
 - ⬜ **2.3 "Ask Claude Code" inside the app.** A panel where you describe a change in your own words. It sends the request to GitHub, shows progress (working → building → ready to install), and Claude's reply.
 - ⬜ **2.4 Claude chat inside the app.** Talk to Claude on a page. It can see the page you point at and change the live tuning values directly ("give me a little longer before the shape locks").
 - ⬜ **2.5 Cable-free updates.** Needed so 2.2–2.3 can update the app without the Mac: TestFlight (Apple membership) or a UDID signing service with over-the-air install. Until then each new build is installed with Sideloadly + cable.
+
+## B · The Board (big-screen Tree of Life)
+TV + IR touch frame + cheap mini PC running the Board in a full-screen web browser. Marker-level, not Pencil-level.
+- ⬜ B1 Board page on the web: one page, marker + eraser + a few colors, the writing clock, an on-screen thumb button. Test with a mouse or any touchscreen before buying hardware
+- ⬜ B2 Palm handling: only the first touch draws, extra touches are ignored (wall-mounted)
+- ⬜ B3 Move pages by file: open an iPad backup on the Board, and save a Board file the iPad can open
+- ⬜ B4 Automatic sync between iPad and Board (pages + writing time), no files to carry
+- ⬜ B5 Buy hardware only after B1 feels right: TV (have one or budget), IR touch frame (~$175 at 55"), N100-class Windows mini PC
+- ⬜ B6 Board catches up with the iPad: folds, timers, links, tags as they're built
+- Rule: one daily total across both devices; overlapping time counts once
 
 ## M3 · Timers anywhere
 - ⬜ Place a timer at any moment, anywhere on a page
