@@ -6,6 +6,11 @@
      devices never overwrite each other. Merging never loses writing: if the same page was changed
      on both, the newer one stays and the other is kept as a page inside it ("Other version …").
    - The passphrase is never stored. The unlocked key stays on this device only.
+   - Two files per device. sync/<id>.json is the BASE: this device's whole book. sync/<id>.d.json is the
+     DELTA: only what changed since that base (same sealed format, pages/intervals/memory hold just the
+     changed ones), so an ordinary save sends a few kilobytes instead of the whole book. When the delta
+     grows, the base is written again and the delta starts over. A reader puts a device's base and delta
+     together first, then merges. Older versions of the app only read the base; they still work, a bit behind.
    THIS FORMAT IS SACRED: never remove fields, never weaken the encryption, never write plaintext. */
 (() => {
   const T = window.TOL;
@@ -26,9 +31,46 @@
   const normalize = p => (p || "").normalize("NFC").toLowerCase().replace(/[\s\-_.,;:]+/g, " ").trim();  // capitals and spaces don't matter
   const when = t => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   async function sha256(text) { return b64(await crypto.subtle.digest("SHA-256", enc.encode(text))); }
+  /* a quick fingerprint of some text (53 bits): only used to tell what changed since this device's base file */
+  function quick(str) {
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+  }
+  const isMap = (part, v) => !!v && typeof v === "object" && !Array.isArray(v) && part !== "settings";   // a memory part made of records
+  const ivKey = i => i ? `${i.start}:${i.end}:${i.device}` : "";
+  function indexOf(cur) {            // one fingerprint per page and per memory record (where the cursor sits doesn't count)
+    const pages = {}, mem = {}, m = cur.memory || {};
+    for (const [id, p] of Object.entries(cur.pages)) pages[id] = quick(JSON.stringify(p && p.cursor ? Object.assign({}, p, { cursor: 0 }) : p));
+    for (const [part, v] of Object.entries(m)) {
+      if (isMap(part, v)) for (const [k, r] of Object.entries(v)) mem[part + "\n" + k] = quick(JSON.stringify(r));
+      else mem[part] = quick(JSON.stringify(v));
+    }
+    return { pages, mem, ivN: cur.intervals.length, ivTail: ivKey(cur.intervals[cur.intervals.length - 1]) };
+  }
+  function deltaOf(cur, idx) {       // what's different from the base: changed pages, changed memory records, time entries added since
+    if (cur.intervals.length < idx.ivN || ivKey(cur.intervals[idx.ivN - 1]) !== idx.ivTail) return null;   // the time list isn't the base's plus more: start a new base
+    const now = indexOf(cur), pages = {}, memory = {}, m = cur.memory || {};
+    for (const [id, h] of Object.entries(now.pages)) if (idx.pages[id] !== h) pages[id] = cur.pages[id];
+    for (const [k, h] of Object.entries(now.mem)) {
+      if (idx.mem[k] === h) continue;
+      const i = k.indexOf("\n");
+      if (i < 0) memory[k] = m[k]; else { const part = k.slice(0, i); (memory[part] = memory[part] || {})[k.slice(i + 1)] = m[part][k.slice(i + 1)]; }
+    }
+    return { pages, memory, intervals: cur.intervals.slice(idx.ivN) };
+  }
+  function overlay(base, delta) {    // one device's base with its newer changes on top = that device's book right now
+    const mem = Object.assign({}, base.memory || {});
+    for (const [part, v] of Object.entries(delta.memory || {})) mem[part] = isMap(part, v) ? Object.assign({}, mem[part] || {}, v) : v;
+    return Object.assign({}, base, delta, { pages: Object.assign({}, base.pages || {}, delta.pages || {}),
+                                            intervals: (base.intervals || []).concat(delta.intervals || []), memory: mem });
+  }
 
   let S = Object.assign({ on: false, deviceId: null, deviceName: T.DEVICE, base: {}, seen: {}, mySha: null, lastHash: "", lastSync: 0, salt: null }, st.get(SYNC_KEY, {}));
   if (!S.deviceId) S.deviceId = randomId();
+  if (S.appv !== T.APP_VERSION) { S.seen = {}; S.appv = T.APP_VERSION; }   // after an update, read every device's files once more (a newer version may understand more of them)
   const save = () => st.set(SYNC_KEY, S);
   save();
   T.deviceLabel = S.deviceName;
@@ -60,11 +102,12 @@
     return crypto.subtle.deriveKey({ name: "PBKDF2", hash: "SHA-256", salt: unb64(saltB64), iterations },
       base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
   }
-  async function seal(key, obj, aad) {
+  async function sealText(key, text, aad) {
     const iv = rand(12);
-    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: enc.encode(aad) }, key, enc.encode(JSON.stringify(obj)));
+    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: enc.encode(aad) }, key, enc.encode(text));
     return { iv: b64(iv), ct: b64(ct) };
   }
+  const seal = (key, obj, aad) => sealText(key, JSON.stringify(obj), aad);
   async function unseal(key, box, aad) {
     const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(box.iv), additionalData: enc.encode(aad) }, key, unb64(box.ct));
     return JSON.parse(dec.decode(pt));
@@ -106,18 +149,35 @@
   const getMeta = async () => { const t = await gh(repo(`/contents/${META}${q}`), { raw: true, allow404: true }); return t ? JSON.parse(t) : null; };
   const listDir = () => gh(repo(`/contents/${DIR}${q}`), { allow404: true });
   const getRaw = path => gh(repo(`/contents/${path}${q}`), { raw: true });
+  async function getListed(f) {      // exactly the version the list named (by its fingerprint), so a slow copy on GitHub's side can't hand us an older one
+    try { return await gh(repo(`/git/blobs/${f.sha}`), { raw: true }); }
+    catch (e) { if (e.status !== 403 && e.status !== 404 && e.status !== 406 && e.status !== 415) throw e; return getRaw(f.path); }
+  }
+  const KEEPALIVE_MAX = 60000;       // browsers refuse a closing-app request over 64 KiB
   async function putFile(path, text, sha, keepalive) {
     const body = { message: "Sync (encrypted)", content: b64(enc.encode(text)), branch: BRANCH };
     if (sha) body.sha = sha;
-    return gh(repo(`/contents/${path}`), { method: "PUT", body: JSON.stringify(body), keepalive });
+    const json = JSON.stringify(body);
+    return gh(repo(`/contents/${path}`), { method: "PUT", body: json, keepalive: !!keepalive && json.length <= KEEPALIVE_MAX });   // too big for a closing-app request: send normally and hope it finishes
+  }
+  async function putMine(path, text, field, keepalive) {      // write one of this device's own files; S[field] holds its current fingerprint
+    let r;
+    try { r = await putFile(path, text, S[field], keepalive); }
+    catch (e) {
+      if (e.status !== 409 && e.status !== 422) throw e;
+      S[field] = await currentSha(path);
+      r = await putFile(path, text, S[field], keepalive);
+    }
+    S[field] = r && r.content && r.content.sha;
   }
   async function currentSha(path) { const r = await gh(repo(`/contents/${path}${q}`), { allow404: true }); return r && r.sha; }
 
   /* ---------------- state ---------------- */
-  /* Timing: push ~5 s after you stop typing (at most one write every 6 s, and at least every 30 s
+  /* Timing: push ~5 s after you stop typing (at most one write every 15 s, and at least every 60 s
      while you keep typing), push at once when the app is hidden or closed, pull at once when it's
-     shown again, and check the other devices every 10 s while it's open. */
-  const PUSH_AFTER = 5000, MIN_GAP = 6000, MAX_WAIT = 30000, POLL = 10000;
+     shown again, and check the other devices every 10 s while it's open (checking never pushes early). */
+  const PUSH_AFTER = 5000, MIN_GAP = 15000, MAX_WAIT = 60000, POLL = 10000;
+  const DELTA_MAX = 24000, REBASE_GAP = 10 * 60000;   // a delta bigger than this is folded into a fresh base (not more often than every 10 minutes, unless it's half the book)
   let dirtySince = 0, lastWriteAt = 0;
   let key = null, phase = "off", detail = "", running = false, again = false, timer = null, backoff = 0, nextTry = 0, metaOk = false, mode = null, panelMsg = "";
   const canSync = () => !T.SANDBOX && !st.paused && S.on && !!token() && !!key;   // paused: the book is open in another tab
@@ -136,11 +196,14 @@
   }
 
   /* ---------------- merging: newest wins, writing is never lost ---------------- */
-  function mergeInto(P, I, remote, changed) {
+  function mergeInto(P, I, remote, changed, own) {
     const rname = remote.deviceName || "another device";
     for (const rp of Object.values(remote.pages || {})) {
       if (!rp || !rp.id) continue;
       const lp = P[rp.id], base = S.base[rp.id] || 0;
+      // "mine" = what this device itself had when the round began. Once a page has been replaced by another device's
+      // version in this round, a third device's older copy of it is just an older copy, not a clash with my writing.
+      const mine = !own || own[rp.id] === lp;
       if (!lp) { P[rp.id] = rp; changed.add(rp.id); continue; }
       // where a fold sits in its parent's words moves on its own clock (anchorAt), so typing
       // in a parent never counts as editing the fold itself
@@ -153,7 +216,7 @@
       }
       const remoteNewer = rp.updatedAt > lp.updatedAt;
       const newer = remoteNewer ? rp : lp, older = remoteNewer ? lp : rp;
-      const bothChanged = lp.updatedAt > base && rp.updatedAt > base;
+      const bothChanged = mine && lp.updatedAt > base && rp.updatedAt > base;
       if (bothChanged && !!lp.deleted !== !!rp.deleted) {
         // deleted on one device, written on the other: keep the writing
         const alive = lp.deleted ? rp : lp;
@@ -184,7 +247,7 @@
     if (!canSync()) { paint(); return; }
     if (running) { again = true; return; }
     if ((reason === "interval" || reason === "timer") && Date.now() < nextTry) return;
-    running = true; phase = "syncing"; pushAt = 0; paint();
+    running = true; phase = "syncing"; if (reason !== "interval") pushAt = 0; paint();
     try {
       if (!metaOk) {
         const meta = await getMeta();
@@ -194,32 +257,52 @@
       }
       if (notePrefs() && !dirtySince) dirtySince = Date.now();
       const list = (await listDir()) || [];
-      const files = list.filter(f => /^[0-9a-f]{16}\.json$/.test(f.name));
+      const devs = {};                                           // device id → { base: its whole-book file, delta: its changes since }
+      for (const f of list) { const m = /^([0-9a-f]{16})(\.d)?\.json$/.exec(f.name || ""); if (m) (devs[m[1]] = devs[m[1]] || {})[m[2] ? "delta" : "base"] = f; }
       const data = T.data();
       const P = Object.assign({}, data.pages), I = data.intervals.slice();
       const M = JSON.parse(JSON.stringify(data.memory || {}));   // memory practice: prompts, settings, review history
       const changed = new Set();
       let spot = null, prefs = null;
-      S.mySha = null;
-      for (const f of files) {
-        const id = f.name.slice(0, -5);
-        if (id === S.deviceId) { S.mySha = f.sha; continue; }
-        if (S.seen[id] === f.sha) continue;
-        const box = JSON.parse(await getRaw(f.path));
-        if (!box || box.format !== "tol-sealed") continue;
-        const remote = await unseal(key, box, "tol-state:" + id);
-        mergeInto(P, I, remote, changed);
-        if (remote.memory && T.mergeMemory && T.mergeMemory(M, remote.memory)) changed.add("#memory");
-        if (remote.spot && remote.spot.id && (!spot || remote.spot.at > spot.at)) spot = remote.spot;
-        if (remote.prefs && (remote.prefs.at || 0) > (prefs ? prefs.at : 0)) prefs = remote.prefs;
-        S.seen[id] = f.sha;
+      const mine = devs[S.deviceId] || {}; delete devs[S.deviceId];
+      if (Date.now() - lastWriteAt > 30000) {                    // (right after a write, what we just wrote is the truth; the list can lag a moment)
+        S.mySha = mine.base ? mine.base.sha : null; S.myDeltaSha = mine.delta ? mine.delta.sha : null;
       }
+      const open = async (f, aad) => { const box = JSON.parse(await getListed(f)); return box && box.format === "tol-sealed" ? unseal(key, box, aad) : null; };
+      let unread = 0;
+      for (const [id, d] of Object.entries(devs)) {
+        const newBase = !!d.base && S.seen[id] !== d.base.sha, newDelta = !!d.delta && S.seen[id + ".d"] !== d.delta.sha;
+        if (!newBase && !newDelta) continue;
+        let base = null, delta = null;
+        try {
+          if (newBase) base = await open(d.base, "tol-state:" + id);
+          if (newDelta) delta = await open(d.delta, "tol-state:" + id + ":delta");
+        } catch (e) {
+          if (e.offline || e.status || e.noToken) throw e;                                // trouble reaching GitHub: stop here and try again later
+          if (!(await keyStillOpens())) throw Object.assign(new Error("LOCK"), { name: "OperationError" });   // the passphrase really was changed
+          unread++;                                                                     // one file that can't be read never stops the rest
+          if (d.base) S.seen[id] = d.base.sha; if (d.delta) S.seen[id + ".d"] = d.delta.sha;
+          continue;
+        }
+        if (delta && d.base && delta.baseSha && delta.baseSha !== d.base.sha) delta = null;   // changes left over from an older base: the new base already holds them
+        const remote = base && delta ? overlay(base, delta) : (base || delta);
+        if (remote) {
+          mergeInto(P, I, remote, changed, data.pages);
+          if (remote.memory && T.mergeMemory && T.mergeMemory(M, remote.memory)) changed.add("#memory");
+          if (remote.spot && remote.spot.id && (!spot || remote.spot.at > spot.at)) spot = remote.spot;
+          if (remote.prefs && (remote.prefs.at || 0) > (prefs ? prefs.at : 0)) prefs = remote.prefs;
+        }
+        if (d.base) S.seen[id] = d.base.sha;
+        if (d.delta) S.seen[id + ".d"] = d.delta.sha;
+      }
+      detail = unread ? `${unread} synced file${unread === 1 ? "" : "s"} from another device couldn't be read and ${unread === 1 ? "was" : "were"} skipped.` : "";
       if (changed.size) T.replaceData(P, I, changed, changed.has("#memory") ? M : null);
       if (prefs && prefs.at > (S.prefsAt || 0)) { T.applyPrefs(prefs); S.prefsJson = JSON.stringify(T.getPrefs()); S.prefsAt = prefs.at; }
       if (reason === "resume" && spot && spot.at > (T.lastSpot().at || 0)) T.goTo(spot.id, spot.cursor, spot.at, spot);
       if (dirtySince || !S.mySha) {
         const background = reason === "timer" || reason === "interval";
-        if (background && S.mySha && Date.now() - lastWriteAt < MIN_GAP) changedSoon();   // too soon after the last write; it'll go shortly
+        if (reason === "interval" && S.mySha && pushAt > Date.now()) { /* a push is already planned; checking the other devices doesn't bring it forward */ }
+        else if (background && S.mySha && Date.now() - lastWriteAt < MIN_GAP) changedSoon();   // too soon after the last write; it'll go shortly
         else await writeMine(false);
       }
       const after = T.data().pages;
@@ -239,27 +322,47 @@
     }
   }
 
+  /* What this device's base file on GitHub holds (fingerprints), kept in this device's database.
+     Unknown or out of date → null → the next write is a whole new base. */
+  let baseIdx;
+  async function baseIndex() {
+    if (baseIdx === undefined) { try { baseIdx = (await idb.get("base")) || null; } catch (e) { baseIdx = null; } }
+    const x = baseIdx;
+    return x && x.v === 1 && x.deviceId === S.deviceId && x.salt === S.salt && S.mySha && x.sha === S.mySha && x.pages && x.mem ? x : null;
+  }
+  async function keyStillOpens() {   // does this device's key still open the vault? (then a file that won't open is just a bad file)
+    try { const meta = await getMeta(); if (!meta || meta.salt !== S.salt) { metaOk = false; return false; } return (await unseal(key, meta.check, "tol-check")) === "tree-of-life"; }
+    catch (e) { if (e.name === "OperationError") return false; throw e; }
+  }
   async function writeMine(keepalive) {
     const cur = T.data(), spot = T.lastSpot();
     const prefs = Object.assign(T.getPrefs(), { at: S.prefsAt || 0 });
     const fingerprint = await sha256(JSON.stringify([cur.pages, cur.intervals, spot.id, spot.cursor, spot.node, spot.pos, S.deviceName, prefs, cur.memory || {}]));
     if (fingerprint === S.lastHash && S.mySha) { dirtySince = 0; return; }
+    const idx = await baseIndex();
+    // from here to the sealing there is no waiting, so what is sealed and what is fingerprinted are the same instant
     const now = Date.now();
-    const state = { format: "tol-state", v: 1, deviceId: S.deviceId, deviceName: S.deviceName, savedAt: now, spot, prefs, pages: cur.pages, intervals: cur.intervals,
-                    memory: cur.memory || {} };   // added field: memory practice (prompts, settings, review history)
-    const box = await seal(key, state, "tol-state:" + S.deviceId);
-    const text = JSON.stringify({ format: "tol-sealed", v: 1, iv: box.iv, ct: box.ct, updatedAt: now });
-    const path = `${DIR}/${S.deviceId}.json`;
-    if (keepalive && text.length > 60000) keepalive = false;   // too big for a closing-app request; send normally and hope it finishes
-    let r;
-    try { r = await putFile(path, text, S.mySha, keepalive); }
-    catch (e) {
-      if (e.status !== 409 && e.status !== 422) throw e;
-      S.mySha = await currentSha(path);
-      r = await putFile(path, text, S.mySha, keepalive);
+    const head = { format: "tol-state", v: 1, deviceId: S.deviceId, deviceName: S.deviceName, savedAt: now, spot, prefs };
+    let d = idx ? deltaOf(cur, idx) : null, plain = "";
+    if (d) {
+      plain = JSON.stringify(Object.assign({}, head, { kind: "delta", baseSha: idx.sha, pages: d.pages, intervals: d.intervals, memory: d.memory }));
+      if (!keepalive && plain.length > DELTA_MAX && (now - (idx.at || 0) > REBASE_GAP || plain.length * 2 > (idx.size || 0))) d = null;   // grown too big: fold it into a fresh base
     }
-    S.mySha = r && r.content && r.content.sha; S.lastHash = fingerprint;
-    lastWriteAt = Date.now(); dirtySince = 0;
+    if (d) {
+      const box = await sealText(key, plain, "tol-state:" + S.deviceId + ":delta");
+      await putMine(`${DIR}/${S.deviceId}.d.json`, JSON.stringify({ format: "tol-sealed", v: 1, kind: "delta", iv: box.iv, ct: box.ct, updatedAt: now }), "myDeltaSha", keepalive);
+    } else {
+      plain = JSON.stringify(Object.assign({}, head, { pages: cur.pages, intervals: cur.intervals,
+                                                       memory: cur.memory || {} }));   // added field: memory practice (prompts, settings, review history)
+      const next = Object.assign(indexOf(cur), { v: 1, deviceId: S.deviceId, salt: S.salt, at: now, size: plain.length });
+      const box = await sealText(key, plain, "tol-state:" + S.deviceId);
+      baseIdx = null;                                           // until the new base is safely up, nothing is known about it
+      await putMine(`${DIR}/${S.deviceId}.json`, JSON.stringify({ format: "tol-sealed", v: 1, iv: box.iv, ct: box.ct, updatedAt: now }), "mySha", keepalive);
+      next.sha = S.mySha; baseIdx = next; S.baseAt = now;
+      idb.put("base", next).catch(() => {});                  // (if this can't be kept, the next session simply starts with a new base)
+    }
+    S.lastHash = fingerprint;
+    lastWriteAt = Date.now(); dirtySince = 0; pushAt = 0;
   }
 
   /* design + writing settings: newest wins across devices */
@@ -310,7 +413,7 @@
   }
   async function finishUnlock(k, salt, msg) {
     key = k; await idb.put("key", { salt, key: k }).catch(() => {});
-    if (S.salt !== salt) { S.seen = {}; S.mySha = null; S.lastHash = ""; S.base = {}; }
+    if (S.salt !== salt) { S.seen = {}; S.mySha = null; S.myDeltaSha = null; S.lastHash = ""; S.base = {}; baseIdx = null; }
     S.on = true; S.salt = salt; metaOk = true; save();
     mode = null; panelMsg = msg; renderPanel();
     syncNow("resume");
@@ -372,7 +475,7 @@
       $("syncOn").onclick = () => run(async () => { await ensureBranch(); mode = (await getMeta()) ? "join" : "setup"; panelMsg = ""; renderPanel(); });
       return;
     }
-    a.innerHTML = `<div><b>${esc(label())}</b>${S.lastSync ? ` <small style="display:inline">· last synced ${esc(when(S.lastSync))}</small>` : ""}</div>
+    a.innerHTML = `<div><b>${esc(label())}</b>${S.lastSync ? ` <small style="display:inline">· last synced ${esc(when(S.lastSync))}</small>` : ""}</div>${phase === "ok" && detail ? `<small>${esc(detail)}</small>` : ""}
       <div class="row" style="margin-top:6px;align-items:center"><input type="text" id="devName" value="${esc(S.deviceName)}" aria-label="This device's name" style="flex:1 1 140px;margin:0"><button class="btn" id="devSave">Rename device</button></div>
       <div class="row" style="margin-top:6px"><button class="btn" id="syncNowBtn">Sync now</button><button class="btn ghost" id="syncOff">Turn off on this device</button></div>${msg}`;
     $("syncNowBtn").onclick = () => { panelMsg = ""; syncNow("now"); };
@@ -406,5 +509,6 @@
     paint();
     if (canSync()) syncNow("resume");
   })();
-  window.__tolSync = { normalize, strength, suggest, syncNow: r => syncNow(r || "resume"), state: () => ({ phase, on: S.on, locked: !key, label: label(), running, dirtySince, lastWriteAt, nextTry, pushAt, detail, mySha: S.mySha }) };
+  window.__tolSync = { normalize, strength, suggest, syncNow: r => syncNow(r || "resume"), state: () => ({ phase, on: S.on, locked: !key, label: label(), running, dirtySince, lastWriteAt, nextTry, pushAt, detail, mySha: S.mySha, myDeltaSha: S.myDeltaSha, baseAt: S.baseAt || 0 }),
+                       _quick: quick, _indexOf: indexOf, _deltaOf: deltaOf, _overlay: overlay, _newBase: () => { baseIdx = null; } };
 })();

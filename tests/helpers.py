@@ -31,9 +31,9 @@ class _Quiet(http.server.SimpleHTTPRequestHandler):
         pass
 
 
-def serve(port):
-    """Serve docs/ at http://127.0.0.1:<port>/ in a background thread."""
-    h = functools.partial(_Quiet, directory=DOCS)
+def serve(port, directory=None):
+    """Serve docs/ (or another folder) at http://127.0.0.1:<port>/ in a background thread."""
+    h = functools.partial(_Quiet, directory=directory or DOCS)
     socketserver.TCPServer.allow_reuse_address = True
     srv = socketserver.TCPServer(("127.0.0.1", port), h)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
@@ -60,6 +60,9 @@ class FakeGitHub:
         self.refs = {"main": "m" * 40}
         self.files = {}
         self.offline = False
+        self.puts = []          # (path, bytes stored) for every write, to measure how much sync sends
+        self.blobs = {}         # every version ever written, by its sha (like git)
+        self.no_blobs = False   # True: answer 404 for /git/blobs (the app must fall back to reading by path)
 
     async def handle(self, route):
         req = route.request
@@ -89,6 +92,14 @@ class FakeGitHub:
                 return await j(422, {"message": "Reference already exists"})
             self.refs[name] = body["sha"]
             return await j(201, {"ref": body["ref"]})
+        mm = re.match(r"^/git/blobs/([0-9a-f]+)$", rest)
+        if mm and req.method == "GET":
+            data = None if self.no_blobs else self.blobs.get(mm.group(1))
+            if data is None:
+                return await j(404, {"message": "Not Found"})
+            if "raw" in req.headers.get("accept", ""):
+                return await route.fulfill(status=200, headers=cors, content_type="text/plain", body=data)
+            return await j(200, {"sha": mm.group(1), "encoding": "base64", "content": base64.b64encode(data).decode()})
         mm = re.match(r"^/contents/(.+)$", rest)
         if mm:
             p = mm.group(1)
@@ -112,6 +123,8 @@ class FakeGitHub:
                 data = base64.b64decode(body["content"])
                 sha = hashlib.sha1(data + str(time.time()).encode()).hexdigest()
                 self.files[p] = (data, sha)
+                self.blobs[sha] = data
+                self.puts.append((p, len(data)))
                 return await j(200 if cur else 201, {"content": {"sha": sha, "path": p}})
         return await j(200, [])
 

@@ -1,0 +1,104 @@
+name: Tests
+
+# Runs every browser test of the web app in three browser engines, on each change:
+#   chromium = Chrome, webkit = the engine of Safari (the iPhone), firefox = Firefox (the laptop).
+# GitHub is faked inside the tests, so nothing here touches the real sync data, and this never
+# runs for the tol-data branch.
+# Results: a table on the run's Summary page, and results/<browser>.txt on the "test-results" branch
+# (so Claude can read them without anyone copying anything).
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'tests/**', '.github/workflows/tests.yml']
+  pull_request:                     # changes made by Claude Code are tested before you keep them
+    paths: ['docs/**', 'tests/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit, firefox]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # one test compares with the previous version of the app
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright and the browser
+        run: |
+          pip install --quiet playwright
+          python -m playwright install --with-deps ${{ matrix.browser }}
+      - name: Run the tests
+        env:
+          BROWSER: ${{ matrix.browser }}
+          CHROME: ''
+        run: |
+          set +e
+          mkdir -p results; fail=0
+          for t in tests/test_*.py; do
+            n=$(basename "$t" .py)
+            echo "::group::$n"
+            timeout 1200 python "$t" 2>&1 | tee "results/$n.log"
+            code=${PIPESTATUS[0]}
+            echo "::endgroup::"
+            p=$(grep -c '^PASS ' "results/$n.log"); f=$(grep -c '^FAIL ' "results/$n.log")
+            echo "$n: pass=$p fail=$f exit=$code" | tee -a results/summary.txt
+            [ "$code" -ne 0 ] && fail=1
+          done
+          {
+            echo "browser: $BROWSER"
+            echo "commit: $GITHUB_SHA"
+            echo "when: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "result: $([ $fail -eq 0 ] && echo PASS || echo FAIL)"
+            cat results/summary.txt
+            echo "--- failures ---"
+            grep -H '^FAIL \|^Traceback\|Error:' results/*.log | sed 's#^results/##' | head -150
+          } > "results/$BROWSER.txt"
+          { echo "### $BROWSER"; echo '```'; cat "results/$BROWSER.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $fail
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results-${{ matrix.browser }}
+          path: results/
+          retention-days: 14
+
+  # Keep the three result files on a small branch of their own, so they can be read with one request.
+  report:
+    needs: test
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: got
+      - name: Publish results to the test-results branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          mkdir -p out/results
+          for d in got/results-*; do b=${d#got/results-}; cp "$d/$b.txt" "out/results/$b.txt" 2>/dev/null || true; done
+          cd out
+          echo "Results of the automatic tests (see .github/workflows/tests.yml). Nothing here is used by the app." > README.md
+          git init -q -b test-results
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Test results for ${GITHUB_SHA::7} [skip ci]"
+          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" test-results
