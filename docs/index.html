@@ -51,6 +51,8 @@ header{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area
   font-variant-numeric:tabular-nums;font-size:17px}
 .dot{width:10px;height:10px;border-radius:50%;background:#9a9a94}.dot.on{background:var(--on)}
 .goal{font-size:13px;color:var(--muted)}
+.here{border:1px solid var(--line);background:var(--paper);color:var(--green);font:600 15px "Hanken Grotesk",system-ui,sans-serif;border-radius:999px;min-width:40px;height:36px;padding:0 10px;cursor:pointer;white-space:nowrap}
+.here:hover{background:color-mix(in srgb,var(--green) 10%,var(--paper))}
 .sync{border:0;background:none;color:var(--muted);font:13px "Hanken Grotesk",system-ui,sans-serif;padding:6px 4px;min-height:36px;cursor:pointer;white-space:nowrap}
 .sync[data-state=ok]::before{content:"● ";color:var(--on)}.sync[data-state=syncing]::before{content:"◌ "}
 .sync[data-state=locked],.sync[data-state=error]{color:#b4462f}
@@ -193,6 +195,8 @@ mark.ch{background:color-mix(in srgb,#3f6fb5 25%,transparent)}
 @media (max-width:760px){
   .app{grid-template-columns:minmax(0,1fr)}
   .sync{font-size:12px;max-width:34vw;overflow:hidden;text-overflow:ellipsis}
+  .here .here-t{display:none}
+  .here{min-width:40px;padding:0 8px}
   aside{position:fixed;inset:0 auto 0 0;width:min(330px,86vw);z-index:10;transform:translateX(-105%);box-shadow:0 0 40px rgb(0 0 0/.25)}
   .drawer aside{transform:none}
   .drawer .scrim{display:block;position:fixed;inset:0;background:rgb(0 0 0/.3);z-index:9}
@@ -226,6 +230,7 @@ mark.ch{background:color-mix(in srgb,#3f6fb5 25%,transparent)}
       <button class="btn menu" id="menu" aria-label="Show pages">☰</button>
       <div class="crumbs" id="crumbs"></div>
       <button class="sync" id="syncPill" hidden aria-label="Sync status"></button>
+      <button class="here" id="claudeHere" title="Ask Claude here (Ctrl/⌘ K)" aria-label="Ask Claude here"><span aria-hidden="true">✦</span><span class="here-t"> Claude</span></button>
       <div class="clock"><span class="dot" id="dot"></span><span id="total">0:00:00</span><span class="goal" id="goal">of 5:00:00</span></div>
     </header>
     <div id="writer" aria-label="Your writing"></div>
@@ -312,7 +317,7 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
-const APP_VERSION = "0.7";
+const APP_VERSION = "0.8";
 
 /* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
    Served from /preview/<number>/, it uses its own storage names, filled once from
@@ -771,7 +776,7 @@ function showBar(st) {
   barState = st;
   const dot = col => `<span class="fdot" style="background:${col}"></span>`;
   if (st.mode === "sel") bar.innerHTML = `<button class="go" data-b="nest">Nest</button><button data-b="nestin">Nest in…</button>` +
-    (H.aiSelection ? `<button data-b="ai">Write deeper with AI</button>` : "");
+    (H.askSelection ? `<button data-b="ask">Ask Claude</button>` : "") + (H.aiSelection ? `<button data-b="ai">Write deeper with AI</button>` : "");
   else if (st.mode === "nest") bar.innerHTML = `<button class="go" data-b="new">New text</button><button data-b="existing">Existing page or fold…</button><button data-b="x" aria-label="Cancel">✕</button>`;
   else if (st.mode === "nestin") bar.innerHTML =
     `<button class="go" data-b="wrapnew" title="The words stay here and are shared with a new fold around them">Wrap here: new</button>` +
@@ -810,6 +815,7 @@ bar.addEventListener("click", e => {
   else if (b.dataset.b === "wrapold") openPicker(Object.assign({}, st, { action: "wrap" }));
   else if (b.dataset.b === "movenew") moveInto(st, null);
   else if (b.dataset.b === "moveold") openPicker(Object.assign({}, st, { action: "move" }));
+  else if (b.dataset.b === "ask" && H.askSelection) { hideBar(); H.askSelection({ id: st.id, s: st.s, e: st.e }); }
   else if (b.dataset.b === "ai" && H.aiSelection) { hideBar(); H.aiSelection({ id: st.id, s: st.s, e: st.e }); }
   else if (b.dataset.b === "toggle") { toggleFold(b.dataset.id, st); }
 });
@@ -1212,6 +1218,37 @@ window.TOL = {
   typed: () => typed(), endTyping: () => endTyping(), toast,
   getMemory: () => memory,
   setMemory(m) { memory = m; store.set(K.mem, memory); document.dispatchEvent(new CustomEvent("tol:changed", { detail: "memory" })); },
+  /* for agent.js (Claude in the app): the same actions your hands can do, plus undo */
+  ops: {
+    nest(id, s, e, text) {                    // a new fold on words s..e of node id, with text inside
+      const n = pages[id]; if (!live(n) || e <= s) return null;
+      const now = Date.now();
+      const f = { id: uid(), parentId: n.id, text: text || "", cursor: 0, createdAt: now, updatedAt: now, by: "Claude",
+                  anchor: makeAnchor(n.text || "", s, e), anchorAt: now };
+      pages[f.id] = f; ui.folds[f.id] = true; savePages(); saveUI(); changedEvent(); return f;
+    },
+    reparent(id, parentId, s, e) {            // nest an existing node under words s..e of parentId
+      const x = pages[id], n = pages[parentId]; if (!live(x) || !live(n) || isAncestor(x.id, n.id) || x.id === n.id) return null;
+      const now = Date.now();
+      pages[x.id] = Object.assign({}, x, { parentId: n.id, anchor: makeAnchor(n.text || "", s, e), anchorAt: now, updatedAt: now });
+      ui.folds[x.id] = true; savePages(); saveUI(); changedEvent(); return pages[x.id];
+    },
+    wrap(id, s, e, existingId) { wrapHere({ id, s, e }, existingId || null); return true; },
+    move(id, s, e, destId) { moveInto({ id, s, e }, destId || null); return true; },
+    focus(id) { if (live(pages[id])) { if (view !== "write") showView("write"); openPage(id, false); return true; } return false; },
+    setSetting(k, v) { if (k === "pause") ui.pause = Math.max(1, Math.min(15, +v)); if (k === "goal") ui.goal = Math.max(1, Math.min(12, +v)); saveUI(); paintClock(); prefsChanged(); }
+  },
+  /* put nodes back exactly as they were (undo): value null = the node didn't exist before */
+  restoreNodes(map) {
+    const now = Date.now();
+    for (const [id, v] of Object.entries(map)) {
+      if (v) pages[id] = Object.assign({}, v, { updatedAt: now }, v.anchor ? { anchorAt: now } : {});
+      else if (pages[id]) pages[id] = { id, deleted: true, updatedAt: now };
+    }
+    reconcileShares(); savePages(); changedEvent();
+    if (view === "write") { const sel = curSel(); renderWriter(); if (sel) placeCaret(sel, true); } renderList();
+  },
+  isAncestor: (a, b) => isAncestor(a, b),
   /* for sync.js */
   deviceLabel: DEVICE,
   data: () => ({ pages, intervals, memory }),
@@ -1282,6 +1319,7 @@ if (!SANDBOX && "serviceWorker" in navigator && location.protocol === "https:") 
 <script src="claude.js"></script>
 <script src="memory.js"></script>
 <script src="ai.js"></script>
+<script src="agent.js"></script>
 <script src="sync.js"></script>
 </body>
 </html>

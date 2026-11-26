@@ -80,6 +80,14 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 
 ---
 
+## C · Claude is the book (instant tier) ✅ built
+- ✅ ✦ Claude in the header (iPhone: ✦), Ctrl/⌘ K anywhere, "Ask Claude" on selected words
+- ✅ Streaming replies with tools over the book: read, search, add text, change words (asks first), new pages, folds, nest, wrap, move (asks first), open/focus, memory settings, questions, tests, looks, settings
+- ✅ Each action shows as a step line; "Undo Claude's changes" undoes a whole reply
+- ✅ Conversations kept per page or fold, synced encrypted
+- ✅ Marked Instant / Add-on / Deep; big app changes hand off to Claude Code
+- ✅ Offline and no-key messages; never counts on the writing clock
+
 ## M · Memory palace (folds as pegs) ✅ (built and tested in a browser; waiting for you to try)
 - ✅ M1 Practice: hide what's inside a fold with hints (first letters, word shapes, every other word, blank lines); press and hold to peek
 - ✅ M2 Test me: on any fold or page (it and everything inside), walked in order room by room or shuffled. Prompt = the fold's words with what's inside hidden (default), or the other way round (per fold), or your own questions, or questions the AI suggested and you kept

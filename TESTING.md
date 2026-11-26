@@ -1,5 +1,26 @@
 # The Tree of Life: Build Checklists
 
+---
+
+## C · Claude in the book
+
+**Switch it on (once per device)**
+- [ ] Settings → AI has your key (with Claude Max: claude.ai → Settings → Billing → API credits → Link organization; then platform.claude.com → API Keys → Create)
+- [ ] Tap **✦ Claude** in the header (laptop: or press Ctrl/⌘ K). A panel opens.
+
+**Talk and act**
+- [ ] Ask "what is this page about?" — the reply appears as it's written
+- [ ] Say "fold a memory under the word tree" — a fold appears under "tree", and a line like "Folded under “tree”" shows in the panel
+- [ ] Tap **Undo Claude's changes** — the fold is gone; your words are untouched
+- [ ] Say "change brown to green" — Claude asks first; **Don't** keeps your words, **Allow** changes them
+- [ ] Say "make the text a little bigger" — the look changes at once; Undo puts it back
+- [ ] Select some words → **Ask Claude** — the panel shows "About: …"
+- [ ] Your writing clock doesn't move while Claude works
+- [ ] Close and reopen the app: the conversation for that page is still there (and on your other device, with sync on)
+- [ ] Turn on Airplane Mode and try: "You're offline…", and your book still works
+- [ ] Ask for something big ("rebuild the sidebar") — it hands off to the Claude Code page (marked Deep)
+
+
 ## N · Nest in… (wrapping words outward)
 
 **Wrap here (shared)**

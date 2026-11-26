@@ -13,6 +13,7 @@ python3 tests/test_folds.py       # folds: create, overlap, picker, edits, stair
 python3 tests/test_folds_sync.py  # folds between two devices through encrypted sync
 python3 tests/test_memory.py      # Nest in (wrap/move), memory tests, practice, FSRS, AI (Anthropic faked), old data
 python3 tests/test_memory_sync.py # memory history, settings and shared words between two devices
+python3 tests/test_agent.py       # Claude in the book: streaming, tools, ask-first, undo, per-page conversations, offline (Anthropic faked)
 ```
 
 Set `CHROME=/path/to/chrome` if Chrome isn't at `/usr/bin/google-chrome`, and `SHOTS=/some/folder`

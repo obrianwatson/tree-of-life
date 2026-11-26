@@ -241,7 +241,8 @@
     const a = $("aiArea"); if (!a) return;
     const c = cfg(), u = usage();
     a.innerHTML = `<label><span>AI (feedback, questions, AI folds)</span><span>${c.key ? "key saved" : "no key"}</span></label>
-      <small>Uses your own Anthropic API key, kept only on this device. When you use AI, the fold's text and your answer go to Anthropic. AI never adds to your writing clock.</small>
+      <small>Uses your own Anthropic API key, kept only on this device. When you use AI (Claude in the book, feedback, questions, AI folds), the text it works on goes to Anthropic. AI never adds to your writing clock.</small>
+      <small>With Claude Max, your monthly API credits can pay for this: on claude.ai go to Settings → Billing → API credits → Link organization, then make a key at platform.claude.com → API Keys and paste it here.</small>
       <div class="row"><input type="password" id="aiKey" placeholder="${c.key ? "Key saved. Paste a new one to replace it" : "Paste your Anthropic key (sk-ant-…)"}" autocomplete="off" style="flex:1 1 200px">
         <button class="btn" id="aiSave">Save</button><button class="btn" id="aiTest"${c.key ? "" : " disabled"}>Test key</button><button class="btn" id="aiRemove"${c.key ? "" : " disabled"}>Remove</button></div>
       <div class="field"><label for="aiModel"><span>Model</span></label><select id="aiModel" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:15px 'Hanken Grotesk',system-ui,sans-serif">
@@ -271,6 +272,9 @@
   });
   document.addEventListener("input", e => { if (e.target.id === "aiCap") { const s = e.target.parentElement.querySelector("label span:last-child"); if (s) s.textContent = "$" + e.target.value; } });
 
-  T.ai = { ready, feedback, makeQuestions, deeper, generate, ask, _models: MODELS, _usage: usage };
+  /* for agent.js (Claude in the app): the key, model, spending cap and running estimate are shared */
+  function record(model, i, o) { const nu = usage(); nu.usd += price(model, i, o); nu.calls++; st.set(USE_KEY, nu); }
+  function capReached() { const c = cfg(), u = usage(); return c.cap > 0 && u.usd >= c.cap ? c.cap : 0; }
+  T.ai = { ready, feedback, makeQuestions, deeper, generate, ask, cfg, record, capReached, price, money, parseJSON, _models: MODELS, _usage: usage };
   T.rerender();
 })();

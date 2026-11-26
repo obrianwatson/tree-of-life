@@ -41,7 +41,8 @@
     let changed = false;
     M.settings = M.settings || {}; M.folds = M.folds || {}; M.prompts = M.prompts || {}; M.cards = M.cards || {};
     if (R.settings && (R.settings.updatedAt || 0) > (M.settings.updatedAt || 0)) { M.settings = R.settings; changed = true; }
-    for (const part of ["folds", "prompts"]) {
+    for (const part of ["folds", "prompts", "drills", "convos", "addons"]) {   // drills, Claude conversations, add-ons: added parts, newest wins per record
+      M[part] = M[part] || {};
       for (const [k, v] of Object.entries(R[part] || {})) {
         const mine = M[part][k];
         if (!mine || (v.updatedAt || 0) > (mine.updatedAt || 0)) { M[part][k] = v; changed = true; }
@@ -244,9 +245,10 @@
   /* ---------------- the list: what's due today ---------------- */
   H.listTop = () => {
     const n = dueCount();
-    return `<div class="item memrow"><button class="open" data-listtop="memory"><b>Memory</b><small>${n ? n + " to review today" : "Nothing due today"}</small></button></div>`;
+    const extra = H.listTopMore ? H.listTopMore() : "";
+    return `<div class="item memrow"><button class="open" data-listtop="memory"><b>Memory</b><small>${n ? n + " to review today" : "Nothing due today"}</small></button></div>` + extra;
   };
-  H.listTopClick = () => openHub();
+  H.listTopClick = k => { if (k === "memory" || !H.listTopOther) openHub(); else H.listTopOther(k); };
 
   /* ---------------- the fold menu (More…) ---------------- */
   const dlg = document.createElement("dialog"); dlg.id = "memDlg"; dlg.setAttribute("aria-labelledby", "memTitle");
@@ -271,6 +273,7 @@
         <div class="qform"><input type="text" id="qQ" placeholder="Your question"><input type="text" id="qA" placeholder="Answer (leave empty to use what's in this fold)">
           <div class="row"><button class="btn" data-act="addq">Add question</button></div></div></div>
       ${ai ? `<div class="row"><button class="btn" data-act="aiq">Make questions with AI</button><button class="btn" data-act="aideep">Write deeper with AI</button></div>` : ""}
+      ${H.menuExtra ? H.menuExtra(f) : ""}
       <p class="msg">${esc(msg || "")}</p>
       <div class="row"><button class="btn primary" data-act="close">Done</button></div>`;
   }
@@ -308,7 +311,18 @@
         m.folds[foldId] = Object.assign({}, FOLD_DEFAULT, m.folds[foldId] || {}, { memorize: true, updatedAt: now });
       });
     },
-    foldSettings: foldSet, setFold, dueItems, dueCount, isDue, settings, cardKey
+    foldSettings: foldSet, setFold, dueItems, dueCount, isDue, settings, cardKey,
+    /* for drill.js and agent.js */
+    scope: id => scopeNodes(id), items: nodes => itemsFor(nodes), diff: (a, b) => diffWords(a, b), cue: (t, s) => cue(t, s),
+    cardState: (c, set) => cardState(c, set || settings()), step: (st, g, t, set) => step(st, g, t, set || settings()), when: t => when(t),
+    record(card, promptKey, dir, g) {          // one graded attempt, kept forever (history is never dropped)
+      const now = Date.now();
+      save(m => { const c = m.cards[card] || { id: card, prompt: promptKey, dir: dir || "fwd", history: [] };
+        c.history = (c.history || []).concat([{ id: T.uid(), t: now, g, by: T.deviceLabel || T.DEVICE }]); c.updatedAt = now; m.cards[card] = c; });
+    },
+    getPart: part => Object.assign({}, mem()[part] || {}),
+    putRecord(part, id, rec) { save(m => { m[part] = m[part] || {}; m[part][id] = Object.assign({}, rec, { updatedAt: Date.now() }); }); },
+    hub: () => openHub(), startSession: (items, title, order) => startSession(items, title, order), startTest: (id, order) => startTest(id, order)
   };
 
   /* ---------------- the Memory hub (from the page list) ---------------- */
@@ -321,6 +335,7 @@
         ${cur ? `<button class="btn" data-hub="page">Test this page: “${esc(T.titleOf(cur).slice(0, 30))}”</button>` : ""}</div>
       <div class="field"><label><span>Order</span></label>
         <select id="hubOrder"><option value="order">Walk in order (room by room)</option><option value="shuffle">Shuffled</option></select></div>
+      ${H.hubExtra ? H.hubExtra() : ""}
       <p><small>Tip: on any fold, More… → Test me, Practice, or add your own questions.</small></p>
       <div class="row"><button class="btn" data-hub="close">Close</button></div>`;
     $("hubOrder").value = T.store.get(T.PREFIX + "mem-order", "order");
