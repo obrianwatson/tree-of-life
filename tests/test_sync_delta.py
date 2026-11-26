@@ -150,6 +150,22 @@ async def main():
         C.ok((await book(B))["pages"][first]["text"].startswith("Page 0\nrewritten again"), "the other device keeps the newer base's words")
         C.ok(not await others(B), "…and the leftover delta makes no 'Other version' page")
 
+        # 4b. GitHub's list a moment behind: it shows the OLD base next to a delta that belongs to the NEW base.
+        #     The delta must not be thrown away for good; it is used as soon as the list shows the new base.
+        await sync(A); await sync(B)
+        old_base = fake.files[base_path][1]
+        await A.evaluate("window.__tolSync._newBase()")
+        await A.evaluate(f"window.TOL.setText('{first}', 'Page 0\\nwritten into the new base')"); await A.wait_for_timeout(200); await sync(A)
+        await A.evaluate(f"window.TOL.setText('{first}', 'Page 0\\nwritten into the new base\\nand this line is only in the delta')"); await A.wait_for_timeout(200); await sync(A)
+        C.ok(fake.files[base_path][1] != old_base and fake.puts[-1][0] == delta_path, "(a new base, then a delta on top of it)")
+        fake.lag[base_path] = old_base                                  # the list still shows the old base
+        await sync(B)
+        C.ok("only in the delta" not in (await book(B))["pages"][first]["text"], "(with the list behind, the delta isn't applied to the wrong base)")
+        fake.lag.clear()                                                # the list catches up
+        await sync(B)
+        C.ok((await book(B))["pages"][first]["text"].endswith("and this line is only in the delta"), "when the list catches up, the delta is read again and nothing is missed")
+        C.ok(not await others(B), "…with no 'Other version' page")
+
         # 5. a file that can't be read is skipped; the device stays unlocked and keeps syncing
         junk = json.dumps({"format": "tol-sealed", "v": 1, "iv": base64.b64encode(os.urandom(12)).decode(), "ct": base64.b64encode(os.urandom(200)).decode(), "updatedAt": 1}).encode()
         fake.files["sync/aaaaaaaaaaaaaaaa.json"] = (junk, "a" * 40); fake.blobs["a" * 40] = junk

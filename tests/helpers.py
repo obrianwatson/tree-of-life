@@ -75,6 +75,7 @@ class FakeGitHub:
         self.puts = []          # (path, bytes stored) for every write, to measure how much sync sends
         self.blobs = {}         # every version ever written, by its sha (like git)
         self.no_blobs = False   # True: answer 404 for /git/blobs (the app must fall back to reading by path)
+        self.lag = {}           # path → an older sha: the folder list shows that older version (GitHub's list a moment behind)
 
     async def handle(self, route):
         req = route.request
@@ -119,7 +120,7 @@ class FakeGitHub:
                 if "tol-data" not in self.refs:
                     return await j(404, {"message": "No commit found for the ref"})
                 if p == "sync":
-                    items = [{"name": k.split("/")[1], "path": k, "sha": v[1], "type": "file"} for k, v in self.files.items() if k.startswith("sync/")]
+                    items = [{"name": k.split("/")[1], "path": k, "sha": self.lag.get(k, v[1]), "type": "file"} for k, v in self.files.items() if k.startswith("sync/")]
                     return await (j(200, items) if items else j(404, {"message": "Not Found"}))
                 if p not in self.files:
                     return await j(404, {"message": "Not Found"})

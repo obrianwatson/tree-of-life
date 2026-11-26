@@ -271,7 +271,10 @@
       const open = async (f, aad) => { const box = JSON.parse(await getListed(f)); return box && box.format === "tol-sealed" ? unseal(key, box, aad) : null; };
       let unread = 0;
       for (const [id, d] of Object.entries(devs)) {
-        const newBase = !!d.base && S.seen[id] !== d.base.sha, newDelta = !!d.delta && S.seen[id + ".d"] !== d.delta.sha;
+        // a delta that didn't belong to the listed base is remembered together with that base ("delta@base"):
+        // it is looked at again as soon as the listed base changes (GitHub's list can show the base a moment late)
+        const newBase = !!d.base && S.seen[id] !== d.base.sha,
+              newDelta = !!d.delta && S.seen[id + ".d"] !== d.delta.sha && S.seen[id + ".d"] !== d.delta.sha + "@" + (d.base ? d.base.sha : "");
         if (!newBase && !newDelta) continue;
         let base = null, delta = null;
         try {
@@ -284,7 +287,8 @@
           if (d.base) S.seen[id] = d.base.sha; if (d.delta) S.seen[id + ".d"] = d.delta.sha;
           continue;
         }
-        if (delta && d.base && delta.baseSha && delta.baseSha !== d.base.sha) delta = null;   // changes left over from an older base: the new base already holds them
+        const other = !!delta && !!d.base && !!delta.baseSha && delta.baseSha !== d.base.sha;
+        if (other) delta = null;                                 // not for the listed base: left over from an older base (the new base holds it all), or the list is a moment behind
         const remote = base && delta ? overlay(base, delta) : (base || delta);
         if (remote) {
           mergeInto(P, I, remote, changed, data.pages);
@@ -293,7 +297,7 @@
           if (remote.prefs && (remote.prefs.at || 0) > (prefs ? prefs.at : 0)) prefs = remote.prefs;
         }
         if (d.base) S.seen[id] = d.base.sha;
-        if (d.delta) S.seen[id + ".d"] = d.delta.sha;
+        if (d.delta) S.seen[id + ".d"] = other ? d.delta.sha + "@" + d.base.sha : d.delta.sha;
       }
       detail = unread ? `${unread} synced file${unread === 1 ? "" : "s"} from another device couldn't be read and ${unread === 1 ? "was" : "were"} skipped.` : "";
       if (changed.size) T.replaceData(P, I, changed, changed.has("#memory") ? M : null);

@@ -92,7 +92,7 @@
 
   /* ---------------- Recently deleted ---------------- */
   H.onDelete = (node, why) => {
-    if (!node || node.ref || node.portal || node.code || !(node.text || "").trim()) return;      // placements and markers hold no words of their own
+    if (!node || node.ref || node.portal || node.code || !(node.text || "").trim() || why === "undo") return;      // placements and markers hold no words of their own; an undo puts the words back where they were
     const at = Date.now();
     put("trash", at + ":" + node.id, { id: node.id, at, why: why || "you", title: T.titleOf(node), node: JSON.parse(JSON.stringify(node)) }).catch(() => {});
   };
