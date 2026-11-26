@@ -103,7 +103,7 @@
   }
 
   /* ---------------- reading a conversation ---------------- */
-  const FOOTER = /\n+---\n_Sent from the Tree of Life app[\s\S]*$/;
+  const FOOTER = /\n+---\n_Sent from the (?:Tree of Life app|Book of Living Waters)[\s\S]*$/;
   function cleanMine(body) { return (body || "").replace(FOOTER, "").replace(/^\s*@claude\s*/i, "").trim(); }
   const isWorking = b => /is working|working…|working\.\.\./i.test(b) && !/finished/i.test(b);
   const isError = b => /encountered an error|ran into an error/i.test(b);
@@ -122,7 +122,7 @@
     if (claudeDone) {
       const pr = await gh(repo(`/pulls`), { method: "POST", body: JSON.stringify({
         title: c.title.replace(TITLE_PREFIX, ""), head: b.name, base: "main",
-        body: `Made by Claude Code from the Tree of Life app. Closes #${c.n}` }) });
+        body: `Made by Claude Code from the Book of Living Waters. Closes #${c.n}` }) });
       c.pr = pr.number; saveChat();
     }
     return true;
@@ -238,7 +238,7 @@
       <p>Look-and-feel changes work right now. To let Claude Code build new things, give this device a GitHub key:</p>
       <ol>
         <li>On GitHub, open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">New fine-grained token</a> (Settings → Developer settings → Personal access tokens → Fine-grained tokens).</li>
-        <li>Name it <b>Tree of Life app</b>. Pick an expiration (1 year is fine).</li>
+        <li>Name it <b>Book of Living Waters</b>. Pick an expiration (1 year is fine).</li>
         <li>Repository access: <b>Only select repositories</b> → <b>tree-of-life</b>.</li>
         <li>Repository permissions: <b>Contents</b>, <b>Issues</b> and <b>Pull requests</b>, each set to <b>Read and write</b>.</li>
         <li>Tap <b>Generate token</b> and copy it (it starts with <code>github_pat_</code>).</li>
@@ -297,7 +297,7 @@
       const page = T.currentPageText();
       body += `\n\n<details><summary>The page I was on</summary>\n\n\`\`\`\n${page.replace(/```/g, "ˋˋˋ")}\n\`\`\`\n</details>`;
     }
-    body += `\n\n---\n_Sent from the Tree of Life app (${T.DEVICE}, version ${T.APP_VERSION}). Please follow CLAUDE.md and reply in plain words: what you changed and what I should try._`;
+    body += `\n\n---\n_Sent from the Book of Living Waters (${T.DEVICE}, version ${T.APP_VERSION}). Please follow CLAUDE.md and reply in plain words: what you changed and what I should try._`;
     try {
       const c = conv();
       if (c && !c.final) {

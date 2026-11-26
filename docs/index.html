@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Tree of Life">
+<meta name="apple-mobile-web-app-title" content="Living Waters">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#fdfdfb">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Tree of Life</title>
+<title>Book of Living Waters</title>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,500&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
 <style>
 /* VOICE: a quiet writer's notebook; nothing between you and the words
@@ -31,7 +31,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px soli
 aside{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;
   padding:calc(12px + env(safe-area-inset-top)) 10px calc(12px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left))}
 .side-head{display:flex;align-items:center;gap:8px;padding:4px 6px 12px}
-.side-head h1{font-size:18px;font-weight:600;margin:0;flex:1;white-space:nowrap}
+.side-head h1{font-size:17px;font-weight:600;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .item{display:flex;align-items:center;gap:2px;border-radius:10px}
 .item.current{background:color-mix(in srgb,var(--green) 13%,transparent)}
@@ -211,7 +211,7 @@ mark.ch{background:color-mix(in srgb,#3f6fb5 25%,transparent)}
 <div class="app" id="app">
   <aside aria-label="Pages">
     <div class="side-head">
-      <h1>Tree of Life</h1>
+      <h1>Book of Living Waters</h1>
       <div class="side-tools"><button class="btn ghost" id="claudeBtn">Claude</button><button class="btn ghost" id="settingsBtn" aria-label="Settings">Settings</button></div>
     </div>
     <div class="list" id="list"></div>
@@ -1102,7 +1102,7 @@ $("exp").onclick = () => {
   try {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-    a.download = "TreeOfLife-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".json";
+    a.download = "BookOfLivingWaters-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".json";
     document.body.appendChild(a); a.click(); a.remove();
     say("Saved. On the iPhone it's in the Files app, under Downloads.");
   } catch (e) { say("This browser blocked the download."); }
@@ -1123,7 +1123,7 @@ $("imp").onchange = async e => {
     savePages(); store.set(K.time, intervals); changedEvent();
     renderList(); if (live(pages[ui.last])) openPage(ui.last); else { const r = recentLive(); if (r) openPage(r.id); } paintClock();
     say(`Imported: ${added} new page${added === 1 ? "" : "s"}, ${updated} updated. Nothing was deleted.`);
-  } catch (err) { say("That file isn't a Tree of Life export. Nothing was changed."); }
+  } catch (err) { say("That file isn't a Book of Living Waters export. Nothing was changed."); }
 };
 let delArmed = null;
 $("delPage").onclick = () => {

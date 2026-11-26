@@ -1,6 +1,6 @@
-# The Tree of Life: Roadmap
+# The Book of Living Waters: Roadmap
 
-A book of pages and a timer. Writing is to enscribe oneself into life.
+The Book of Living Waters (formerly the Tree of Life). A book of pages and a timer. Writing is to enscribe oneself into life.
 
 How we work: one milestone at a time. Each build ends with its checklist in `TESTING.md`. A box is ticked only after it's been tried on the real device.
 

@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d2a3a"/>
+      <stop offset="0.55" stop-color="#174a57"/>
+      <stop offset="1" stop-color="#1f6a6e"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.5">
+      <stop offset="0" stop-color="#f6d58a" stop-opacity="0.55"/>
+      <stop offset="0.45" stop-color="#e9b45c" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#e9b45c" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="trunk" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5a3a24"/>
+      <stop offset="0.45" stop-color="#9a6a43"/>
+      <stop offset="0.7" stop-color="#b9875a"/>
+      <stop offset="1" stop-color="#5f3e27"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3fd0d6" stop-opacity="0.15"/>
+      <stop offset="0.3" stop-color="#7ef0f0"/>
+      <stop offset="0.7" stop-color="#bff8f4"/>
+      <stop offset="1" stop-color="#3fd0d6" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="pool" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#58d9dc" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#127c86" stop-opacity="0.9"/>
+    </linearGradient>
+    <radialGradient id="leaf" cx="0.5" cy="0.4" r="0.6">
+      <stop offset="0" stop-color="#9fd27a"/>
+      <stop offset="1" stop-color="#3f7d4a"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <circle cx="512" cy="430" r="470" fill="url(#glow)"/>
+
+  <!-- stream flowing behind the tree -->
+  <path d="M40 610 C 180 560, 320 640, 430 690 C 520 728, 600 700, 700 660 C 800 620, 900 600, 984 640"
+        stroke="url(#water)" stroke-width="22" fill="none" stroke-linecap="round"/>
+  <!-- the pool of living water the tree is rooted in -->
+  <ellipse cx="512" cy="800" rx="400" ry="96" fill="url(#pool)"/>
+  <ellipse cx="512" cy="786" rx="330" ry="58" fill="#8ff2ee" opacity="0.28"/>
+
+  <clipPath id="poolclip"><ellipse cx="512" cy="800" rx="400" ry="96"/></clipPath>
+  <g clip-path="url(#poolclip)" opacity="0.22">
+    <g transform="translate(0,1480) scale(1,-1)">
+      <path d="M430 730 C 408 650, 398 560, 424 470 C 438 420, 446 388, 440 350 L 584 350 C 578 388, 586 420, 600 470 C 626 560, 616 650, 594 730 Z" fill="#0b3a40"/>
+    </g>
+  </g>
+  <!-- roots reaching down into the water -->
+  <g stroke="#6b4429" stroke-linecap="round" fill="none" opacity="0.95">
+    <path d="M470 720 C 440 760, 400 785, 350 812" stroke-width="18"/>
+    <path d="M500 728 C 492 770, 470 800, 440 834" stroke-width="14"/>
+    <path d="M548 726 C 560 768, 585 798, 625 830" stroke-width="15"/>
+    <path d="M575 718 C 615 752, 650 776, 700 806" stroke-width="18"/>
+    <path d="M512 732 C 512 772, 515 805, 512 845" stroke-width="12"/>
+  </g>
+  <g stroke="#9ef3ef" stroke-linecap="round" fill="none" opacity="0.5">
+    <path d="M350 812 q 20 6 40 0" stroke-width="3"/>
+    <path d="M625 830 q 20 6 40 0" stroke-width="3"/>
+  </g>
+
+  <!-- baobab trunk: broad, bottle-shaped -->
+  <path d="M430 730
+           C 408 650, 398 560, 424 470
+           C 438 420, 446 388, 440 350
+           C 452 330, 470 326, 486 336
+           C 498 318, 526 318, 538 336
+           C 554 326, 572 330, 584 350
+           C 578 388, 586 420, 600 470
+           C 626 560, 616 650, 594 730
+           C 560 744, 464 744, 430 730 Z" fill="url(#trunk)"/>
+  <path d="M478 360 C 470 450, 468 560, 480 700" stroke="#c99a6c" stroke-width="5" fill="none" opacity="0.45"/>
+  <path d="M548 362 C 556 460, 560 570, 548 706" stroke="#4e321f" stroke-width="5" fill="none" opacity="0.4"/>
+
+  <!-- branches: like roots raised to the sky -->
+  <g stroke="#7d5232" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M478 352 C 450 300, 400 270, 330 250" stroke-width="22"/>
+    <path d="M400 268 C 380 235, 360 215, 320 200" stroke-width="10"/>
+    <path d="M490 345 C 470 280, 450 240, 410 190" stroke-width="16"/>
+    <path d="M512 342 C 510 280, 512 220, 512 165" stroke-width="18"/>
+    <path d="M534 345 C 556 280, 576 240, 614 190" stroke-width="16"/>
+    <path d="M546 352 C 574 300, 624 270, 694 250" stroke-width="22"/>
+    <path d="M624 268 C 644 235, 664 215, 704 200" stroke-width="10"/>
+  </g>
+
+  <!-- sparse crowns of leaves -->
+  <g fill="url(#leaf)">
+    <ellipse cx="318" cy="238" rx="64" ry="34"/>
+    <ellipse cx="312" cy="196" rx="40" ry="22"/>
+    <ellipse cx="404" cy="182" rx="54" ry="30"/>
+    <ellipse cx="512" cy="156" rx="64" ry="34"/>
+    <ellipse cx="620" cy="182" rx="54" ry="30"/>
+    <ellipse cx="712" cy="196" rx="40" ry="22"/>
+    <ellipse cx="706" cy="238" rx="64" ry="34"/>
+  </g>
+  <g fill="#c8ef9e" opacity="0.35">
+    <ellipse cx="300" cy="228" rx="26" ry="10"/>
+    <ellipse cx="498" cy="146" rx="28" ry="10"/>
+    <ellipse cx="694" cy="228" rx="26" ry="10"/>
+  </g>
+
+  <!-- the stream of living water flowing around and beneath -->
+  <path d="M80 860 C 220 900, 340 870, 460 880 C 600 892, 720 920, 944 870"
+        stroke="url(#water)" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.85"/>
+  <g stroke="#e9fffc" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.8">
+    <path d="M200 668 q 30 -10 60 4"/>
+    <path d="M700 772 q 30 -14 62 -2"/>
+    <path d="M300 878 q 30 -8 58 2"/>
+    <path d="M760 896 q 26 -10 52 0"/>
+  </g>
+  <g fill="#f5fffd">
+    <circle cx="430" cy="790" r="4"/><circle cx="610" cy="812" r="3"/>
+    <circle cx="512" cy="860" r="3.5"/><circle cx="250" cy="700" r="3"/><circle cx="830" cy="742" r="3"/>
+  </g>
+</svg>

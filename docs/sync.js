@@ -298,7 +298,7 @@
     const meta = { format: "tol-vault", version: 1, kdf: "PBKDF2-SHA256", iterations: ITERATIONS, salt, check: await seal(k, "tree-of-life", "tol-check") };
     try { await putFile(META, JSON.stringify(meta, null, 1), null); }
     catch (e) { if (e.status === 422 || e.status === 409) { mode = "join"; panelMsg = "Another device just set up sync. Enter that same passphrase."; renderPanel(); return; } throw e; }
-    await finishUnlock(k, salt, "Sync is on. Now open the Tree of Life on your other device: Settings → Sync → Turn on sync, and type the same passphrase.");
+    await finishUnlock(k, salt, "Sync is on. Now open the Book of Living Waters on your other device: Settings → Sync → Turn on sync, and type the same passphrase.");
   }
   async function join(pass) {
     const meta = await getMeta();

@@ -1,3 +1,5 @@
+> The app is now named **the Book of Living Waters** (BOLW); its logo is a baobab tree rooted in living water (`docs/logo.svg`). The repository and web address keep the old `tree-of-life` name. Never change the sync format strings (`tol-vault`, `tol-sealed`, check text `tree-of-life`).
+
 # Notes for Claude working on The Tree of Life
 
 The owner is a writer and songwriter, not a programmer. Reply in plain words: what changed, what they'll see, and exactly what to try. No code in replies unless asked.
