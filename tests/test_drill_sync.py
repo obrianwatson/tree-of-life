@@ -4,7 +4,7 @@ progress made on the phone comes back to the laptop (newest wins per record); no
 GitHub. Run:  python3 tests/test_drill_sync.py"""
 import asyncio, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, new_device, FakeGitHub, CHROME
+from helpers import serve, Checks, new_device, FakeGitHub, launch
 from test_folds_sync import settle, sync, open_settings, pages, PASS
 from test_agent import FakeClaude, tool_call, say, ask, KEY
 from test_drill import round_, again
@@ -18,7 +18,7 @@ async def main():
     url = serve(8835)
     fake, claude = FakeGitHub(), FakeClaude()
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
         ctxA, A = await new_device(br, url, fake, viewport={"width": 1280, "height": 800})
         ctxB, B = await new_device(br, url, fake, **p.devices["iPhone 13"])
         for c in (ctxA, ctxB):

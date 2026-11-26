@@ -5,7 +5,7 @@ editing, spaced review of a mastered drill, Claude building drills from plain wo
 clock, screenshots. Anthropic is faked. Run:  python3 tests/test_drill.py"""
 import asyncio, json, os, re, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, CHROME
+from helpers import serve, Checks, launch
 from test_folds import pages
 from test_agent import FakeClaude, tool_call, say, ask, KEY, clock
 from playwright.async_api import async_playwright
@@ -59,7 +59,7 @@ async def main():
     url = serve(8834)
     fake = FakeClaude()
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
         ctx = await br.new_context(viewport={"width": 1280, "height": 800})
         await ctx.add_init_script(KEY)
         await ctx.route("https://api.anthropic.com/**", fake.handle)

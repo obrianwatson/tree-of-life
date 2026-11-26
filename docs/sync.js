@@ -120,7 +120,7 @@
   const PUSH_AFTER = 5000, MIN_GAP = 6000, MAX_WAIT = 30000, POLL = 10000;
   let dirtySince = 0, lastWriteAt = 0;
   let key = null, phase = "off", detail = "", running = false, again = false, timer = null, backoff = 0, nextTry = 0, metaOk = false, mode = null, panelMsg = "";
-  const canSync = () => !T.SANDBOX && S.on && !!token() && !!key;
+  const canSync = () => !T.SANDBOX && !st.paused && S.on && !!token() && !!key;   // paused: the book is open in another tab
 
   function label() {
     if (T.SANDBOX) return "Preview: sync off";

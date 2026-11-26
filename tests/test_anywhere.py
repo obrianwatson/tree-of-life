@@ -7,7 +7,7 @@ under selected words, "Change this with Claude Code", Claude's code tools, offli
 and notes sync. Run:  python3 tests/test_anywhere.py"""
 import asyncio, os, re, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, new_device, FakeGitHub, CHROME
+from helpers import serve, Checks, new_device, FakeGitHub, launch
 from test_folds import select, pages, nest_new, by_text, root_id
 from test_folds_sync import settle, sync, open_settings, PASS
 from test_agent import FakeClaude, tool_call, say, ask, KEY
@@ -31,7 +31,7 @@ async def main():
     url = serve(8836)
     fake, claude = FakeGitHub(), FakeClaude()
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
         ctxA, A = await new_device(br, url, fake, viewport={"width": 1280, "height": 800})
         await ctxA.add_init_script(KEY); await ctxA.route("https://api.anthropic.com/**", claude.handle)
         await A.reload(); await A.wait_for_timeout(400)

@@ -1,7 +1,7 @@
 """The basics still work: pages, the writing clock, hold, Claude page design changes. Run:  python3 tests/test_basics.py"""
 import asyncio, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, new_device, CHROME
+from helpers import serve, Checks, new_device, launch
 from playwright.async_api import async_playwright
 
 C = Checks()
@@ -9,7 +9,7 @@ C = Checks()
 async def main():
     url = serve(8816)
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
         ctx, pg = await new_device(br, url, token=False, viewport={"width": 1280, "height": 800})
         await pg.click("#writer textarea")
         await pg.keyboard.type("I still set the table for two\nYour chair still faces the window", delay=60)

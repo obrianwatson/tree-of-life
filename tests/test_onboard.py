@@ -8,7 +8,7 @@ publish to GitHub (pull request, or main after confirming); a newer published ve
 Anthropic and GitHub are faked. Run:  python3 tests/test_onboard.py"""
 import asyncio, json, os, re, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, new_device, FakeGitHub, CHROME
+from helpers import serve, Checks, new_device, FakeGitHub, launch
 from test_folds import pages
 from test_folds_sync import settle, sync, open_settings, PASS
 from test_agent import FakeClaude, tool_call, say, ask, KEY
@@ -54,7 +54,7 @@ async def main():
     url = serve(8837)
     gh, claude = GitHub(), FakeClaude()
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
         ctxA, A = await new_device(br, url, gh, viewport={"width": 1280, "height": 800})
         await ctxA.add_init_script(KEY); await ctxA.route("https://api.anthropic.com/**", claude.handle)
         await A.reload()

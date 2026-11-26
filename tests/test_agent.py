@@ -4,7 +4,7 @@ whole reply, conversation kept per page, offline and no-key messages, hand-off t
 Anthropic is faked (streaming SSE, tool_use). Run:  python3 tests/test_agent.py"""
 import asyncio, json, os, re, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, new_device, CHROME
+from helpers import serve, Checks, new_device, launch
 from test_folds import select, pages, root_id
 from playwright.async_api import async_playwright
 
@@ -77,7 +77,7 @@ async def main():
     url = serve(8831)
     fake = FakeClaude()
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
 
         # ---------- no key: Claude says how to switch it on ----------
         ctx0, pg0 = await new_device(br, url, token=False, viewport={"width": 1280, "height": 800})

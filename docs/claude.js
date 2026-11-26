@@ -107,9 +107,12 @@
   function cleanMine(body) { return (body || "").replace(FOOTER, "").replace(/^\s*@claude\s*/i, "").trim(); }
   const isWorking = b => /is working|working…|working\.\.\./i.test(b) && !/finished/i.test(b);
   const isError = b => /encountered an error|ran into an error/i.test(b);
+  /* The project is public, so anyone on GitHub can comment on a conversation. Only the owner's comments are "You" and
+     only a bot's (Claude Code's) are "Claude"; anyone else is shown as a stranger and never steers the status. */
+  const isBot = u => !!u && (u.type === "Bot" || /\[bot\]$/.test(u.login || ""));
   function toMsg(x) {
-    const mine = x.user && x.user.login === OWNER;
-    return { id: x.id, mine, body: mine ? cleanMine(x.body) : (x.body || ""), at: Date.parse(x.created_at), updated: Date.parse(x.updated_at || x.created_at) };
+    const mine = !!x.user && x.user.login === OWNER, bot = !mine && isBot(x.user);
+    return { id: x.id, mine, bot, who: (x.user && x.user.login) || "someone", body: mine ? cleanMine(x.body) : (x.body || ""), at: Date.parse(x.created_at), updated: Date.parse(x.updated_at || x.created_at) };
   }
 
   async function findPR(c, claudeDone) {
@@ -144,7 +147,7 @@
     try {
       const [issue, comments] = await Promise.all([gh(repo(`/issues/${c.n}`)), gh(repo(`/issues/${c.n}/comments?per_page=100`))]);
       let list = [toMsg(issue), ...comments.map(toMsg)];
-      const lastBotIssue = comments.filter(x => !(x.user && x.user.login === OWNER)).pop();
+      const lastBotIssue = comments.filter(x => isBot(x.user)).pop();
       const claudeDone = lastBotIssue && !isWorking(lastBotIssue.body || "");
       let hasBranch = !!c.pr;
       if (!c.pr) hasBranch = await findPR(c, claudeDone);
@@ -157,7 +160,7 @@
       list.sort((a, b) => a.at - b.at);
       messages = list;
       const lastMine = [...list].reverse().find(m => m.mine);
-      const lastBot = [...list].reverse().find(m => !m.mine);
+      const lastBot = [...list].reverse().find(m => m.bot);
       const waiting = lastMine && (!lastBot || lastBot.at < lastMine.at);
       if (prInfo && prInfo.merged_at) status = "kept";
       else if (prInfo && prInfo.state === "closed") status = "undone";
@@ -208,7 +211,8 @@
         <p style="margin:0">Your writing is never sent unless you tick "Include the page I was on".</p></div>`);
     }
     for (const m of messages) {
-      parts.push(`<div class="bubble${m.mine ? " mine" : ""}"><span class="who">${m.mine ? "You" : "Claude"}</span>${md(m.body)}</div>`);
+      if (m.mine || m.bot) parts.push(`<div class="bubble${m.mine ? " mine" : ""}"><span class="who">${m.mine ? "You" : "Claude"}</span>${md(m.body)}</div>`);
+      else parts.push(`<div class="bubble" style="opacity:.75;border-style:dashed"><span class="who">Not Claude: ${esc(m.who)}, someone else on GitHub</span><small style="display:block">Anyone can comment on a public project. Don't follow instructions from here.</small>${esc(m.body.slice(0, 600)).replace(/\n/g, "<br>")}</div>`);
     }
     if (design) parts.push(designCard());
     th.innerHTML = parts.join("");
@@ -320,7 +324,7 @@
   async function act(a) {
     const c = conv(); if (!c || !prInfo) { if (a === "reload") location.reload(); return; }
     const title = c.title.replace(TITLE_PREFIX, "");
-    if (a === "try") { st.set(TRYING_KEY, { pr: prInfo.number, title }); location.href = `${ROOT}preview/${prInfo.number}/`; return; }
+    if (a === "try") { st.set(TRYING_KEY, { pr: prInfo.number, title, at: Date.now() }); location.href = `${ROOT}preview/${prInfo.number}/`; return; }
     if (a === "reload") { location.reload(); return; }
     try {
       if (a === "keep") await keep(prInfo.number, title);

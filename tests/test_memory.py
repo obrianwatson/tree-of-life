@@ -3,7 +3,7 @@ FSRS scheduling, practice cues, old data. One device; Anthropic is faked.
 Run:  python3 tests/test_memory.py"""
 import asyncio, json, os, re, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, new_device, CHROME
+from helpers import serve, Checks, new_device, launch
 from test_folds import nest_new, select, pages, root_id
 from playwright.async_api import async_playwright
 
@@ -70,7 +70,7 @@ async def main():
     url = serve(8821)
     ai = FakeAnthropic()
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
         ctx, pg = await new_device(br, url, viewport={"width": 1280, "height": 800})
         await ctx.route("https://api.anthropic.com/**", ai.handle)
 

@@ -2,7 +2,7 @@
 Run:  python3 tests/test_folds_sync.py"""
 import asyncio, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, new_device, FakeGitHub, CHROME
+from helpers import serve, Checks, new_device, FakeGitHub, launch
 from test_folds import nest_new, select
 from playwright.async_api import async_playwright
 
@@ -36,7 +36,7 @@ async def main():
     url = serve(8814)
     fake = FakeGitHub()
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
         ctxA, A = await new_device(br, url, fake, viewport={"width": 1280, "height": 800})
         ctxB, B = await new_device(br, url, fake, **p.devices["iPhone 13"])
 

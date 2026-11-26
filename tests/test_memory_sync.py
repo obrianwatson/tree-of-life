@@ -2,7 +2,7 @@
 Run:  python3 tests/test_memory_sync.py"""
 import asyncio, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, new_device, FakeGitHub, CHROME
+from helpers import serve, Checks, new_device, FakeGitHub, launch
 from test_folds import nest_new, select
 from test_folds_sync import settle, sync, open_settings, pages, PASS
 from playwright.async_api import async_playwright
@@ -23,7 +23,7 @@ async def main():
     url = serve(8822)
     fake = FakeGitHub()
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
         ctxA, A = await new_device(br, url, fake, viewport={"width": 1280, "height": 800})
         ctxB, B = await new_device(br, url, fake, **p.devices["iPhone 13"])
 

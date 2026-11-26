@@ -126,6 +126,13 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 .banner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;
   background:var(--green);color:#fff;font-weight:500}
 .banner[hidden]{display:none}
+.savewarn{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;background:#a3271b;color:#fff;font:500 15px/1.4 "Hanken Grotesk",system-ui,sans-serif;position:relative;z-index:40}
+.savewarn[hidden]{display:none}
+.savewarn>span{flex:1 1 240px}
+.savewarn .btn{height:40px;background:#fff;color:#1c1d1b;border-color:#fff}
+.othertab{position:fixed;inset:0;z-index:10001;background:var(--paper);color:var(--ink);display:grid;place-content:center;gap:12px;padding:28px;text-align:center;font:17px/1.5 "Hanken Grotesk",system-ui,sans-serif}
+.othertab[hidden]{display:none}
+.othertab p{max-width:440px;margin:0 auto}
 .banner span{flex:1 1 220px}
 .banner .btn{height:40px;background:#fff;color:#1c1d1b;border-color:#fff}
 .banner .btn.ghost{background:transparent;color:#fff;border-color:rgb(255 255 255/.6)}
@@ -213,6 +220,8 @@ mark.ch{background:color-mix(in srgb,#3f6fb5 25%,transparent)}
 </head>
 <body>
 <div class="banner" id="banner" hidden></div>
+<div class="savewarn" id="saveWarn" hidden role="alert"></div>
+<div class="othertab" id="otherTab" hidden role="alertdialog" aria-labelledby="otT"></div>
 <div class="app" id="app">
   <aside aria-label="Pages">
     <div class="side-head">
@@ -303,14 +312,22 @@ mark.ch{background:color-mix(in srgb,#3f6fb5 25%,transparent)}
     <button class="btn primary" id="closeSet">Done</button>
   </div>
   <p class="msg" id="msg"></p>
+  <p><small id="backupNote"></small></p>
 </dialog>
 
 <script>
 {
 const $ = id => document.getElementById(id);
 const store = {
+  bad: {},          // names whose last save failed (this device's storage is full or blocked)
+  paused: false,    // true when the book is open in another tab: this one stops saving, so the two can't overwrite each other
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  set(k, v) {
+    if (store.paused) return true;
+    try { localStorage.setItem(k, JSON.stringify(v)); if (store.bad[k]) { delete store.bad[k]; store.changed(); } return true; }
+    catch (e) { if (!store.bad[k]) { store.bad[k] = Date.now(); store.changed(); } return false; }
+  },
+  changed() { try { paintSaveWarn(); } catch (e) {} }
 };
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 const isPhone = /iPhone|iPod|Android.+Mobile/.test(navigator.userAgent);
@@ -318,7 +335,7 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
-const APP_VERSION = "1.1";
+const APP_VERSION = "1.2";
 
 /* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
    Served from /preview/<number>/, it uses its own storage names, filled once from
@@ -332,6 +349,10 @@ if (SANDBOX && !store.get(PREFIX + "seeded", false)) {
   }
   store.set(PREFIX + "seeded", true);
 }
+if (!SANDBOX) try {                         // copies kept by previews that are over only fill this device's storage: clear them
+  const t = store.get("tol-trying", null), keep = t && t.at && Date.now() - t.at < 3 * 86400000 ? String(t.pr) : "";
+  for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i) || "", m = /^tol-sbx([^-]+)-/.exec(k); if (m && m[1] !== keep) localStorage.removeItem(k); }
+} catch (e) {}
 
 /* ---------- data: pages (each page can hold pages) ---------- */
 const K = { pages: PREFIX + "pages", time: PREFIX + "intervals", ui: PREFIX + "ui", theme: PREFIX + "theme", mem: PREFIX + "memory" };
@@ -343,7 +364,43 @@ let intervals = store.get(K.time, []);
 const ui = Object.assign({ last: null, pause: 4, goal: 5, open: {}, folds: {}, showFolds: true, active: null }, store.get(K.ui, {}));
 if (!ui.folds || typeof ui.folds !== "object") ui.folds = {};
 const saveUI = () => store.set(K.ui, ui);
-function savePages() { if (!store.set(K.pages, pages)) say("Couldn't save on this device. Export everything to keep it safe."); }
+function savePages() { return store.set(K.pages, pages); }   // a failed save shows the red "Not saved" bar (paintSaveWarn)
+/* A save failed (storage full or blocked): say so where the writer is looking, until a save works again. */
+function paintSaveWarn() {
+  const w = $("saveWarn"), keys = Object.keys(store.bad); if (!w) return;
+  if (!keys.length) { if (!w.hidden) { w.hidden = true; document.dispatchEvent(new CustomEvent("tol:saveok")); } return; }
+  if (w.hidden) {
+    w.innerHTML = `<span><b>Not saved.</b> This device's storage is full or blocked, so your newest words are only on this screen. <span id="swMore">Keep this page open and save a copy now.</span></span><button class="btn" id="swExport">Save a copy now</button>`;
+    w.hidden = false;
+    $("swExport").onclick = () => exportAll();
+  }
+  document.dispatchEvent(new CustomEvent("tol:savefail", { detail: keys }));
+}
+/* A deleted page becomes a small marker. Its words go to "Recently deleted" on this device first (safe.js). */
+function bury(id, at, why) {
+  const p = pages[id]; if (!p) return;
+  if (live(p) && H.onDelete) { try { H.onDelete(p, why || "you"); } catch (e) {} }
+  pages[id] = { id, deleted: true, updatedAt: at || Date.now() };
+}
+/* A page can't be inside itself. If a loop of parents ever forms (two devices moving pages into each other),
+   one page of the loop moves to the top level so nothing is hidden. The choice is the same on every device. */
+function healTree() {
+  let fixed = 0; const state = {};
+  for (const start of Object.keys(pages)) {
+    if (state[start]) continue;
+    const chain = []; let p = pages[start];
+    while (live(p) && !state[p.id]) { state[p.id] = 1; chain.push(p.id); p = p.parentId ? pages[p.parentId] : null; }
+    if (live(p) && state[p.id] === 1) {
+      const loop = chain.slice(chain.indexOf(p.id)), pick = loop.slice().sort()[0], n = pages[pick];
+      const at = Math.max(...loop.map(id => pages[id].updatedAt || 0)) + 1;
+      pages[pick] = Object.assign({}, n, { parentId: null, updatedAt: at },
+        n.anchor ? { anchor: Object.assign({}, n.anchor, { lost: true }), anchorAt: Math.max(at, (n.anchorAt || 0) + 1) } : {});
+      fixed++;
+    }
+    for (const id of chain) state[id] = 2;
+  }
+  return fixed;
+}
 /* Only real edits (typing, new page, delete, import, a kept conflict) count as changes for syncing. */
 
 function newPage(parentId) {
@@ -961,6 +1018,10 @@ function moveInto(st, destId) {
   setNodeText(n.id, text.slice(0, st.s) + "⤷" + text.slice(st.e));
   for (const m of inner) {
     const f = pages[m.f.id];
+    if (f.id === d.id || isAncestor(f.id, d.id)) {         // the words moved into this very fold (or into something inside it): it stays here, under the marker
+      pages[f.id] = Object.assign({}, f, { anchor: makeAnchor(pages[n.id].text || "", st.s, st.s + 1), anchorAt: now });
+      continue;
+    }
     pages[f.id] = Object.assign({}, f, { parentId: d.id, anchor: makeAnchor(d.text, off + (m.s - st.s), off + (m.e - st.s)), anchorAt: now, updatedAt: now });
   }
   const L = { id: uid(), parentId: n.id, text: "", cursor: 0, createdAt: now, updatedAt: now, portal: d.id,
@@ -976,7 +1037,7 @@ function undoMove() {
   const snap = undoSnap; if (!snap) return; undoSnap = null;
   const now = Date.now();
   for (const [id, v] of Object.entries(snap.nodes)) if (v) pages[id] = Object.assign(v, { updatedAt: now, anchorAt: v.anchor ? now : v.anchorAt });
-  for (const id of snap.created) pages[id] = { id, deleted: true, updatedAt: now };
+  for (const id of snap.created) bury(id, now, "undo");
   savePages(); changedEvent(); renderWriter(); renderList();
   toast("Move undone.");
 }
@@ -1075,10 +1136,10 @@ function endTyping() {
   bank(typeStart, typeLast + 400);           // a keystroke itself takes a moment
   typeStart = typeLast = null; paintClock();
 }
-function setHold(v) {
+function setHold(v, endAt) {
   if (v === holdDown) return;
   holdDown = v;
-  if (v) holdSince = Date.now(); else { bank(holdSince, Date.now()); holdSince = null; }
+  if (v) holdSince = Date.now(); else { bank(holdSince, endAt || Date.now()); holdSince = null; }
   $("thumb").classList.toggle("on", v); $("hint").classList.toggle("held", v);
   $("thumbLabel").textContent = v ? "writing" : "hold";
   $("hint").textContent = v ? "Counting while you hold Option" : "Hold Option to count thinking time";
@@ -1104,12 +1165,17 @@ function paintClock() {
   $("dot").classList.toggle("on", holdDown || typeStart !== null);
   $("goal").textContent = "of " + fmt(ui.goal * 3600);
 }
-setInterval(paintClock, 500);
+let beat = Date.now();
+setInterval(() => {          // the heartbeat: a long silence means the device slept; time asleep is never counted
+  const now = Date.now();
+  if (holdDown && now - beat > 10000) setHold(false, beat + 500);
+  beat = now; paintClock();
+}, 500);
 
 // laptop: hold Option
 document.addEventListener("keydown", e => { if (e.key === "Alt" && !e.repeat) setHold(true); });
 document.addEventListener("keyup", e => { if (e.key === "Alt") setHold(false); });
-window.addEventListener("blur", () => { setHold(false); endTyping(); });
+window.addEventListener("blur", () => { setHold(false); endTyping(); savePages(); });
 document.addEventListener("visibilitychange", () => { if (document.hidden) { setHold(false); endTyping(); savePages(); } });
 
 // phone: thumb button, kept just above the keyboard
@@ -1133,42 +1199,100 @@ $("scrim").onclick = closeDrawer;
 
 /* ---------- settings, export, import, delete ---------- */
 const dlg = $("settings"), say = t => { $("msg").textContent = t; };
+function storageUse() {       // how much of this device's small text storage the book uses (characters)
+  const out = { total: 0, parts: {} };
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i) || "", n = k.length + (localStorage.getItem(k) || "").length; out.total += n; out.parts[k] = n; } } catch (e) {}
+  out.limit = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Firefox/.test(navigator.userAgent)) ? 2500000 : 5000000;   // Safari counts more strictly
+  return out;
+}
 function paintSettings() {
   $("pause").value = ui.pause; $("pauseVal").textContent = ui.pause + " s";
   $("goalIn").value = ui.goal; $("goalVal").textContent = ui.goal + " h";
+  const b = $("backupNote");
+  if (b) {
+    const u = storageUse(), pct = Math.round(100 * u.total / u.limit), sync = window.__tolSync && window.__tolSync.state();
+    b.textContent = `Backups: ${sync && sync.on && !sync.locked ? "sync is on (a locked copy is on GitHub)" : "sync is off"} · last export from this device: ${ui.exportedAt ? new Date(ui.exportedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "never"}. `
+      + `Storage on this device: ${(u.total / 1e6).toFixed(2)} MB used, about ${pct}% of what it can hold.${pct >= 70 ? " It's getting full: export now, and tell Claude." : ""}`;
+  }
 }
 $("settingsBtn").onclick = () => { say(""); paintSettings(); closeDrawer(); document.dispatchEvent(new Event("tol:settings")); dlg.showModal(); };
 $("closeSet").onclick = () => dlg.close();
 const prefsChanged = () => document.dispatchEvent(new CustomEvent("tol:changed", { detail: "prefs" }));
 $("pause").oninput = e => { ui.pause = +e.target.value; saveUI(); paintSettings(); prefsChanged(); };
 $("goalIn").oninput = e => { ui.goal = +e.target.value; saveUI(); paintSettings(); paintClock(); prefsChanged(); };
-$("exp").onclick = () => {
-  const text = JSON.stringify({ format: "tol-text-export", version: 1, exportedAt: new Date().toISOString(),
-                                device: DEVICE, pages, intervals, memory, settings: { pause: ui.pause, goal: ui.goal } }, null, 1);
+/* Export: everything in one file. On the phone the share sheet ("Save to Files") is the reliable way to keep a file. */
+const exportText = () => JSON.stringify({ format: "tol-text-export", version: 1, exportedAt: new Date().toISOString(),
+                                          device: DEVICE, pages, intervals, memory, settings: { pause: ui.pause, goal: ui.goal } }, null, 1);
+const exportName = () => "BookOfLivingWaters-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".json";
+const tell = t => { if (dlg.open) say(t); else toast(t); };
+function download(text, name) {
+  const a = document.createElement("a"), url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+async function exportAll() {
+  const text = exportText(), name = exportName(), done = () => { ui.exportedAt = Date.now(); saveUI(); paintSettings(); };
   try {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-    a.download = "BookOfLivingWaters-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".json";
-    document.body.appendChild(a); a.click(); a.remove();
-    say("Saved. On the iPhone it's in the Files app, under Downloads.");
-  } catch (e) { say("This browser blocked the download."); }
-};
+    if (isPhone && navigator.canShare && window.File) {
+      const file = new File([text], name, { type: "application/json" });
+      if (navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); done(); tell("Saved. Keep that file somewhere safe (Files or iCloud Drive)."); return; }
+        catch (e) { if (e && e.name === "AbortError") { tell("Nothing was saved (the share sheet was closed)."); return; } }
+      }
+    }
+    download(text, name); done();
+    tell("Saved. On the iPhone it's in the Files app, under Downloads.");
+  } catch (e) { tell("This browser blocked the download."); }
+}
+$("exp").onclick = () => exportAll();
+/* Bringing in pages from an export or a safety copy. The newer version of each page wins and nothing is ever
+   deleted: a page that's alive here stays, even if the file says it was deleted. Returns what happened, and
+   `gone`: pages that are in the file but were deleted here later (they can be brought back with revive). */
+function mergeData(d) {
+  const out = { added: 0, updated: 0, gone: [] };
+  for (const [key, p] of Object.entries(d.pages || {})) {
+    if (!p || typeof p !== "object" || typeof p.id !== "string" || p.id !== key) continue;      // not a page
+    const mine = pages[p.id];
+    if (!mine) { pages[p.id] = p; if (!p.deleted) out.added++; }
+    else if (p.deleted) continue;                                                            // importing never deletes
+    else if (mine.deleted) { if ((p.text || "").trim() && !p.ref && !p.portal && !p.code) out.gone.push(p); }
+    else if ((p.updatedAt || 0) > (mine.updatedAt || 0)) { pages[p.id] = p; out.updated++; }
+  }
+  const seen = new Set(intervals.map(i => `${i.start}:${i.end}:${i.device}`));
+  for (const i of Array.isArray(d.intervals) ? d.intervals : []) {
+    if (!i || !isFinite(i.start) || !isFinite(i.end) || i.end <= i.start) continue;
+    const k = `${i.start}:${i.end}:${i.device}`; if (!seen.has(k)) { seen.add(k); intervals.push(i); }
+  }
+  if (d.memory && typeof d.memory === "object" && window.TOL.mergeMemory) { const m = JSON.parse(JSON.stringify(memory)); if (window.TOL.mergeMemory(m, d.memory)) { memory = m; store.set(K.mem, memory); document.dispatchEvent(new Event("tol:memory")); } }
+  healTree(); reconcileShares();
+  savePages(); store.set(K.time, intervals); changedEvent();
+  renderList(); if (live(pages[ui.last])) openPage(ui.last); else { const r = recentLive(); if (r) openPage(r.id); } paintClock();
+  return out;
+}
+/* Bring deleted pages back (from Recently deleted, an export or a safety copy): they return as they were, as the newest version. */
+function revive(nodes) {
+  const now = Date.now(); let n = 0;
+  for (const p of nodes || []) {
+    if (!p || typeof p.id !== "string" || live(pages[p.id])) continue;
+    pages[p.id] = Object.assign({}, p, { updatedAt: now }, p.anchor ? { anchorAt: now } : {}); delete pages[p.id].deleted; n++;
+  }
+  if (n) { healTree(); reconcileShares(); savePages(); changedEvent(); renderList(); if (view === "write") { const sel = curSel(); renderWriter(); if (sel) placeCaret(sel, true); } }
+  return n;
+}
+let impGone = [];
 $("imp").onchange = async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   try {
     const d = JSON.parse(await f.text());
-    if (d.format !== "tol-text-export" || typeof d.pages !== "object") throw 0;
-    let added = 0, updated = 0;                      // merge: newer version of each page wins, nothing is deleted
-    for (const p of Object.values(d.pages)) {
-      const mine = pages[p.id];
-      if (!mine) { pages[p.id] = p; added++; } else if (p.updatedAt > mine.updatedAt) { pages[p.id] = p; updated++; }
+    if (d.format !== "tol-text-export" || !d.pages || typeof d.pages !== "object") throw 0;
+    const r = mergeData(d); impGone = r.gone;
+    say(`Imported: ${r.added} new page${r.added === 1 ? "" : "s"}, ${r.updated} updated. Nothing was deleted.`);
+    if (impGone.length) {
+      const b = document.createElement("button"); b.className = "btn"; b.id = "impRevive";
+      b.textContent = `Bring back ${impGone.length} page${impGone.length === 1 ? "" : "s"} from this file that ${impGone.length === 1 ? "was" : "were"} deleted here`;
+      b.onclick = () => { const n = revive(impGone); impGone = []; say(`Brought back ${n} page${n === 1 ? "" : "s"}.`); };
+      $("msg").appendChild(document.createElement("br")); $("msg").appendChild(b);
     }
-    const seen = new Set(intervals.map(i => `${i.start}:${i.end}:${i.device}`));
-    for (const i of d.intervals || []) if (!seen.has(`${i.start}:${i.end}:${i.device}`)) intervals.push(i);
-    if (d.memory && typeof d.memory === "object" && window.TOL.mergeMemory) { const m = JSON.parse(JSON.stringify(memory)); window.TOL.mergeMemory(m, d.memory); memory = m; store.set(K.mem, memory); }
-    savePages(); store.set(K.time, intervals); changedEvent();
-    renderList(); if (live(pages[ui.last])) openPage(ui.last); else { const r = recentLive(); if (r) openPage(r.id); } paintClock();
-    say(`Imported: ${added} new page${added === 1 ? "" : "s"}, ${updated} updated. Nothing was deleted.`);
   } catch (err) { say("That file isn't a Book of Living Waters export. Nothing was changed."); }
 };
 let delArmed = null;
@@ -1186,11 +1310,11 @@ $("delPage").onclick = () => {
     if (c.anchor) { moved.anchor = Object.assign({}, c.anchor, { lost: true }); moved.anchorAt = now; }
     pages[c.id] = moved;
   }
-  pages[p.id] = { id: p.id, deleted: true, updatedAt: now };      // a marker, so other devices delete it too
+  bury(p.id, now);                                                 // a marker, so other devices delete it too (the words go to Recently deleted first)
   savePages(); changedEvent();
   const next = recentLive();
   if (next) openPage(next.id); else newPage(null);
-  say("Deleted. The pages and folds inside it moved up one level (folds that were in its words are now \"unattached\").");
+  say("Deleted. The pages and folds inside it moved up one level (folds that were in its words are now \"unattached\"). Changed your mind? It's under Safety copies → Recently deleted for 30 days.");
 };
 
 /* ---------- look and feel (vibe design changes these instantly) ---------- */
@@ -1248,7 +1372,7 @@ window.TOL = {
     if (n.anchor && !n.anchorAt) n.anchorAt = now;
     pages[n.id] = n; savePages(); changedEvent(); return n;
   },
-  deleteNode(id) { if (!pages[id]) return; pages[id] = { id, deleted: true, updatedAt: Date.now() }; savePages(); changedEvent(); },
+  deleteNode(id) { if (!pages[id]) return; bury(id); savePages(); changedEvent(); },
   patchNode(id, fields) { if (!live(pages[id])) return; pages[id] = Object.assign({}, pages[id], fields, { updatedAt: Date.now() }); savePages(); changedEvent(); },
   setText(id, text, fields) { touched = new Set(); setNodeText(id, text, fields); propagateShares(id); savePages(); changedEvent(); },
   openFold(id, open) { ui.folds[id] = open !== false; saveUI(); },
@@ -1284,19 +1408,24 @@ window.TOL = {
     const now = Date.now();
     for (const [id, v] of Object.entries(map)) {
       if (v) pages[id] = Object.assign({}, v, { updatedAt: now }, v.anchor ? { anchorAt: now } : {});
-      else if (pages[id]) pages[id] = { id, deleted: true, updatedAt: now };
+      else if (pages[id]) bury(id, now, "undo");
     }
     reconcileShares(); savePages(); changedEvent();
     if (view === "write") { const sel = curSel(); renderWriter(); if (sel) placeCaret(sel, true); } renderList();
   },
   isAncestor: (a, b) => isAncestor(a, b),
+  /* for safe.js and check.js: safety copies, bringing pages back, storage in use */
+  exportText, exportAll, mergeData, revive, storageUse, healTree: () => { const n = healTree(); if (n) { savePages(); changedEvent(); renderList(); } return n; },
   /* for sync.js */
   deviceLabel: DEVICE,
   data: () => ({ pages, intervals, memory }),
   replaceData(newPages, newIntervals, changed, newMemory) {      // changes that came FROM another device: save, but don't count as a new edit here
+    if (H.onDelete) for (const [id, np] of Object.entries(newPages)) { const old = pages[id]; if (np && np.deleted && live(old)) { try { H.onDelete(old, "sync"); } catch (e) {} } }
     pages = newPages; intervals = newIntervals; store.set(K.time, intervals);
     if (newMemory) { memory = newMemory; store.set(K.mem, memory); document.dispatchEvent(new Event("tol:memory")); }
-    if (!store.set(K.pages, pages)) say("Couldn't save on this device. Export everything to keep it safe.");
+    const healed = healTree();
+    savePages();
+    if (healed) changedEvent();
     afterRemote();
   },
   /* design and writing settings travel between devices; button position, device name and keys stay here */
@@ -1349,16 +1478,44 @@ function afterRemote() {
 }
 
 /* ---------- start: open where you left off ---------- */
+if (healTree()) { savePages(); setTimeout(() => { changedEvent(); toast("Two pages were inside each other, so one was moved to the top level. Nothing was lost."); }, 1500); }
 reconcileShares();
 paintFoldsToggle();
 if (live(pages[ui.last])) openPage(ui.last);
 else { const recent = recentLive(); recent ? openPage(recent.id) : newPage(null); }
 paintClock();
 if (!SANDBOX && "serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+setTimeout(() => { const u = storageUse(); if (!SANDBOX && u.total > 0.8 * u.limit) toast("This device's storage for the book is almost full. Export a copy now (Settings), and tell Claude."); }, 4000);
+
+/* ---------- one tab at a time ----------
+   Each open tab holds the whole book and saves the whole book, so two tabs would overwrite each other's words.
+   The first tab holds a lock; a second one pauses (it can't save) until you choose to use it instead. */
+function pauseTab(msg) {
+  setHold(false); endTyping(); store.paused = true;
+  document.querySelectorAll("dialog[open]").forEach(d => { try { d.close(); } catch (e) {} });
+  const o = $("otherTab");
+  o.innerHTML = `<h2 id="otT" style="margin:0">${esc(msg)}</h2><p>Writing in two tabs at once could lose words, so this one is paused. Nothing here was lost.</p><div><button class="btn primary" id="otUse">Use it here instead</button></div>`;
+  o.hidden = false;
+  $("otUse").onclick = () => { try { sessionStorage.setItem("bolw-take", "1"); } catch (e) {} location.reload(); };
+  document.dispatchEvent(new CustomEvent("tol:paused"));
+}
+if (!SANDBOX && navigator.locks && navigator.locks.request) {
+  const name = "bolw-book", hold = lock => lock ? new Promise(() => {}) : null;
+  let take = false; try { take = sessionStorage.getItem("bolw-take") === "1"; sessionStorage.removeItem("bolw-take"); } catch (e) {}
+  const lost = e => { if (e && e.name === "AbortError") pauseTab("The book is now open in another tab."); };   // the other tab took over (it already has everything saved here)
+  const ask = tries => { try { navigator.locks.request(name, { ifAvailable: true }, lock => {
+    if (lock) return hold(lock);
+    if (tries > 0) { setTimeout(() => ask(tries - 1), 250); return null; }     // a tab that is just closing or reloading lets go in a moment
+    pauseTab("The book is already open in another tab or window.");
+    return null;
+  }).catch(lost); } catch (e) {} };
+  try { if (take) navigator.locks.request(name, { steal: true }, hold).catch(lost); else ask(3); } catch (e) {}
+}
 }
 </script>
 <script src="claude.js"></script>
 <script src="memory.js"></script>
+<script src="safe.js"></script>
 <script src="ai.js"></script>
 <script src="agent.js"></script>
 <script src="addons.js"></script>

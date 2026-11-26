@@ -1,6 +1,7 @@
-"""Shared helpers for the Tree of Life browser tests.
+"""Shared helpers for the Book of Living Waters browser tests.
 
-Serves docs/ on a local port, starts Chrome through Playwright, and offers a fake
+Serves docs/ on a local port, starts a browser through Playwright (Chrome by default; set
+BROWSER=webkit or BROWSER=firefox for Safari's engine or Firefox), and offers a fake
 GitHub (in memory) so sync can be tested without touching the real repository.
 """
 import base64, functools, hashlib, http.server, json, os, re, socketserver, threading, time
@@ -9,6 +10,20 @@ from urllib.parse import urlparse, parse_qs
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = os.path.join(ROOT, "docs")
 CHROME = os.environ.get("CHROME", "/usr/bin/google-chrome")
+BROWSER = os.environ.get("BROWSER", "chromium")   # chromium (Chrome), webkit (Safari's engine) or firefox
+
+
+async def launch(p):
+    """Start the browser the tests run in. BROWSER=webkit or firefox uses Playwright's own builds;
+    chromium uses the Chrome at CHROME if it exists, otherwise Playwright's Chromium."""
+    if BROWSER == "firefox":
+        return await p.firefox.launch()
+    if BROWSER == "webkit":
+        return await p.webkit.launch()
+    kw = {"args": ["--no-sandbox"]}
+    if CHROME and os.path.exists(CHROME):
+        kw["executable_path"] = CHROME
+    return await p.chromium.launch(**kw)
 
 
 class _Quiet(http.server.SimpleHTTPRequestHandler):
@@ -102,6 +117,9 @@ class FakeGitHub:
 
 
 async def new_device(browser, url, fake=None, token=True, **ctx_kw):
+    ctx_kw.pop("default_browser_type", None)
+    if BROWSER == "firefox":
+        ctx_kw.pop("is_mobile", None)       # Firefox has no phone mode; the phone-sized window and touch still apply
     ctx = await browser.new_context(**ctx_kw)
     if fake:
         await ctx.route("https://api.github.com/**", fake.handle)

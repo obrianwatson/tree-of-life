@@ -3,7 +3,7 @@ no keys, no network, no removing words); buttons, panels, toasts, cue styles; ve
 safe mode; undo of a made add-on. Anthropic is faked. Run:  python3 tests/test_addons.py"""
 import asyncio, json, os, re, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, CHROME
+from helpers import serve, Checks, launch
 from test_folds import pages, root_id
 from test_agent import FakeClaude, tool_call, say, ask, KEY
 from playwright.async_api import async_playwright
@@ -35,7 +35,7 @@ async def main():
     url = serve(8832)
     fake = FakeClaude()
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
         ctx = await br.new_context(viewport={"width": 1280, "height": 800})
         await ctx.add_init_script(KEY)
         await ctx.route("https://api.anthropic.com/**", fake.handle)

@@ -2,7 +2,7 @@
 export/import, old data, alignment of the fold lines. Run:  python3 tests/test_folds.py"""
 import asyncio, json, os, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, new_device, CHROME
+from helpers import serve, Checks, new_device, launch
 from playwright.async_api import async_playwright
 
 C = Checks()
@@ -69,7 +69,7 @@ LONG = ("The tree is brown. I still set the table for two, and your chair still 
 async def main():
     url = serve(8812)
     async with async_playwright() as p:
-        br = await p.chromium.launch(executable_path=CHROME, args=["--no-sandbox"])
+        br = await launch(p)
         ctx, pg = await new_device(br, url, token=False, viewport={"width": 1280, "height": 800}, accept_downloads=True)
 
         # ---------- create: sentence, word, single character ----------
