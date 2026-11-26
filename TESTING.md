@@ -249,3 +249,20 @@ After every build: install it, go down that build's list on the iPad, and tick e
 **On the real touch frame (later)**
 - [ ] A finger or stylus draws; a second hand on the board doesn't draw
 - [ ] Holding the thumb button with one hand while writing with the other works
+
+---
+
+## Web app 0.6 · Nests on text (iPhone and laptop)
+
+- [ ] Write "the tree is brown." Select the whole sentence → a bar appears above the page with "Nest a page inside" and "Nest this in…"
+- [ ] **Nest a page inside** → "A new page inside" opens a new empty page inside this one; the drawer shows it under the page
+- [ ] Back on the first page, the bar shows a chip like `▸ "the tree is brown." holds Title`; tap it to open the nested page
+- [ ] Do the same with one word, and with a single letter
+- [ ] Select "tree", tap **+ Another piece**, select "brown", then **Nest a page inside these 2** (words with a gap between them)
+- [ ] Choose an **existing page** from the list: it moves inside this page; nothing in it is lost
+- [ ] Type words before the nested sentence: put the caret in the sentence and the chip lights up (the link followed the words)
+- [ ] **Nest this in…** with "A new page holding this": a new top-level page appears with the sentence; your original text is unchanged
+- [ ] **Nest this in…** an existing page: the sentence is added to the end of that page; the original is unchanged
+- [ ] The ✕ next to a chip only unlinks it; the page and all words stay
+- [ ] Selecting text doesn't close the keyboard or lose the selection when you tap the bar
+- [ ] Sync: nests show on the other device; the writing clock is not affected by nesting
