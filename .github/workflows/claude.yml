@@ -36,9 +36,20 @@ jobs:
         with:
           fetch-depth: 1
 
+      # A token copied from a terminal can pick up line breaks or spaces; remove them.
+      - name: Tidy the Claude token
+        env:
+          RAW_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          T=$(printf '%s' "$RAW_TOKEN" | tr -d '\r\n\t ')
+          if [ -n "$T" ]; then
+            echo "::add-mask::$T"
+            echo "CLEAN_CLAUDE_TOKEN=$T" >> "$GITHUB_ENV"
+          fi
+
       - uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ env.CLEAN_CLAUDE_TOKEN }}
           # Either one works: a Claude plan token (preferred) or an Anthropic API key (billed by use).
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           show_full_output: true  # temporary: shows the exact error while we set things up
