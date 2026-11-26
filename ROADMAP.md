@@ -78,6 +78,14 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 
 ---
 
+## M · Memory palace (folds as pegs) ⬜ — next after folds
+- ⬜ M1 Hiding: hide a fold's contents or selected words; cue styles: blank, first letters, word shapes, every other word; press-and-hold to peek
+- ⬜ M2 Test me: walk the folds in order (room by room, level by level): see the peg → recall → Reveal → Got it / Almost / Missed; score and weak pegs at the end
+- ⬜ M3 Write it from memory: type what you remember, word-by-word comparison
+- ⬜ M4 Spaced review: missed pegs come back sooner ("3 pegs due today")
+- Open choices: hide contents vs peg words by default; first test style (reveal-and-mark vs type it)
+- Typing answers counts as writing; holding while recalling counts; everything syncs encrypted
+
 # ⏸ ON HOLD: iPad + Apple Pencil (resume when the Pencil is replaced)
 Everything below is kept. The native iPad app still builds on GitHub.
 
@@ -167,6 +175,7 @@ TV + IR touch frame + cheap mini PC running the Board in a full-screen web brows
 ---
 
 ## ⏸ Back pocket
+- AI-generated folds: tell an AI (Claude, ChatGPT, Venice, own models) to write something and fold deeper passages under each meaningful chunk, several levels deep. Start with unfold-on-demand (generate a level only when opened). AI folds look different; AI time never counts on the writing clock. Needs API keys (chat subscriptions usually don't include app access).
 - MIDI controller / sequencer mode: piano roll + channel rack (MIDI channels, in and out), to the iPad itself or FL Studio over USB
 
 ## Dropped
