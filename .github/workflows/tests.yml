@@ -104,14 +104,18 @@ jobs:
         run: |
           set +e
           mkdir -p results
-          timeout 900 python tests/real_sync.py 2>&1 | tee results/real_sync.log
-          code=${PIPESTATUS[0]}
+          code=0
+          for pass in 1 2; do                       # twice, each on its own scratch branch: GitHub's timing differs from run to run
+            echo "--- pass $pass ---" | tee -a results/real_sync.log
+            SCRATCH_BRANCH="${SCRATCH_BRANCH}-$pass" timeout 600 python tests/real_sync.py 2>&1 | tee -a results/real_sync.log
+            [ "${PIPESTATUS[0]}" -ne 0 ] && code=1
+          done
           {
             echo "browser: real-github"
             echo "commit: $GITHUB_SHA"
             echo "when: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "result: $([ $code -eq 0 ] && echo PASS || echo FAIL)"
-            grep '^PASS \|^FAIL \|^SKIP \|^   (\|passed\|Error' results/real_sync.log | head -80
+            grep '^--- pass\|^PASS \|^FAIL \|^SKIP \|^   \|passed\|Error' results/real_sync.log | head -120
           } > results/real-github.txt
           { echo "### real GitHub"; echo '```'; cat results/real-github.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $code
@@ -119,7 +123,8 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${SCRATCH_BRANCH}" || true
+        run: |
+          for pass in 1 2; do gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${SCRATCH_BRANCH}-$pass" || true; done
       - uses: actions/upload-artifact@v4
         if: always()
         with:

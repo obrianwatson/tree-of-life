@@ -18,8 +18,8 @@ little of your time as possible.
   offline, fill the storage, open two tabs, delete and restore, import and export.
 - **Where:** in three browser engines: Chrome's, Safari's (your iPhone) and Firefox (your laptop).
 - **When:** every time the app changes, by themselves, on GitHub. Nobody has to start them.
-- **Sync, for real:** one more test syncs three devices through the real GitHub, on a scratch branch that is
-  deleted afterwards. Your real sync data is never touched.
+- **Sync, for real:** one more test syncs three devices through the real GitHub (twice, on scratch branches
+  that are deleted afterwards). Your real sync data is never touched.
 - **Where the results go:** a small branch of the project named `test-results`. I read it at the start of
   every session. If something is red, I fix it before anything else.
 - **Why:** so a change can never quietly break something you rely on.
