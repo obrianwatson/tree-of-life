@@ -171,7 +171,7 @@ dialog#drillDlg select,dialog#drillDlg input[type=text]{width:100%;height:44px;b
     }
     if (R.phase === "ask") {
       const cue = await cueFor(d, it);
-      if (getD(R.did) !== d && !R) return;
+      if (!R || R.items[R.i] !== it || R.phase !== "ask") return;      // you moved on (or left the drill) while the hint was being made
       sec.innerHTML = top + `<div class="d-card">${head}<small>${esc(it.ask)}</small><div class="d-q">${esc(it.prompt)}</div>
         ${cue ? `<div class="d-cue" aria-label="Hint">${esc(cue)}</div>` : ""}
         <textarea id="dAns" placeholder="Type it from memory"></textarea>

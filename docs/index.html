@@ -11,6 +11,9 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <title>Book of Living Waters</title>
+<!-- Sealed frames (add-ons, a change being tried) are made from text inside the book. This line stops any frame
+     from ever loading another website, so a sealed frame can't carry your words out by navigating itself. -->
+<meta http-equiv="Content-Security-Policy" content="frame-src 'self'">
 <style>
 #bolwBoot{font:15px/1.5 system-ui,sans-serif;color:#5b6670;padding:28px;max-width:520px}
 #bolwBoot button{font:inherit;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid #ccd;background:#fff;margin-top:12px}
@@ -56,9 +59,13 @@
 
   /* the published files: app.html and every script it names */
   async function published() {
-    const get = async n => { const r = await fetch(n, { cache: "no-cache" }); if (!r.ok) throw new Error(n + " " + r.status); return r.text(); };
+    // "x-bolw-boot" tells the offline helper (sw.js) to stay out of the way: these files come straight from the
+    // network as one complete set, or not at all (then the last complete set saved on this device is used).
+    const get = async n => { const r = await fetch(n, { cache: "no-cache", headers: { "x-bolw-boot": "1" } }); if (!r.ok) throw new Error(n + " " + r.status); return r.text(); };
     const app = await get("app.html"), files = { "app.html": app };
-    for (const m of app.matchAll(/<script src="([^"]+)"><\/script>/g)) files[m[1]] = await get(m[1]);
+    const names = [...app.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1]);
+    const texts = await Promise.all(names.map(get));
+    names.forEach((n, i) => { files[n] = texts[i]; });
     const ver = (app.match(/const APP_VERSION = "([^"]+)"/) || [])[1] || "?";
     return { id: "pub-" + ver, origin: "published", label: "published version " + ver, base: ver, files, note: "Published version " + ver, by: "GitHub", at: Date.now() };
   }
@@ -107,13 +114,23 @@
     if (want && !bad[want]) v = await V.get(want);
     else if (want) { fell = want; if (M.lastGood && !bad[M.lastGood]) v = await V.get(M.lastGood); }
     if (!v) {
+      // The newest published files if the network answers within a few seconds; otherwise the last complete set saved
+      // on this device (the fetch carries on, and a small note offers the update when it's ready).
+      const saved = V ? (await V.all()).filter(x => x.origin === "published").sort((a, b) => b.at - a.at)[0] : null;
+      const keep = async p => { if (!V) return p; const old = await V.get(p.id); if (!old || JSON.stringify(old.files) !== JSON.stringify(p.files)) { await V.put(p); return p; } return old; };
+      const fresh = published().then(keep);
+      let late = false;
       try {
-        v = await published();
-        if (V) { const old = await V.get(v.id); if (!old || JSON.stringify(old.files) !== JSON.stringify(v.files)) await V.put(v); else v = old; }
-      } catch (e) {                                       // offline and nothing cached: the newest saved published copy
-        if (V) v = (await V.all()).filter(x => x.origin === "published").sort((a, b) => b.at - a.at)[0];
+        v = await (saved ? Promise.race([fresh, new Promise(res => setTimeout(() => res(null), 3500))]) : fresh);
+        if (!v) {
+          v = saved; late = true;
+          fresh.then(p => { if (p && p !== saved && JSON.stringify(p.files) !== JSON.stringify(saved.files)) banner("A newer version of the book is ready.", [["Reload", () => location.reload()], ["Later", () => {}]]); }).catch(() => {});
+        }
+      } catch (e) {                                       // offline: the newest saved published copy
+        v = saved;
         if (!v) { document.getElementById("bolwBoot").textContent = "The book couldn't open: no internet, and no copy saved on this device yet. Try again when you're online."; return; }
       }
+      if (!late) fresh.catch(() => {});
     }
     if (V) await V.set("booting", v.id);
     window.__bolwBoot = { id: v.id, origin: v.origin, label: v.label, base: v.base, note: v.note, at: v.at, safe, fell, files: v.files, pinned: !!M.pinned };

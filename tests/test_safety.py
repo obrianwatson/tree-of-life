@@ -221,6 +221,66 @@ async def main():
         C.ok("Done. I added a word count." in th and await pg3.locator("#thread .bubble .who", has_text="Claude").count() >= 1, "Claude Code's own reply still shows as Claude")
         C.ok("Claude answered" in await pg3.text_content("#statusbar"), "the stranger's words don't change what the page says Claude is doing")
         await ctx3.close()
+
+        # ---------- 10. Check this device: a report with no writing in it, that can be sent to Claude ----------
+        posted = []
+        async def gh2(route):
+            r = route.request
+            if r.method == "POST" and r.url.endswith("/issues"):
+                posted.append(json.loads(r.post_data))
+                return await route.fulfill(status=201, headers={"access-control-allow-origin": "*"}, content_type="application/json", body=json.dumps({"number": 77}))
+            return await route.fulfill(status=200, headers={"access-control-allow-origin": "*"}, content_type="application/json", body=json.dumps({"permissions": {"push": True}}))
+        ctx4 = await br.new_context(viewport={"width": 1280, "height": 800})
+        await ctx4.route("https://api.github.com/**", gh2)
+        await ctx4.route("https://fonts.googleapis.com/**", lambda r: r.abort())
+        await ctx4.add_init_script("try { localStorage.setItem('tol-gh-token', JSON.stringify('github_pat_test')); } catch (e) {}")
+        pg4 = await ctx4.new_page(); pg4.errs = []; pg4.on("pageerror", lambda e: pg4.errs.append(str(e)))
+        await pg4.goto(url); await pg4.wait_for_timeout(500)
+        await pg4.click("#writer textarea"); await pg4.keyboard.type("Private words that must never be in a report.", delay=5); await pg4.wait_for_timeout(5200)   # (past the typing pause, so the time is banked)
+        t_before = await pg4.evaluate("JSON.stringify(window.TOL.data().intervals)")
+        await open_settings(pg4)
+        await pg4.click("#ckRun")
+        await pg4.wait_for_function("document.getElementById('ckCopy') !== null", timeout=40000)
+        area = await pg4.text_content("#checkArea")
+        for name in ("Saving on this device", "Storage in use", "The bigger database", "Safety copies", "Encryption", "Opens without internet", "The book", "GitHub key", "Sync"):
+            C.ok(name in area, f"the device check reports: {name}")
+        rep = await pg4.evaluate("window.TOL.check.run().then(window.TOL.check.reportText)")
+        C.ok("ok    Saving on this device: works" in rep and "ok    Encryption: works" in rep and "ok    GitHub key: works" in rep, "saving, encryption and the GitHub key check out")
+        C.ok("Private words" not in rep and "github_pat" not in rep, "the report holds no writing and no keys")
+        C.ok(await pg4.evaluate("JSON.stringify(window.TOL.data().intervals)") == t_before, "checking the device adds no writing time")
+        await pg4.click("#ckSend"); await pg4.wait_for_timeout(200)
+        C.ok(not posted and "public" in await pg4.text_content("#ckSend"), "'Send it to Claude' first says the project is public and asks again")
+        await pg4.click("#ckSend"); await pg4.wait_for_timeout(1200)
+        C.ok(len(posted) == 1 and posted[0]["title"].startswith("Device check:") and "@claude" not in json.dumps(posted[0]).lower() and "Private words" not in json.dumps(posted[0]),
+             "the report is posted as a GitHub issue: no writing in it, and it doesn't start Claude Code")
+        C.ok(not pg4.errs, f"no page errors {pg4.errs}")
+        await ctx4.close()
+
+        # ---------- 11. AI: a key that isn't tied to one workspace can be given its Workspace ID; Opus can be chosen ----------
+        hdrs, mode = [], {"fail": False}
+        async def anth(route):
+            hdrs.append(route.request.headers)
+            cors = {"access-control-allow-origin": "*"}
+            if mode["fail"]:
+                return await route.fulfill(status=400, headers=cors, content_type="application/json", body=json.dumps({"type": "error", "error": {"type": "invalid_request_error", "message": "This API key is not scoped to a workspace, so this request must include the anthropic-workspace-id header."}}))
+            return await route.fulfill(status=200, headers=cors, content_type="application/json", body=json.dumps({"content": [{"type": "text", "text": "OK"}], "usage": {"input_tokens": 3, "output_tokens": 1}}))
+        ctx5 = await br.new_context(viewport={"width": 1280, "height": 800})
+        await ctx5.route("https://api.anthropic.com/**", anth)
+        await ctx5.route("https://fonts.googleapis.com/**", lambda r: r.abort())
+        await ctx5.add_init_script("try { if (!localStorage.getItem('tol-ai')) localStorage.setItem('tol-ai', JSON.stringify({ key: 'sk-ant-test' })); } catch (e) {}")
+        pg5 = await ctx5.new_page(); await pg5.goto(url); await pg5.wait_for_timeout(500)
+        mode["fail"] = True
+        await open_settings(pg5)
+        await pg5.click("#aiTest"); await pg5.wait_for_timeout(800)
+        C.ok("Workspace ID" in await pg5.text_content("#aiSetMsg") and "anthropic-workspace-id" not in hdrs[-1], "when Anthropic says the key needs a workspace, the message says what to do in plain words")
+        mode["fail"] = False
+        await pg5.fill("#aiWs", "not-an-id"); await pg5.dispatch_event("#aiWs", "change"); await pg5.wait_for_timeout(200)
+        C.ok("starts with wrkspc_" in await pg5.text_content("#aiSetMsg"), "a wrong Workspace ID is refused")
+        await pg5.fill("#aiWs", "wrkspc_01TestOnly"); await pg5.dispatch_event("#aiWs", "change"); await pg5.wait_for_timeout(200)
+        await pg5.click("#aiTest"); await pg5.wait_for_timeout(800)
+        C.ok(hdrs[-1].get("anthropic-workspace-id") == "wrkspc_01TestOnly" and "The key works" in await pg5.text_content("#aiSetMsg"), "with a Workspace ID saved, every request carries it and the key test passes")
+        C.ok(await pg5.locator("#aiModel option[value='claude-opus-5-5']").count() == 1, "Opus 5.5 can be chosen as the model")
+        await ctx5.close()
         await br.close()
     print(f"\n{C.passes} passed, {C.fails} failed")
     sys.exit(1 if C.fails else 0)

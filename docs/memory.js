@@ -170,11 +170,17 @@
     return { reviews, news, all: reviews.concat(news), now };
   }
   const dueCount = () => { try { return dueItems().all.length; } catch (e) { return 0; } };
+  /* which folds have something due today: worked out once, then kept until memory changes (or a minute passes),
+     because every fold on screen asks, and each answer means replaying every card's history */
+  let dueMemo = null;
   function isDue(foldId) {
-    const m = mem(), set = settings(), eod = endOfToday();
-    return Object.entries(m.cards).some(([k, c]) => {
-      return foldOfCard(k, c) === foldId && (c.history || []).length && cardState(c, set).due <= eod;
-    });
+    const now = Date.now();
+    if (!dueMemo || dueMemo.of !== T.getMemory() || now - dueMemo.at > 60000) {
+      const m = mem(), set = settings(), eod = endOfToday(), ids = new Set();
+      for (const [k, c] of Object.entries(m.cards)) if ((c.history || []).length && cardState(c, set).due <= eod) { const id = foldOfCard(k, c); if (id) ids.add(id); }
+      dueMemo = { of: T.getMemory(), at: now, ids };
+    }
+    return dueMemo.ids.has(foldId);
   }
 
   /* ---------------- word-by-word comparison ---------------- */

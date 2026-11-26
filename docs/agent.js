@@ -279,15 +279,12 @@ Rules: never delete or rewrite the writer's words unless they clearly ask (tools
 Today is ${new Date().toDateString()}.`;
 
   async function stream(body, onText, signal) {
-    const c = T.ai.cfg();
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST", signal,
-      headers: { "content-type": "application/json", "x-api-key": c.key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-      body: JSON.stringify(Object.assign({ stream: true }, body))
-    });
+    let r;
+    try { r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal, headers: T.ai.headers(), body: JSON.stringify(Object.assign({ stream: true }, body)) }); }
+    catch (e) { if (e.name === "AbortError") throw e; throw new Error(T.ai.unreachable()); }
     if (!r.ok) {
       let j = null; try { j = await r.json(); } catch (e) {}
-      throw new Error(r.status === 401 ? "the AI key wasn't accepted (Settings → AI)" : r.status === 429 ? "too many requests; try again in a minute" : (j && j.error && j.error.message) || ("HTTP " + r.status));
+      throw new Error(r.status === 401 ? "the AI key wasn't accepted (Settings → AI)" : T.ai.explain(r.status, j && j.error && j.error.message) + (r.status === 400 && /workspace/i.test((j && j.error && j.error.message) || "") ? " (Settings → AI)" : ""));
     }
     const out = { content: [], stop: null, usage: { in: 0, out: 0 } };
     if (!(r.headers.get("content-type") || "").includes("event-stream") || !r.body) {
@@ -348,7 +345,7 @@ Today is ${new Date().toDateString()}.`;
     let firstText = true;
     try {
       for (let round = 0; round < MAX_ROUNDS; round++) {
-        const res = await stream({ model, max_tokens: 1500, system: SYSTEM(), tools: tools.map(t => t.def), messages },
+        const res = await stream({ model, max_tokens: 4000, system: SYSTEM(), tools: tools.map(t => t.def), messages },
           d => { if (firstText && !am.t) { tEl.textContent = ""; firstText = false; } am.t += d; tEl.textContent = am.t; box.scrollTop = box.scrollHeight; }, busy.signal);
         T.ai.record(model, res.usage.in, res.usage.out);
         messages.push({ role: "assistant", content: res.content.map(b => b.type === "tool_use" ? { type: "tool_use", id: b.id, name: b.name, input: b.input || {} } : { type: "text", text: b.text || "" }).filter(b => b.type !== "text" || b.text) });

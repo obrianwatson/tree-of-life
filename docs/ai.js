@@ -13,28 +13,37 @@
   /* ---------------- providers ---------------- */
   const MODELS = {
     "claude-haiku-5-5": { label: "Claude Haiku 5.5 (fast, very cheap)", inM: 0.10, outM: 0.50, provider: "anthropic" },
-    "claude-sonnet-5-5": { label: "Claude Sonnet 5.5 (deeper, costs more)", inM: 2, outM: 10, provider: "anthropic" }
+    "claude-sonnet-5-5": { label: "Claude Sonnet 5.5 (deeper, costs more)", inM: 2, outM: 10, provider: "anthropic" },
+    "claude-opus-5-5": { label: "Claude Opus 5.5 (the most capable, costs the most)", inM: 4, outM: 20, provider: "anthropic" }
   };
+  /* what goes with every request to Anthropic. A key that isn't tied to one workspace needs the Workspace ID too. */
+  const headers = c => Object.assign({ "content-type": "application/json", "x-api-key": c.key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+                                     c.ws ? { "anthropic-workspace-id": c.ws } : {});
+  /* Anthropic's answer when something is wrong, in plain words */
+  function explain(status, msg) {
+    if (/workspace/i.test(msg || "") && /scoped|anthropic-workspace-id/i.test(msg || "")) return "this key works across several workspaces, so Anthropic needs to know which one. Paste your Workspace ID below (it starts with wrkspc_; find it in the Claude Console under Workspaces), or make a new key inside one workspace";
+    if (status === 401) return "the key wasn't accepted";
+    if (status === 429) return "too many requests; try again in a minute";
+    return msg || ("HTTP " + status);
+  }
+  const unreachable = c => navigator.onLine === false ? "you're offline" : "couldn't reach Anthropic" + (c.ws ? " (if this began after you added a Workspace ID, clear it and try again)" : "");
   const PROVIDERS = {
     anthropic: {
-      async call({ key, model, system, user, maxTokens, signal }) {
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST", signal,
-          headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      async call({ key, ws, model, system, user, maxTokens, signal }) {
+        let r;
+        try { r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST", signal, headers: headers({ key, ws }),
           body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: "user", content: user }] })
-        });
+        }); } catch (e) { if (e.name === "AbortError") throw e; throw new Error(unreachable({ ws })); }
         let data = null; try { data = await r.json(); } catch (e) {}
-        if (!r.ok) {
-          const msg = data && data.error && data.error.message || ("HTTP " + r.status);
-          throw Object.assign(new Error(r.status === 401 ? "the key wasn't accepted" : r.status === 429 ? "too many requests; try again in a minute" : msg), { status: r.status });
-        }
+        if (!r.ok) throw Object.assign(new Error(explain(r.status, data && data.error && data.error.message)), { status: r.status });
         const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
         return { text, usage: { in: (data.usage && data.usage.input_tokens) || 0, out: (data.usage && data.usage.output_tokens) || 0 } };
       }
     }
   };
 
-  const cfg = () => Object.assign({ key: "", model: "claude-haiku-5-5", cap: 5 }, st.get(CFG_KEY, {}));
+  const cfg = () => Object.assign({ key: "", ws: "", model: "claude-haiku-5-5", cap: 5 }, st.get(CFG_KEY, {}));
   const setCfg = c => st.set(CFG_KEY, Object.assign(cfg(), c));
   const month = () => new Date().toISOString().slice(0, 7);
   function usage() { const u = st.get(USE_KEY, {}); return u.month === month() ? u : { month: month(), usd: 0, calls: 0 }; }
@@ -50,7 +59,7 @@
     const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), (opts && opts.timeout) || 45000);
     try {
       const m = MODELS[c.model] ? c.model : "claude-haiku-5-5";
-      const res = await PROVIDERS[MODELS[m].provider].call({ key: c.key, model: m, system, user, maxTokens, signal: ctl.signal });
+      const res = await PROVIDERS[MODELS[m].provider].call({ key: c.key, ws: c.ws, model: m, system, user, maxTokens, signal: ctl.signal });
       const nu = usage(); nu.usd += price(m, res.usage.in, res.usage.out); nu.calls++; st.set(USE_KEY, nu);
       return res.text;
     } catch (e) { if (e.name === "AbortError") throw new Error("the AI took too long"); throw e; }
@@ -245,6 +254,7 @@
       <small>With Claude Max, your monthly API credits can pay for this: on claude.ai go to Settings → Billing → API credits → Link organization, then make a key at platform.claude.com → API Keys and paste it here.</small>
       <div class="row"><input type="password" id="aiKey" placeholder="${c.key ? "Key saved. Paste a new one to replace it" : "Paste your Anthropic key (sk-ant-…)"}" autocomplete="off" style="flex:1 1 200px">
         <button class="btn" id="aiSave">Save</button><button class="btn" id="aiTest"${c.key ? "" : " disabled"}>Test key</button><button class="btn" id="aiRemove"${c.key ? "" : " disabled"}>Remove</button></div>
+      <div class="row"><input type="text" id="aiWs" value="${esc(c.ws || "")}" placeholder="Workspace ID: only if the key test asks for one (wrkspc_…)" autocomplete="off" autocapitalize="none" spellcheck="false" style="flex:1 1 200px" aria-label="Workspace ID"></div>
       <div class="field"><label for="aiModel"><span>Model</span></label><select id="aiModel" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:15px 'Hanken Grotesk',system-ui,sans-serif">
         ${Object.entries(MODELS).map(([k, m]) => `<option value="${k}"${k === c.model ? " selected" : ""}>${esc(m.label)}</option>`).join("")}</select></div>
       <div class="field"><label for="aiCap"><span>Monthly limit (soft)</span><span>$${c.cap}</span></label><input type="range" id="aiCap" min="0" max="50" step="1" value="${c.cap}">
@@ -268,6 +278,11 @@
   });
   document.addEventListener("change", e => {
     if (e.target.id === "aiModel") { setCfg({ model: e.target.value }); paintSettings("Model saved."); }
+    if (e.target.id === "aiWs") {
+      const v = (e.target.value || "").replace(/\s+/g, "");
+      if (v && !/^wrkspc_[A-Za-z0-9_-]+$/.test(v)) return paintSettings("A Workspace ID starts with wrkspc_. Leave the box empty if the key test doesn't ask for one.");
+      setCfg({ ws: v }); paintSettings(v ? "Workspace ID saved on this device. Tap Test key." : "Workspace ID cleared.");
+    }
     if (e.target.id === "aiCap") { setCfg({ cap: +e.target.value }); paintSettings(); }
   });
   document.addEventListener("input", e => { if (e.target.id === "aiCap") { const s = e.target.parentElement.querySelector("label span:last-child"); if (s) s.textContent = "$" + e.target.value; } });
@@ -275,6 +290,6 @@
   /* for agent.js (Claude in the app): the key, model, spending cap and running estimate are shared */
   function record(model, i, o) { const nu = usage(); nu.usd += price(model, i, o); nu.calls++; st.set(USE_KEY, nu); }
   function capReached() { const c = cfg(), u = usage(); return c.cap > 0 && u.usd >= c.cap ? c.cap : 0; }
-  T.ai = { ready, feedback, makeQuestions, deeper, generate, ask, cfg, record, capReached, price, money, parseJSON, _models: MODELS, _usage: usage };
+  T.ai = { ready, feedback, makeQuestions, deeper, generate, ask, cfg, record, capReached, price, money, parseJSON, headers: () => headers(cfg()), explain, unreachable: () => unreachable(cfg()), _models: MODELS, _usage: usage };
   T.rerender();
 })();
