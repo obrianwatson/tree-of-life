@@ -334,7 +334,13 @@
     try { const meta = await getMeta(); if (!meta || meta.salt !== S.salt) { metaOk = false; return false; } return (await unseal(key, meta.check, "tol-check")) === "tree-of-life"; }
     catch (e) { if (e.name === "OperationError") return false; throw e; }
   }
-  async function writeMine(keepalive) {
+  let writing = null;                // the write that is under way, if any (one at a time: two at once would write the same file twice)
+  function writeMine(keepalive) {
+    const p = (writing || Promise.resolve()).catch(() => {}).then(() => writeOnce(keepalive));
+    writing = p; p.catch(() => {}).then(() => { if (writing === p) writing = null; });
+    return p;
+  }
+  async function writeOnce(keepalive) {
     const cur = T.data(), spot = T.lastSpot();
     const prefs = Object.assign(T.getPrefs(), { at: S.prefsAt || 0 });
     const fingerprint = await sha256(JSON.stringify([cur.pages, cur.intervals, spot.id, spot.cursor, spot.node, spot.pos, S.deviceName, prefs, cur.memory || {}]));

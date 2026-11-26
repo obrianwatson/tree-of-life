@@ -105,7 +105,7 @@
 
   async function main() {
     let V = null, M = {};
-    if (!PREVIEW) try { V = vault(await open()); for (const k of ["active", "pinned", "lastGood", "booting", "bad"]) M[k] = await V.meta(k); } catch (e) { V = null; }
+    if (!PREVIEW) try { V = vault(await open()); for (const k of ["active", "pinned", "lastGood", "booting", "bad", "lastPub"]) M[k] = await V.meta(k); } catch (e) { V = null; }
     if (held && !safe) return goSafe();
     const bad = M.bad || {};
     let fell = null, v = null;
@@ -116,8 +116,14 @@
     if (!v) {
       // The newest published files if the network answers within a few seconds; otherwise the last complete set saved
       // on this device (the fetch carries on, and a small note offers the update when it's ready).
-      const saved = V ? (await V.all()).filter(x => x.origin === "published").sort((a, b) => b.at - a.at)[0] : null;
-      const keep = async p => { if (!V) return p; const old = await V.get(p.id); if (!old || JSON.stringify(old.files) !== JSON.stringify(p.files)) { await V.put(p); return p; } return old; };
+      const saved = V ? ((M.lastPub && await V.get(M.lastPub)) || (await V.all()).filter(x => x.origin === "published").sort((a, b) => b.at - a.at)[0]) : null;
+      const keep = async p => {
+        if (!V) return p;
+        const old = await V.get(p.id), same = old && JSON.stringify(old.files) === JSON.stringify(p.files);
+        if (!same) await V.put(p);
+        if (M.lastPub !== p.id) await V.set("lastPub", p.id);      // (so the next start can find the newest saved set without reading every version)
+        return same ? old : p;
+      };
       const fresh = published().then(keep);
       let late = false;
       try {

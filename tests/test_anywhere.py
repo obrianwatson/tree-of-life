@@ -180,9 +180,10 @@ async def main():
         await B.evaluate(f"window.TOL.openFold('{plb['id']}'); window.TOL.openPage('{pb}', true)"); await B.wait_for_timeout(1000)
         tb = B.locator(f"#writer .fold.place[data-ref='{stones['id']}'] textarea")
         C.ok(await tb.count() == 1, "on the iPhone it opens in its other place too")
-        await tb.click(); await B.keyboard.press("End"); await B.keyboard.type(" Cool at night.", delay=5); await B.wait_for_timeout(3500)
+        await tb.click(); await B.keyboard.press("Control+End"); await B.keyboard.type(" Cool at night.", delay=5); await B.wait_for_timeout(3500)   # (Control+End: the very end, however the lines wrap)
         await sync(B); await sync(A)
-        C.ok((await pages(A))[stones["id"]]["text"].endswith("Cool at night."), "writing through a placement on the iPhone reaches the one fold on the laptop")
+        got = (await pages(A))[stones["id"]]["text"]
+        C.ok(got.endswith("Cool at night."), f"writing through a placement on the iPhone reaches the one fold on the laptop ({got[-40:]!r})")
         await B.screenshot(path=os.path.join(SHOTS, "anywhere-iphone.png"))
         await B.evaluate("window.TOL.code.open()"); await B.wait_for_timeout(1200)
         C.ok(await B.evaluate("document.getElementById('appView').scrollWidth <= innerWidth + 1"), "The App fits the iPhone's width")
