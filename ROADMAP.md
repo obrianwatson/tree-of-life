@@ -10,6 +10,31 @@ Status key: ✅ done · 🔨 in progress · ⬜ not started · ⏸ on hold
 
 # ▶ NOW: Text Tree of Life on the iPhone 16e + the laptop
 
+## L · One Living Page interface ⬜ (planned; nothing built yet)
+Build one use case at a time; each is tried by the owner before the next goes on top. Order: write and see
+your time → fold → practice and test → Claude in the page → drills → sync and safety → changing the book.
+
+### Trial #01: writing, folding, and the selection menu
+**Goal:** the Apple Notes feel. Open, jot, come back. Nothing clunky.
+- **Writing:** opens straight into a blank line with the cursor (and phone keyboard) ready; the first line is
+  the title, with no naming or saving step; one list, newest on top, with search; the header fades while
+  typing; the clock is a small dot plus the time.
+- **Folds look quiet:** one thin underline (colors only where folds overlap); tap to open/close; it opens
+  under the line, indented, with a soft line on the left, and no buttons inside.
+- **The selection menu (iPhone): a bar that sits on top of the keyboard.** The main problem today is the fight
+  for space with Apple's Copy/Paste menu, so ours never goes near the words: it slides up and rests on the
+  keyboard, full width, in the same spot every time (at the bottom of the screen when the keyboard is down).
+  On it: **Fold** (one tap, then you type inside), **⋯** for everything else (fold into an existing page,
+  wrap, move out, place here too, Ask Claude, Write deeper), and the **round hold button** at the right end,
+  so there's one strip instead of two floating things. A web app can't add buttons to Apple's own menu.
+- **The selection menu (laptop):** on right-click, the book's own menu with the same choices (a web page can't
+  add to the browser's right-click menu, but it can show its own in its place); Tab = Fold, Esc = step out.
+  **Plus a menu bar** along the top of the laptop screen with everything the book can do.
+- **Less clunk:** no messages for things that worked; one way to do each thing; Undo appears in the bar
+  right after a fold action.
+- **To decide during the trial:** whether Ask Claude sits next to Fold or behind ⋯; whether the bar learns
+  your habits (moves the choice you use most up front).
+
 ## H · Hardening: nothing lost, sync that lasts, tests that run themselves ✅ built (versions 1.2–1.5)
 - [x] A save that fails shows a red "Not saved" bar; the book is kept in a rescue copy and comes back at the next open
 - [x] Safety copies (7 days), Recently deleted (30 days), "This page as it was"
