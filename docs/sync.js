@@ -197,6 +197,7 @@
       const files = list.filter(f => /^[0-9a-f]{16}\.json$/.test(f.name));
       const data = T.data();
       const P = Object.assign({}, data.pages), I = data.intervals.slice();
+      const M = JSON.parse(JSON.stringify(data.memory || {}));   // memory practice: prompts, settings, review history
       const changed = new Set();
       let spot = null, prefs = null;
       S.mySha = null;
@@ -208,11 +209,12 @@
         if (!box || box.format !== "tol-sealed") continue;
         const remote = await unseal(key, box, "tol-state:" + id);
         mergeInto(P, I, remote, changed);
+        if (remote.memory && T.mergeMemory && T.mergeMemory(M, remote.memory)) changed.add("#memory");
         if (remote.spot && remote.spot.id && (!spot || remote.spot.at > spot.at)) spot = remote.spot;
         if (remote.prefs && (remote.prefs.at || 0) > (prefs ? prefs.at : 0)) prefs = remote.prefs;
         S.seen[id] = f.sha;
       }
-      if (changed.size) T.replaceData(P, I, changed);
+      if (changed.size) T.replaceData(P, I, changed, changed.has("#memory") ? M : null);
       if (prefs && prefs.at > (S.prefsAt || 0)) { T.applyPrefs(prefs); S.prefsJson = JSON.stringify(T.getPrefs()); S.prefsAt = prefs.at; }
       if (reason === "resume" && spot && spot.at > (T.lastSpot().at || 0)) T.goTo(spot.id, spot.cursor, spot.at, spot);
       if (dirtySince || !S.mySha) {
@@ -240,10 +242,11 @@
   async function writeMine(keepalive) {
     const cur = T.data(), spot = T.lastSpot();
     const prefs = Object.assign(T.getPrefs(), { at: S.prefsAt || 0 });
-    const fingerprint = await sha256(JSON.stringify([cur.pages, cur.intervals, spot.id, spot.cursor, spot.node, spot.pos, S.deviceName, prefs]));
+    const fingerprint = await sha256(JSON.stringify([cur.pages, cur.intervals, spot.id, spot.cursor, spot.node, spot.pos, S.deviceName, prefs, cur.memory || {}]));
     if (fingerprint === S.lastHash && S.mySha) { dirtySince = 0; return; }
     const now = Date.now();
-    const state = { format: "tol-state", v: 1, deviceId: S.deviceId, deviceName: S.deviceName, savedAt: now, spot, prefs, pages: cur.pages, intervals: cur.intervals };
+    const state = { format: "tol-state", v: 1, deviceId: S.deviceId, deviceName: S.deviceName, savedAt: now, spot, prefs, pages: cur.pages, intervals: cur.intervals,
+                    memory: cur.memory || {} };   // added field: memory practice (prompts, settings, review history)
     const box = await seal(key, state, "tol-state:" + S.deviceId);
     const text = JSON.stringify({ format: "tol-sealed", v: 1, iv: box.iv, ct: box.ct, updatedAt: now });
     const path = `${DIR}/${S.deviceId}.json`;

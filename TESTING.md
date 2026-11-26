@@ -1,5 +1,70 @@
 # The Tree of Life: Build Checklists
 
+## N · Nest in… (wrapping words outward)
+
+**Wrap here (shared)**
+- [ ] Select a few words (e.g. "Your chair") → **Nest in…** → **Wrap here: new**
+- [ ] A fold opens under the line holding the same words, softly tinted, with the caret before them
+- [ ] Type before or after the tinted words inside the fold: the page above doesn't change
+- [ ] Change a tinted word inside the fold (e.g. add "old"): the page above changes the same way
+- [ ] Change those words in the page: the fold changes too
+- [ ] Delete those words from the page: the fold stays, shows "source removed: a saved copy", and keeps its words
+- [ ] **Wrap here: existing…** on other words: pick a page; that page moves here, around the words, with the words added at its end (tinted)
+
+**Move into**
+- [ ] Select a sentence → **Nest in…** → **Move into: new page**: the sentence leaves, a ⤷ stays, and a new page holds it (in the page list, inside this page)
+- [ ] A fold that was inside the moved words goes with them
+- [ ] Tap the ⤷ → **Go to "…"** opens where the words went
+- [ ] Right after a move, **Undo** (bottom of the screen) puts everything back
+- [ ] **Move into: existing…** adds the words to the end of the page you pick
+
+## M · Memory (folds as pegs)
+
+**Test me**
+- [ ] Make a fold on a few words and write something inside it
+- [ ] On the fold, tap **More…** → **Test me on this**: you see the fold's words, and what's inside is hidden
+- [ ] Type what you remember (the writing clock counts it), tap **Submit** (laptop: Command+Enter)
+- [ ] The correct answer is beside yours: missed words in amber, extra words struck in pink, changed words in blue
+- [ ] Each grade button says when it comes back (Missed: in 10 min; Easy: much later)
+- [ ] Grade it; at the end you see a score, the weak pegs, and **Practice the weak ones now**
+- [ ] **More… → In tests, hide → The words it's folded under**: now the test shows what's inside and asks for the words
+- [ ] **More… → My questions**: add "How many …?" with an answer (or leave the answer empty to use the fold); it comes up in the next test
+- [ ] Page list → **Memory** → **Test this page**: every fold and question in the page comes up; choose **Shuffled** to mix them
+
+**Practice**
+- [ ] **More… → Practice: hide what's inside**: the fold shows first letters only (e.g. "T p, o c.")
+- [ ] Press and hold **Hold to peek**: the words show; let go: hidden again
+- [ ] **Hints while practicing**: try Word shapes, Every other word, Blank lines
+- [ ] **Stop practicing** shows the words again
+
+**Spaced review**
+- [ ] After a test, the page list says "Memory · N to review today" (or "Nothing due today")
+- [ ] The next day (or after Missed, 10 minutes later), folds due show a pink **due** badge
+- [ ] **Memory → Review what's due** runs only what's due today
+- [ ] **Settings → Memory**: change "How sure you want to be" (higher = more reviews), reviews per day, new per day, longest gap
+- [ ] With sync on: answer on the iPhone, then open the laptop: the answer is there, and the same things are due on both
+
+## A · AI (feedback, questions, AI folds)
+
+**Get a key (once)**
+1. In a browser, go to **console.anthropic.com** and sign in (or sign up).
+2. **Billing** → add a small amount of credit (e.g. $5) and set a monthly limit there too.
+3. **API Keys** → **Create Key** → name it "Tree of Life" → copy it (it starts with `sk-ant-`).
+4. In the Tree of Life: **Settings → AI** → paste it → **Save** → **Test key** (should say "The key works").
+5. Do steps 4 on each device (the key stays on each device; it isn't synced).
+
+**Checks**
+- [ ] Take a test on a fold: after Submit, an **AI feedback** box shows what you got, missed, the meaning, and a tip; one grade button is outlined as "AI suggests"; you can still choose another
+- [ ] **More… → Reviewing my answers → Only me**: no AI box any more
+- [ ] **More… → Make questions with AI**: about 5 questions appear; edit one, untick one, **Keep checked**; the kept ones come up in tests
+- [ ] Select words → **Write deeper with AI**: it shows the cost first; type what you want (optional) → **Write it**: a new fold with an "AI" mark and a dashed line, and a few dashed phrases inside it
+- [ ] Open a dashed phrase: nothing is written until you tap **Write this with AI**; or write in it yourself; or **Remove this fold**
+- [ ] Edit an AI fold: its "AI" mark and dashed line go away (it's yours now)
+- [ ] The writing clock doesn't move while the AI writes
+- [ ] **Settings → AI** shows about how much has been used this month; set the monthly limit low to see AI pause
+- [ ] Turn on Airplane Mode and take a test: you can still grade; the AI box says it isn't available
+
+
 ## F · Folds in the text
 
 **Make folds**

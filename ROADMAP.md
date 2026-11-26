@@ -53,7 +53,9 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 - ✅ **Focus view:** "Open on its own" makes any fold the page; "‹ Step out" and the path at the top (Book › … › here) go back out, with the way back unfolded
 - ✅ Pages and folds are the same thing; folds show in the page list with a ⌁ mark
 - ✅ Reopening puts you back in the fold you were writing in; folds sync (encrypted) and export/import
-- ⬜ **Nest in… (going outward):** wrap selected words in something new or existing. Waiting on your decision: should the words **move** into the wrapper, or **stay** and be **shared** with it?
+- ✅ **Nest in… (going outward)** — both ways (built, waiting for you to try):
+  - **Wrap here (shared):** the words stay where they are and a fold forms around them holding the same words; change them in either place and both change; write around them inside the fold. If the words are deleted in the page, the fold keeps a copy ("source removed").
+  - **Move into:** the words move to a new page or one you already have (folds in them travel along); a ⤷ marker stays and takes you there. Undo right after.
 - ⬜ Later: several separate pieces in one fold; the same fold in several places (cross-folds); open a fold as a tab or side by side
 
 ## T4 · The book, in text ⬜
@@ -78,13 +80,20 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 
 ---
 
-## M · Memory palace (folds as pegs) ⬜ — next after folds
-- ⬜ M1 Hiding: hide a fold's contents or selected words; cue styles: blank, first letters, word shapes, every other word; press-and-hold to peek
-- ⬜ M2 Test me: walk the folds in order (room by room, level by level): see the peg → recall → Reveal → Got it / Almost / Missed; score and weak pegs at the end
-- ⬜ M3 Write it from memory: type what you remember, word-by-word comparison
-- ⬜ M4 Spaced review: missed pegs come back sooner ("3 pegs due today")
-- Open choices: hide contents vs peg words by default; first test style (reveal-and-mark vs type it)
-- Typing answers counts as writing; holding while recalling counts; everything syncs encrypted
+## M · Memory palace (folds as pegs) ✅ (built and tested in a browser; waiting for you to try)
+- ✅ M1 Practice: hide what's inside a fold with hints (first letters, word shapes, every other word, blank lines); press and hold to peek
+- ✅ M2 Test me: on any fold or page (it and everything inside), walked in order room by room or shuffled. Prompt = the fold's words with what's inside hidden (default), or the other way round (per fold), or your own questions, or questions the AI suggested and you kept
+- ✅ M3 Type it from memory → Submit → the correct answer beside yours, word by word (matched / missed / added / changed); AI feedback if you've added a key; you grade Missed / Almost / Got it / Easy (the AI's suggestion is highlighted; you can overrule). Per fold: AI suggests the grade, AI feedback but you grade, or only you. End: score, weak pegs, next review
+- ✅ M4 Spaced review with FSRS (the modern open scheduler): each prompt comes back right before you'd likely forget it. Simple limits in Settings → Memory: how sure you want to be (80–95%), most reviews per day, new prompts per day, longest gap. "N to review today" in the page list; a "due" badge on folds
+- ✅ Typing answers counts on the writing clock; holding counts; AI never does. Everything syncs encrypted; answers given on two devices are all kept
+- Later (planned): drills/loops (repeat a recipe until mastered, then extend), prompts in both directions at once, the same fold in many places (cross-folds)
+
+## AI ✅ (built; switches on when you add an Anthropic key in Settings → AI)
+- ✅ Feedback on memory answers (what you got, what you missed, meaning kept, a tip, a suggested grade)
+- ✅ Make questions with AI on any fold: keep, edit or drop each
+- ✅ Write deeper with AI: on selected words, the AI writes a new fold and marks up to 5 phrases in it with dashed lines; each is written only when you open it and ask (you choose up to 5 levels deep). On a fold, it marks phrases inside it. Shows the cost first. AI-written folds show a dashed line and "AI" until you edit them. No writing-clock time
+- ✅ Your key stays on your device; model choice (Haiku 5.5 / Sonnet 5.5); a monthly soft limit with a running estimate
+- Later: Venice, ChatGPT and your own models (the code is ready for more providers)
 
 # ⏸ ON HOLD: iPad + Apple Pencil (resume when the Pencil is replaced)
 Everything below is kept. The native iPad app still builds on GitHub.
@@ -175,7 +184,6 @@ TV + IR touch frame + cheap mini PC running the Board in a full-screen web brows
 ---
 
 ## ⏸ Back pocket
-- AI-generated folds: tell an AI (Claude, ChatGPT, Venice, own models) to write something and fold deeper passages under each meaningful chunk, several levels deep. Start with unfold-on-demand (generate a level only when opened). AI folds look different; AI time never counts on the writing clock. Needs API keys (chat subscriptions usually don't include app access).
 - MIDI controller / sequencer mode: piano roll + channel rack (MIDI channels, in and out), to the iPad itself or FL Studio over USB
 
 ## Dropped

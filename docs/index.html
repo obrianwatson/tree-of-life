@@ -86,6 +86,14 @@ header{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area
 .crumb.out{color:var(--green);font-weight:500}
 .crumbs .sep{color:var(--muted);flex:none}
 .fmk{font-weight:600}
+:root{--share:color-mix(in srgb,var(--green) 12%,transparent)}
+.fnote{font-size:12px;color:var(--muted);border:1px dashed var(--line);border-radius:6px;padding:1px 6px}
+.aimark{font:600 11px/1 "Hanken Grotesk",system-ui,sans-serif;letter-spacing:.02em;color:var(--fc,var(--green));border:1px solid currentColor;border-radius:5px;padding:2px 4px}
+.fold.ai{border-left-style:dashed}
+#toast{position:fixed;z-index:30;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;
+  max-width:min(92vw,560px);padding:8px 8px 8px 16px;border-radius:12px;background:var(--ink);color:var(--paper);box-shadow:0 8px 24px rgb(0 0 0/.25);font-size:15px}
+#toast[hidden]{display:none}
+#toast .btn{height:38px;background:var(--paper);color:var(--ink);border-color:var(--paper)}
 #pickList{max-height:50vh;overflow-y:auto;margin:8px 0}
 #pickList button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);padding:10px 6px;min-height:44px;font:15px "Hanken Grotesk",system-ui,sans-serif;cursor:pointer}
 #pickList button small{display:block;color:var(--muted)}
@@ -148,6 +156,40 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 .looks .row{align-items:center}
 .looks .look{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line)}
 .looks .look span{flex:1}
+.aipending{display:grid;gap:6px;margin:4px 0 8px;padding:8px 12px;border:1px dashed var(--fc,var(--green));border-radius:10px;font:14px/1.4 "Hanken Grotesk",system-ui,sans-serif;color:var(--muted)}
+.aiq-item{display:grid;gap:2px;padding:8px 0;border-bottom:1px solid var(--line)}
+.memrow{margin-bottom:6px;background:color-mix(in srgb,var(--green) 8%,transparent)}
+.duebadge{font:600 11px/1 "Hanken Grotesk",system-ui,sans-serif;color:#fff;background:#b5546e;border-radius:999px;padding:3px 7px}
+.practice{margin:4px 0 6px}.practice .cue{white-space:pre-wrap;font:var(--w-size,19px)/var(--w-lh,1.7) var(--w-font,Literata,Georgia,serif);color:var(--muted);letter-spacing:.02em;margin-bottom:6px;overflow-wrap:anywhere}
+.practice .cue.peeking{color:var(--ink)}
+.practice .peek{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#memDlg,#memHub,#aiDlg{width:min(600px,94vw);max-height:90dvh;overflow-y:auto}
+#memDlg select,#memHub select,#aiDlg select{width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:15px "Hanken Grotesk",system-ui,sans-serif;padding:0 10px;margin-top:6px}
+#memDlg input[type=text],#aiDlg input[type=text],#aiDlg textarea,#aiArea input{width:100%;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:16px "Hanken Grotesk",system-ui,sans-serif;padding:8px 12px;margin:4px 0}
+.qlist .q{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line)}.qlist .q>div{flex:1}.qlist small{display:block;color:var(--muted)}
+#testView{overflow-y:auto;min-height:0}
+#testView[hidden]{display:none}
+.t-top{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.t-body{padding:18px max(16px,calc((100% - 760px)/2)) 120px;display:grid;gap:14px}
+.t-prompt small,.t-cols small{color:var(--muted);font-size:13px}
+.t-q{font:calc(var(--w-size,19px) + 3px)/1.45 var(--w-font,Literata,Georgia,serif);white-space:pre-wrap;overflow-wrap:anywhere}
+.t-ctx{color:var(--muted);font:15px/1.5 var(--w-font,Literata,Georgia,serif);margin-top:4px}
+#tAns{width:100%;min-height:140px;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:var(--w-size,19px)/1.6 var(--w-font,Literata,Georgia,serif);padding:12px}
+.t-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.t-text{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:17px/1.7 var(--w-font,Literata,Georgia,serif);overflow-wrap:anywhere}
+.w.ok{color:var(--ink)}
+mark.w{border-radius:4px;padding:0 2px;color:inherit}
+mark.miss{background:color-mix(in srgb,#c08a1e 30%,transparent);text-decoration:underline dotted}
+mark.add{background:color-mix(in srgb,#b5546e 25%,transparent);text-decoration:line-through}
+mark.ch{background:color-mix(in srgb,#3f6fb5 25%,transparent)}
+.t-legend{color:var(--muted);font-size:13px;margin:0}
+.t-ai{border-left:3px solid var(--green);padding:6px 12px;background:var(--side);border-radius:0 10px 10px 0}.t-ai p{margin:4px 0}
+.t-grades{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.t-grades .grade{height:auto;min-height:56px;display:grid;gap:2px;padding:8px}.t-grades .grade small{color:var(--muted);font-weight:400;font-size:12px}
+.t-grades .grade.sug{border:2px solid var(--green)}
+.t-score{font-size:52px;line-height:1;margin:8px 0 0}
+.t-weak div{padding:4px 0;border-bottom:1px solid var(--line)}
+@media (max-width:600px){.t-cols{grid-template-columns:1fr}.t-grades{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:760px){
   .app{grid-template-columns:minmax(0,1fr)}
   .sync{font-size:12px;max-width:34vw;overflow:hidden;text-overflow:ellipsis}
@@ -187,7 +229,7 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
       <div class="clock"><span class="dot" id="dot"></span><span id="total">0:00:00</span><span class="goal" id="goal">of 5:00:00</span></div>
     </header>
     <div id="writer" aria-label="Your writing"></div>
-    <section id="chatView" hidden aria-label="Claude">
+    <section id="chatView" data-view="chat" hidden aria-label="Claude">
       <div class="chat-top">
         <select id="convSel" aria-label="Conversation"></select>
         <button class="btn" id="newConv">New</button>
@@ -208,9 +250,10 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
   </main>
 </div>
 <div id="foldbar" hidden role="toolbar" aria-label="Fold"></div>
+<div id="toast" hidden role="status"></div>
 <dialog id="pickDlg" aria-labelledby="pickTitle">
   <h2 id="pickTitle">Nest an existing page or fold</h2>
-  <p>It moves here, under the words you selected. (The same page in several places comes later.)</p>
+  <p id="pickNote">It moves here, under the words you selected. (The same page in several places comes later.)</p>
   <input id="pickSearch" type="search" placeholder="Search your pages" autocomplete="off">
   <div id="pickList"></div>
   <div class="row"><button class="btn" id="pickCancel">Cancel</button></div>
@@ -234,6 +277,8 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
     <label for="goalIn"><span>Daily goal</span><span id="goalVal"></span></label>
     <input type="range" id="goalIn" min="1" max="12" step="0.5">
   </div>
+  <div class="field" id="memArea"></div>
+  <div class="field" id="aiArea"></div>
   <div class="field looks">
     <label><span>Looks</span></label>
     <small>Designs you've kept from Claude. Tap one to switch.</small>
@@ -267,7 +312,7 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
-const APP_VERSION = "0.6";
+const APP_VERSION = "0.7";
 
 /* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
    Served from /preview/<number>/, it uses its own storage names, filled once from
@@ -275,7 +320,7 @@ const APP_VERSION = "0.6";
 const SANDBOX = (/\/preview\/(\d+)\//.exec(location.pathname) || [])[1] || null;
 const PREFIX = SANDBOX ? `tol-sbx${SANDBOX}-` : "tol-";
 if (SANDBOX && !store.get(PREFIX + "seeded", false)) {
-  for (const n of ["pages", "intervals", "ui", "theme", "looks"]) {
+  for (const n of ["pages", "intervals", "ui", "theme", "looks", "memory"]) {
     const v = store.get("tol-" + n, null);
     if (v !== null) store.set(PREFIX + n, v);
   }
@@ -283,7 +328,10 @@ if (SANDBOX && !store.get(PREFIX + "seeded", false)) {
 }
 
 /* ---------- data: pages (each page can hold pages) ---------- */
-const K = { pages: PREFIX + "pages", time: PREFIX + "intervals", ui: PREFIX + "ui", theme: PREFIX + "theme" };
+const K = { pages: PREFIX + "pages", time: PREFIX + "intervals", ui: PREFIX + "ui", theme: PREFIX + "theme", mem: PREFIX + "memory" };
+/* memory testing: prompts, practice settings and review history (memory.js reads and writes it) */
+let memory = store.get(K.mem, {});
+if (!memory || typeof memory !== "object") memory = {};
 let pages = store.get(K.pages, {});
 let intervals = store.get(K.time, []);
 const ui = Object.assign({ last: null, pause: 4, goal: 5, open: {}, folds: {}, showFolds: true, active: null }, store.get(K.ui, {}));
@@ -314,6 +362,8 @@ const ago = t => {
   if (s < 86400) return Math.floor(s / 3600) + " h ago";
   return new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 };
+/* other parts of the app (memory.js, ai.js) plug in here */
+const H = {};
 const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 function renderList() {
@@ -329,10 +379,11 @@ function renderList() {
     }
   };
   walk(null, 0);
-  $("list").innerHTML = rows.join("") || `<p style="color:var(--muted);padding:8px">No pages yet.</p>`;
+  $("list").innerHTML = (H.listTop ? H.listTop() : "") + (rows.join("") || `<p style="color:var(--muted);padding:8px">No pages yet.</p>`);
 }
 $("list").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.listtop && H.listTopClick) { H.listTopClick(b.dataset.listtop); closeDrawer(); return; }
   if (b.dataset.open) { openPage(b.dataset.open, true); closeDrawer(); }
   else if (b.dataset.tw) { ui.open[b.dataset.tw] = !ui.open[b.dataset.tw]; saveUI(); renderList(); }
   else if (b.dataset.add) { newPage(b.dataset.add); closeDrawer(); }
@@ -379,6 +430,7 @@ function placed(n) {
     let ci = hashIdx(x.f.id) % PALETTE.length, k = 0;
     while (used.has(PALETTE[ci]) && k++ < PALETTE.length) ci = (ci + 1) % PALETTE.length;
     x.color = PALETTE[ci];
+    x.ai = !!(x.f.ai && !x.f.ai.edited); x.portal = !!x.f.portal;
   }
   return list;
 }
@@ -388,6 +440,10 @@ function foldColor(f) { const par = pages[f.parentId]; if (!live(par)) return PA
 /* When a parent's text changes here, its folds' anchors move with it. Typing inside a
    folded stretch grows it; typing right at its edges doesn't; deleting all of it leaves
    the fold "unattached" (kept, never deleted). */
+/* A fold you're in the middle of editing keeps growing as you type at its end (e.g. replacing
+   its last word letter by letter); otherwise typing right at a fold's edges doesn't join it. */
+const editingRange = {};
+const sticky = (key, p) => { const r = editingRange[key]; return !!r && r.at === p && Date.now() - r.t < 2500; };   // same spot you just typed at
 function shiftAnchors(pid, oldT, newT) {
   if (oldT === newT) return;
   let p = 0; while (p < oldT.length && p < newT.length && oldT[p] === newT[p]) p++;
@@ -397,9 +453,10 @@ function shiftAnchors(pid, oldT, newT) {
   for (const f of foldsOf(pid)) {
     const r = locate(f, oldT); if (!r) continue;
     let [s, e] = r, ns, ne;
-    if (e <= p) { ns = s; ne = e; }
+    if (e === p && so === p && sticky(f.id, p)) { ns = s; ne = e + delta; editingRange[f.id] = { t: Date.now(), at: sn }; }   // still typing at its end
+    else if (e <= p) { ns = s; ne = e; }
     else if (s >= so) { ns = s + delta; ne = e + delta; }
-    else { ns = s < p ? s : p; ne = e > so ? e + delta : sn; }   // the change touched the folded words
+    else { ns = s < p ? s : p; ne = e > so ? e + delta : sn; editingRange[f.id] = { t: Date.now(), at: sn }; }   // the change touched the folded words
     const nf = Object.assign({}, f);
     if (ne <= ns) nf.anchor = Object.assign({}, f.anchor, { lost: true });
     else nf.anchor = makeAnchor(newT, ns, ne);
@@ -426,17 +483,26 @@ function pieces(n, marks, depth, seen) {   // how a node's text is cut around it
   if (pos <= text.length) out.push({ base: pos, value: text.slice(pos), after: [] });
   return out;
 }
-function marksHTML(value, base, marks, levels) {
-  if (ui.showFolds === false || !marks.length) return esc(value) + "​";
+function marksHTML(value, base, marks, levels, tint) {
   const len = value.length, pts = new Set([0, len]);
-  const rel = marks.map(m => ({ m, a: Math.max(0, m.s - base), b: Math.min(len, m.e - base) })).filter(x => x.b > x.a);
+  const rel = ui.showFolds === false ? [] : marks.map(m => ({ m, a: Math.max(0, m.s - base), b: Math.min(len, m.e - base) })).filter(x => x.b > x.a);
+  // shared words (a "Wrap here" span) get a soft tint, even when fold lines are hidden
+  const tr = tint ? { a: Math.max(0, tint.s - base), b: Math.min(len, tint.e - base) } : null;
+  if (!rel.length && !(tr && tr.b > tr.a)) return esc(value) + "​";
   rel.forEach(x => { pts.add(x.a); pts.add(x.b); });
+  if (tr && tr.b > tr.a) { pts.add(tr.a); pts.add(tr.b); }
   const P = [...pts].sort((x, y) => x - y); let out = "";
   for (let i = 0; i < P.length - 1; i++) {
     const a = P[i], b = P[i + 1], seg = esc(value.slice(a, b)), act = rel.filter(x => x.a <= a && x.b >= b);
-    if (!act.length) { out += seg; continue; }
-    const bg = act.map(x => `linear-gradient(${x.m.color},${x.m.color}) 0 calc(100% - ${(levels - 1 - x.m.level) * 3}px)/100% 2px no-repeat`).join(",");
-    out += `<span class="fm" style="padding-bottom:${levels * 3}px;background:${bg}">${seg}</span>`;
+    const tinted = tr && tr.a <= a && tr.b >= b;
+    if (!act.length && !tinted) { out += seg; continue; }
+    const bg = act.map(x => {
+      const y = `calc(100% - ${(levels - 1 - x.m.level) * 3}px)`;
+      return x.m.ai ? `repeating-linear-gradient(90deg,${x.m.color} 0 5px,transparent 5px 8px) 0 ${y}/100% 2px no-repeat`   // AI-written: dashed
+                    : `linear-gradient(${x.m.color},${x.m.color}) 0 ${y}/100% ${x.m.portal ? 3 : 2}px no-repeat`;
+    });
+    if (tinted) bg.push("linear-gradient(var(--share),var(--share))");
+    out += `<span class="fm${tinted ? " sh" : ""}" style="padding-bottom:${levels * 3}px;background:${bg.join(",")}">${seg}</span>`;
   }
   return out + "​";
 }
@@ -471,7 +537,7 @@ function addChunk(box, n, pc, marks, levels, depth) {
   if (!pc.base && !pc.value && !(n.text || "")) t.placeholder = depth ? "Write inside this fold." : "Start writing. The first line becomes the page's name.";
   const c = { ta: t, bd, id: n.id, levels };
   t._c = c; chunks.push(c);
-  bd.innerHTML = marksHTML(pc.value, pc.base, marks, levels);
+  bd.innerHTML = marksHTML(pc.value, pc.base, marks, levels, shareRange(n));
   wrap.append(bd, t); box.appendChild(wrap);
   wireTA(t);
 }
@@ -480,17 +546,24 @@ function renderFold(m, depth, seen) {
   box.style.setProperty("--fc", m.color); box.dataset.fold = f.id;
   const words = f.anchor.text.replace(/\s+/g, " ").trim();
   const head = el("div", "fold-head");
-  head.innerHTML = `<span class="fdot"></span><span class="ftitle">“${esc(words.slice(0, 48))}${words.length > 48 ? "…" : ""}”</span>` +
-    `<button class="fbtn" data-own="${f.id}">Open on its own</button><button class="fbtn" data-close="${f.id}">Fold away</button>`;
+  const isAI = f.ai && !f.ai.edited;
+  if (isAI) box.classList.add("ai");
+  head.innerHTML = `<span class="fdot"></span>${isAI ? '<span class="aimark" title="Written by AI">AI</span>' : ""}<span class="ftitle">“${esc(words.slice(0, 48))}${words.length > 48 ? "…" : ""}”</span>${H.foldBadge ? H.foldBadge(f) : ""}` +
+    (f.share && f.share.frozen ? '<span class="fnote">source removed: a saved copy</span>' : f.share ? '<span class="fnote">shared words</span>' : "") +
+    `<button class="fbtn" data-own="${f.id}">Open on its own</button><button class="fbtn" data-close="${f.id}">Fold away</button>` +
+    (H.foldMenu ? `<button class="fbtn" data-more="${f.id}" aria-label="More for this fold">More…</button>` : "");
   box.appendChild(head);
   const s2 = new Set(seen); s2.add(f.id);
-  box.appendChild(renderNode(f, depth + 1, s2));
+  const extra = H.foldBody ? H.foldBody(f, depth) : null;   // memory practice or AI (memory.js / ai.js)
+  if (extra && extra.prepend) box.appendChild(extra.prepend);
+  if (extra && extra.replace) box.appendChild(extra.replace);
+  else box.appendChild(renderNode(f, depth + 1, s2));
   return box;
 }
 function refreshMarks(id) {   // after typing: redraw the lines under the words, without rebuilding
   const n = pages[id]; if (!n) return;
   const marks = placed(n), levels = marks.reduce((m, x) => Math.max(m, x.level + 1), 0);
-  for (const c of nodeChunks(id)) { c.levels = levels; c.bd.innerHTML = marksHTML(c.ta.value, baseOf(c), marks, levels); sizeTA(c.ta); }
+  for (const c of nodeChunks(id)) { c.levels = levels; c.bd.innerHTML = marksHTML(c.ta.value, baseOf(c), marks, levels, shareRange(n)); sizeTA(c.ta); }
 }
 function expectedPieces(id) {   // would this node be cut differently now?
   const n = pages[id], depthSeen = new Set(); let d = 0, p = n;
@@ -548,13 +621,83 @@ function stepTo(t, dir) {
   nx.setSelectionRange(p, p); scrollToCaret(nx._c, p); return true;
 }
 
+/* ---------- shared words ("Wrap here") ----------
+   A wrapper fold holds the same words as the stretch of its parent it's anchored to.
+   They're one text: typing in either place changes both. If the words are deleted in the
+   parent, the wrapper keeps its copy and says "source removed". */
+function shareRange(n) {
+  const r = n && n.share; if (!r || r.frozen || (r.src && r.src !== n.parentId)) return null;   // src: the node the words are shared with (a reference)
+  const L = (n.text || "").length; return { s: Math.min(r.s, L), e: Math.min(Math.max(r.e, r.s), L) };
+}
+function shiftRange(r, oldT, newT, key) {     // move a range with an edit; typing inside it grows it
+  let p = 0; while (p < oldT.length && p < newT.length && oldT[p] === newT[p]) p++;
+  let so = oldT.length, sn = newT.length;
+  while (so > p && sn > p && oldT[so - 1] === newT[sn - 1]) { so--; sn--; }
+  const d = sn - so, { s, e } = r;
+  if (key && e === p && so === p && sticky(key, p)) { editingRange[key] = { t: Date.now(), at: sn }; return { s, e: e + d }; }
+  if (e <= p) return { s, e };                          // all before the change
+  if (s >= so) return { s: s + d, e: e + d };           // all after it
+  if (key) editingRange[key] = { t: Date.now(), at: sn };
+  return { s: Math.min(s, p), e: e > so ? e + d : sn };  // the change touched it
+}
+let touched = new Set();
+function setNodeText(id, newText, extra) {   // change a node's text without counting it as typing
+  const n = pages[id]; if (!live(n)) return;
+  const old = n.text || "";
+  shiftAnchors(id, old, newText);
+  const fields = Object.assign({ text: newText, updatedAt: Date.now() }, extra || {});
+  if (n.share && !n.share.frozen && !("share" in (extra || {}))) fields.share = Object.assign({}, n.share, shiftRange(n.share, old, newText, "share:" + id));
+  pages[id] = Object.assign({}, pages[id], fields);
+  touched.add(id);
+}
+function propagateShares(id, depth) {
+  if ((depth || 0) > 3) return;
+  const n = pages[id]; if (!live(n)) return;
+  const now = Date.now();
+  // 1) this node is a parent: wrappers anchored in it take its words
+  for (const w of foldsOf(id)) {
+    if (!w.share || w.share.frozen) continue;
+    const loc = locate(pages[w.id], n.text || "");
+    if (!loc) { pages[w.id] = Object.assign({}, pages[w.id], { share: Object.assign({}, w.share, { frozen: true }), updatedAt: now }); touched.add(w.id); continue; }
+    const words = (n.text || "").slice(loc[0], loc[1]), cur = pages[w.id], r = shareRange(cur);
+    if (!r || (cur.text || "").slice(r.s, r.e) === words) continue;
+    const t = (cur.text || "").slice(0, r.s) + words + (cur.text || "").slice(r.e);
+    setNodeText(w.id, t, { share: Object.assign({}, cur.share, { s: r.s, e: r.s + words.length }) });
+  }
+  // 2) this node is a wrapper: its shared words go back to the parent
+  const r = shareRange(n), par = n.parentId && pages[n.parentId];
+  if (r && live(par)) {
+    const loc = locate(n, par.text || ""), words = (n.text || "").slice(r.s, r.e);
+    if (loc && (par.text || "").slice(loc[0], loc[1]) !== words) {
+      const t = (par.text || "").slice(0, loc[0]) + words + (par.text || "").slice(loc[1]);
+      setNodeText(par.id, t);
+      if (!words) pages[id] = Object.assign({}, pages[id], { share: Object.assign({}, pages[id].share, { frozen: true }) });
+      for (const w of foldsOf(par.id)) if (w.id !== id && w.share && !w.share.frozen) propagateShares(par.id, (depth || 0) + 1);
+    }
+  }
+}
+/* bring shared words back together after changes from another device: the newer side wins */
+function reconcileShares() {
+  for (const w of Object.values(pages)) {
+    if (!live(w) || !w.share || w.share.frozen) continue;
+    const par = pages[w.parentId]; if (!live(par)) continue;
+    const loc = locate(w, par.text || ""), r = shareRange(w); if (!loc || !r) continue;
+    if ((par.text || "").slice(loc[0], loc[1]) === (w.text || "").slice(r.s, r.e)) continue;
+    propagateShares((w.updatedAt || 0) > (par.updatedAt || 0) ? w.id : par.id);
+  }
+}
+
 function editNode(id, newText, caret) {   // every change of a node's text goes through here
   const n = pages[id]; if (!live(n)) return;
   const old = n.text || "";
   shiftAnchors(id, old, newText);
   const now = Date.now();
-  pages[id] = Object.assign({}, n, { text: newText, cursor: caret, updatedAt: now, by: window.TOL && window.TOL.deviceLabel || DEVICE });
+  const more = {};
+  if (n.share && !n.share.frozen) more.share = Object.assign({}, n.share, shiftRange(n.share, old, newText, "share:" + id));
+  if (n.ai && !n.ai.edited) more.ai = Object.assign({}, n.ai, { edited: true });   // your words now: no longer marked AI
+  pages[id] = Object.assign({}, n, { text: newText, cursor: caret, updatedAt: now, by: window.TOL && window.TOL.deviceLabel || DEVICE }, more);
   screen[id] = newText;
+  touched = new Set(); propagateShares(id); touched.delete(id);
   ui.active = { root: ui.last, id, pos: caret }; ui.lastAt = now; lastInputAt = now;
   scheduleSave(); typed(); changedEvent();
   paintCrumbs();
@@ -565,9 +708,11 @@ function wireTA(t) {
   t.addEventListener("input", () => {
     const c = t._c, now = assemble(c.id), pos = baseOf(c) + t.selectionStart;
     lastTypeAt = Date.now(); hideBar();
+    const wasAI = !!(pages[c.id] && pages[c.id].ai && !pages[c.id].ai.edited);
     editNode(c.id, now, pos);
     const exp = expectedPieces(c.id), cur = nodeChunks(c.id).map(x => x.ta.value);
-    if (exp.length !== cur.length || exp.some((v, i) => v !== cur[i])) {
+    const others = [...touched].some(id => screen[id] !== undefined && (pages[id].text || "") !== screen[id]);
+    if (others || wasAI || exp.length !== cur.length || exp.some((v, i) => v !== cur[i])) {
       const sel = curSel(); renderWriter(); if (sel) placeCaret(sel, true);
     } else { refreshMarks(c.id); shownSig = sigOf(); }
   });
@@ -610,10 +755,10 @@ function hideBar() { bar.hidden = true; barState = null; }
 function updateBar(tapped) {
   if (view !== "write") return hideBar();
   const t = document.activeElement;
-  if (!t || !t._c) { if (!(barState && barState.mode === "nest")) hideBar(); return; }
+  if (!t || !t._c) { if (!(barState && (barState.mode === "nest" || barState.mode === "nestin"))) hideBar(); return; }
   const c = t._c, b = baseOf(c), s = b + t.selectionStart, e = b + t.selectionEnd;
   if (s !== e) {
-    if (barState && barState.mode === "nest" && barState.id === c.id && barState.s === s && barState.e === e) return;
+    if (barState && (barState.mode === "nest" || barState.mode === "nestin") && barState.id === c.id && barState.s === s && barState.e === e) return;
     return showBar({ mode: "sel", c, rel: t.selectionEnd, id: c.id, s, e });
   }
   if (ui.showFolds === false) return hideBar();
@@ -625,10 +770,18 @@ function updateBar(tapped) {
 function showBar(st) {
   barState = st;
   const dot = col => `<span class="fdot" style="background:${col}"></span>`;
-  if (st.mode === "sel") bar.innerHTML = `<button class="go" data-b="nest">Nest</button>`;
+  if (st.mode === "sel") bar.innerHTML = `<button class="go" data-b="nest">Nest</button><button data-b="nestin">Nest in…</button>` +
+    (H.aiSelection ? `<button data-b="ai">Write deeper with AI</button>` : "");
   else if (st.mode === "nest") bar.innerHTML = `<button class="go" data-b="new">New text</button><button data-b="existing">Existing page or fold…</button><button data-b="x" aria-label="Cancel">✕</button>`;
+  else if (st.mode === "nestin") bar.innerHTML =
+    `<button class="go" data-b="wrapnew" title="The words stay here and are shared with a new fold around them">Wrap here: new</button>` +
+    `<button data-b="wrapold" title="The words stay here and are shared with a fold you already have">Wrap here: existing…</button>` +
+    `<button data-b="movenew" title="The words move to a new page; a ⤷ marker stays here">Move into: new page</button>` +
+    `<button data-b="moveold" title="The words move to a page or fold you already have; a ⤷ marker stays here">Move into: existing…</button>` +
+    `<button data-b="x" aria-label="Cancel">✕</button>`;
   else bar.innerHTML = st.list.map(m => {
     const w = m.f.anchor.text.replace(/\s+/g, " ").trim();
+    if (m.f.portal) { const to = pages[m.f.portal]; return `<button data-b="toggle" data-id="${m.f.id}">${dot(m.color)}Go to “${esc(live(to) ? titleOf(to).slice(0, 28) : "a removed page")}” ⤷</button>`; }
     return `<button data-b="toggle" data-id="${m.f.id}">${dot(m.color)}${ui.folds[m.f.id] ? "Fold away" : "Open"} “${esc(w.slice(0, 28))}${w.length > 28 ? "…" : ""}”</button>`;
   }).join("");
   bar.hidden = false; positionBar();
@@ -649,9 +802,15 @@ bar.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b || !barState) return;
   const st = barState;
   if (b.dataset.b === "nest") { showBar(Object.assign({}, st, { mode: "nest" })); }
+  else if (b.dataset.b === "nestin") { showBar(Object.assign({}, st, { mode: "nestin" })); }
   else if (b.dataset.b === "x") hideBar();
   else if (b.dataset.b === "new") nestNew(st);
-  else if (b.dataset.b === "existing") openPicker(st);
+  else if (b.dataset.b === "existing") openPicker(Object.assign({}, st, { action: "nest" }));
+  else if (b.dataset.b === "wrapnew") wrapHere(st, null);
+  else if (b.dataset.b === "wrapold") openPicker(Object.assign({}, st, { action: "wrap" }));
+  else if (b.dataset.b === "movenew") moveInto(st, null);
+  else if (b.dataset.b === "moveold") openPicker(Object.assign({}, st, { action: "move" }));
+  else if (b.dataset.b === "ai" && H.aiSelection) { hideBar(); H.aiSelection({ id: st.id, s: st.s, e: st.e }); }
   else if (b.dataset.b === "toggle") { toggleFold(b.dataset.id, st); }
 });
 function nestNew(st) {
@@ -665,6 +824,12 @@ function nestNew(st) {
 }
 function toggleFold(id, st) {
   hideBar(); lastTypeAt = Date.now();          // don't pop the bar straight back up
+  const pf = pages[id];
+  if (pf && pf.portal) {                       // a ⤷ marker: go to where the words were moved
+    if (live(pages[pf.portal])) openPage(pf.portal, true); else say("The page these words moved to was deleted.");
+    return;
+  }
+  if (pf && H.beforeOpen && !ui.folds[id] && H.beforeOpen(pf) === false) return;
   ui.folds[id] = !ui.folds[id]; saveUI();
   const sel = curSel() || (st && { id: st.id, start: st.s != null ? st.s : 0 });
   renderWriter(); if (sel) placeCaret(sel, true);
@@ -674,11 +839,15 @@ const isAncestor = (a, b) => { let p = pages[b], d = 0; while (live(p) && d++ < 
 let pickFor = null;
 function openPicker(st) {
   pickFor = st; hideBar();
+  const T = { nest: ["Nest an existing page or fold", "It moves here, under the words you selected. (The same page in several places comes later.)"],
+              wrap: ["Wrap these words in…", "The words stay where they are and are also added inside the page or fold you pick, as shared words: change them in either place and both change. That page or fold moves here, around the words."],
+              move: ["Move these words into…", "The words are added at the end of the page or fold you pick. A ⤷ marker stays here; tap it to go there."] }[st.action || "nest"];
+  $("pickTitle").textContent = T[0]; $("pickNote").textContent = T[1];
   $("pickSearch").value = ""; paintPick(); $("pickDlg").showModal();
 }
 function paintPick() {
   const q = $("pickSearch").value.trim().toLowerCase(), st = pickFor; if (!st) return;
-  const opts = Object.values(pages).filter(p => live(p) && p.id !== st.id && !isAncestor(p.id, st.id))
+  const opts = Object.values(pages).filter(p => live(p) && !p.portal && p.id !== st.id && (st.action === "move" || !isAncestor(p.id, st.id)))
     .filter(p => !q || (p.text || "").toLowerCase().includes(q) || titleOf(p).toLowerCase().includes(q))
     .sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 80);
   $("pickList").innerHTML = opts.map(p => `<button data-pick="${p.id}">${esc(titleOf(p))}<small>${p.anchor ? "fold · " : ""}${path(p.id).slice(0, -1).map(titleOf).map(esc).join(" › ") || "top level"}</small></button>`).join("")
@@ -688,21 +857,99 @@ $("pickSearch").addEventListener("input", paintPick);
 $("pickCancel").onclick = () => { $("pickDlg").close(); pickFor = null; };
 $("pickList").addEventListener("click", e => {
   const b = e.target.closest("[data-pick]"); if (!b || !pickFor) return;
-  const st = pickFor, x = pages[b.dataset.pick], n = pages[st.id]; if (!live(x) || !live(n) || isAncestor(x.id, st.id)) return;
+  const st = pickFor, x = pages[b.dataset.pick], n = pages[st.id]; if (!live(x) || !live(n)) return;
+  if (st.action === "move") { $("pickDlg").close(); pickFor = null; moveInto(st, x.id); return; }
+  if (isAncestor(x.id, st.id)) return;
+  if (st.action === "wrap") { $("pickDlg").close(); pickFor = null; wrapHere(st, x.id); return; }
   const now = Date.now();
   pages[x.id] = Object.assign({}, x, { parentId: n.id, anchor: makeAnchor(n.text || "", st.s, st.e), anchorAt: now, updatedAt: now });
   ui.folds[x.id] = true; savePages(); saveUI(); changedEvent();
   $("pickDlg").close(); pickFor = null;
   renderWriter(); placeCaret({ id: x.id, start: 0 }, !touch); renderList();
 });
-// TODO (waiting on the owner's decision): "Nest in…" — wrap selected words in a new or existing
-// fold, going outward. Undecided whether the words MOVE into the wrapper or STAY and are SHARED.
+/* ---------- Nest in… (going outward) ----------
+   Wrap here: the words stay where they are; a fold forms around them, holding the same words
+   (shared: change them in either place and both change), with room to write before and after.
+   Move into: the words go to another page or fold; a ⤷ marker stays where they were. */
+function wrapHere(st, existingId) {
+  const n = pages[st.id]; if (!live(n) || st.e <= st.s) return;
+  const text = n.text || "", words = text.slice(st.s, st.e), now = Date.now();
+  let w;
+  if (existingId) {
+    const x = pages[existingId]; if (!live(x) || isAncestor(x.id, n.id)) return;
+    const sep = (x.text || "") ? "\n\n" : "", start = (x.text || "").length + sep.length;
+    w = Object.assign({}, x, { parentId: n.id, anchor: makeAnchor(text, st.s, st.e), anchorAt: now, text: (x.text || "") + sep + words,
+                               share: { src: n.id, s: start, e: start + words.length }, updatedAt: now });
+  } else {
+    w = { id: uid(), parentId: n.id, text: words, cursor: 0, createdAt: now, updatedAt: now, by: window.TOL && window.TOL.deviceLabel || DEVICE,
+          anchor: makeAnchor(text, st.s, st.e), anchorAt: now, share: { src: n.id, s: 0, e: words.length } };
+  }
+  pages[w.id] = w; ui.folds[w.id] = true;
+  savePages(); saveUI(); changedEvent();
+  renderWriter(); placeCaret({ id: w.id, start: existingId ? w.share.s : 0 }, true); renderList();
+  toast(existingId ? `Wrapped in “${titleOf(w)}”. The words are shared.` : "Wrapped. Write around the shared words.");
+}
+let undoSnap = null;
+function moveInto(st, destId) {
+  const n = pages[st.id]; if (!live(n) || st.e <= st.s) return;
+  const text = n.text || "", words = text.slice(st.s, st.e), now = Date.now();
+  const snap = { nodes: {}, created: [] }, keep = id => { if (!(id in snap.nodes)) snap.nodes[id] = pages[id] ? JSON.parse(JSON.stringify(pages[id])) : null; };
+  keep(n.id); foldsOf(n.id).forEach(f => keep(f.id)); if (n.share && n.parentId) keep(n.parentId);
+  // folds that sit entirely in the moved words travel with them
+  const inner = placed(n).filter(m => m.s >= st.s && m.e <= st.e && !m.f.portal);
+  inner.forEach(m => keep(m.f.id));
+  let d;
+  if (destId) {
+    const x = pages[destId]; if (!live(x) || x.id === n.id) return;
+    keep(x.id);
+    const sep = (x.text || "") ? "\n\n" : "", off = (x.text || "").length + sep.length;
+    d = Object.assign({}, x, { text: (x.text || "") + sep + words, updatedAt: now });
+    d._off = off;
+  } else {
+    d = { id: uid(), parentId: n.id, text: words, cursor: 0, createdAt: now, updatedAt: now, by: window.TOL && window.TOL.deviceLabel || DEVICE };
+    d._off = 0; snap.created.push(d.id);
+  }
+  const off = d._off; delete d._off;
+  pages[d.id] = d;
+  // cut the words here and leave the marker
+  touched = new Set();
+  setNodeText(n.id, text.slice(0, st.s) + "⤷" + text.slice(st.e));
+  for (const m of inner) {
+    const f = pages[m.f.id];
+    pages[f.id] = Object.assign({}, f, { parentId: d.id, anchor: makeAnchor(d.text, off + (m.s - st.s), off + (m.e - st.s)), anchorAt: now, updatedAt: now });
+  }
+  const L = { id: uid(), parentId: n.id, text: "", cursor: 0, createdAt: now, updatedAt: now, portal: d.id,
+              anchor: makeAnchor(pages[n.id].text || "", st.s, st.s + 1), anchorAt: now };
+  pages[L.id] = L; snap.created.push(L.id);
+  propagateShares(n.id);
+  undoSnap = snap;
+  savePages(); changedEvent();
+  renderWriter(); placeCaret({ id: n.id, start: st.s + 1 }, !touch); renderList();
+  toast(`Moved into “${titleOf(pages[d.id])}”. Tap ⤷ to go there.`, "Undo", undoMove);
+}
+function undoMove() {
+  const snap = undoSnap; if (!snap) return; undoSnap = null;
+  const now = Date.now();
+  for (const [id, v] of Object.entries(snap.nodes)) if (v) pages[id] = Object.assign(v, { updatedAt: now, anchorAt: v.anchor ? now : v.anchorAt });
+  for (const id of snap.created) pages[id] = { id, deleted: true, updatedAt: now };
+  savePages(); changedEvent(); renderWriter(); renderList();
+  toast("Move undone.");
+}
+let toastT = null;
+function toast(text, act, fn) {
+  const t = $("toast"); clearTimeout(toastT);
+  t.innerHTML = `<span>${esc(text)}</span>` + (act ? `<button class="btn" id="toastAct">${esc(act)}</button>` : "");
+  t.hidden = false;
+  if (act) $("toastAct").onclick = () => { t.hidden = true; fn(); };
+  toastT = setTimeout(() => { t.hidden = true; if (fn === undoMove) undoSnap = null; }, act ? 12000 : 4000);
+}
 
 /* fold heads: open on its own / fold away */
 writer.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.own) openPage(b.dataset.own, true);
   else if (b.dataset.close) toggleFold(b.dataset.close);
+  else if (b.dataset.more && H.foldMenu) H.foldMenu(b.dataset.more, b);
 });
 $("foldsToggle").onclick = () => {
   ui.showFolds = ui.showFolds === false; saveUI(); paintFoldsToggle();
@@ -844,14 +1091,14 @@ function paintSettings() {
   $("pause").value = ui.pause; $("pauseVal").textContent = ui.pause + " s";
   $("goalIn").value = ui.goal; $("goalVal").textContent = ui.goal + " h";
 }
-$("settingsBtn").onclick = () => { say(""); paintSettings(); closeDrawer(); dlg.showModal(); };
+$("settingsBtn").onclick = () => { say(""); paintSettings(); closeDrawer(); document.dispatchEvent(new Event("tol:settings")); dlg.showModal(); };
 $("closeSet").onclick = () => dlg.close();
 const prefsChanged = () => document.dispatchEvent(new CustomEvent("tol:changed", { detail: "prefs" }));
 $("pause").oninput = e => { ui.pause = +e.target.value; saveUI(); paintSettings(); prefsChanged(); };
 $("goalIn").oninput = e => { ui.goal = +e.target.value; saveUI(); paintSettings(); paintClock(); prefsChanged(); };
 $("exp").onclick = () => {
   const text = JSON.stringify({ format: "tol-text-export", version: 1, exportedAt: new Date().toISOString(),
-                                device: DEVICE, pages, intervals, settings: { pause: ui.pause, goal: ui.goal } }, null, 1);
+                                device: DEVICE, pages, intervals, memory, settings: { pause: ui.pause, goal: ui.goal } }, null, 1);
   try {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
@@ -872,6 +1119,7 @@ $("imp").onchange = async e => {
     }
     const seen = new Set(intervals.map(i => `${i.start}:${i.end}:${i.device}`));
     for (const i of d.intervals || []) if (!seen.has(`${i.start}:${i.end}:${i.device}`)) intervals.push(i);
+    if (d.memory && typeof d.memory === "object" && window.TOL.mergeMemory) { const m = JSON.parse(JSON.stringify(memory)); window.TOL.mergeMemory(m, d.memory); memory = m; store.set(K.mem, memory); }
     savePages(); store.set(K.time, intervals); changedEvent();
     renderList(); if (live(pages[ui.last])) openPage(ui.last); else { const r = recentLive(); if (r) openPage(r.id); } paintClock();
     say(`Imported: ${added} new page${added === 1 ? "" : "s"}, ${updated} updated. Nothing was deleted.`);
@@ -925,9 +1173,9 @@ function showView(v) {
   if (v === "chat") { setHold(false); endTyping(); }
   document.body.classList.toggle("chatting", v === "chat");
   writer.hidden = v !== "write";
-  $("chatView").hidden = v !== "chat";
+  document.querySelectorAll("main > section[data-view]").forEach(sec => { sec.hidden = sec.dataset.view !== v; });
   if (v === "write") { paintCrumbs(); sizeAll(); if (!touch) { const a = ui.active; placeCaret(a && a.root === ui.last && screen[a.id] !== undefined ? { id: a.id, start: a.pos } : { id: ui.last, start: (pages[ui.last] || {}).cursor || 0 }, true); } }
-  else { hideBar(); $("crumbs").textContent = "Claude"; }
+  else { hideBar(); $("crumbs").textContent = v === "chat" ? "Claude" : v === "test" ? "Memory" : ""; }
   document.dispatchEvent(new CustomEvent("tol:view", { detail: v }));
 }
 
@@ -944,11 +1192,32 @@ window.TOL = {
   /* for tests and for Claude Code: where folds sit (read-only) */
   folds: { placed: id => live(pages[id]) ? placed(pages[id]).map(m => ({ id: m.f.id, s: m.s, e: m.e, level: m.level, color: m.color })) : [],
            unattached: id => isUnattached(pages[id]) },
+  /* for memory.js and ai.js */
+  hooks: H,
+  node: id => pages[id], allNodes: () => Object.values(pages).filter(live), live, titleOf, path, children, foldsOf, locate, isUnattached, makeAnchor, uid,
+  placedIn: id => live(pages[id]) ? placed(pages[id]) : [],
+  createNode(fields) {                        // a new page or fold (AI folds use this): not typing, so no clock time
+    const now = Date.now();
+    const n = Object.assign({ id: uid(), parentId: null, text: "", cursor: 0, createdAt: now, updatedAt: now, by: window.TOL.deviceLabel || DEVICE }, fields);
+    if (n.anchor && !n.anchorAt) n.anchorAt = now;
+    pages[n.id] = n; savePages(); changedEvent(); return n;
+  },
+  deleteNode(id) { if (!pages[id]) return; pages[id] = { id, deleted: true, updatedAt: Date.now() }; savePages(); changedEvent(); },
+  patchNode(id, fields) { if (!live(pages[id])) return; pages[id] = Object.assign({}, pages[id], fields, { updatedAt: Date.now() }); savePages(); changedEvent(); },
+  setText(id, text, fields) { touched = new Set(); setNodeText(id, text, fields); propagateShares(id); savePages(); changedEvent(); },
+  openFold(id, open) { ui.folds[id] = open !== false; saveUI(); },
+  rerender() { if (view !== "write") return; const sel = curSel(); renderWriter(); if (sel) placeCaret(sel, true); renderList(); },
+  refreshList: () => renderList(),
+  openPage: (id, f) => openPage(id, f), current: () => ui.last,
+  typed: () => typed(), endTyping: () => endTyping(), toast,
+  getMemory: () => memory,
+  setMemory(m) { memory = m; store.set(K.mem, memory); document.dispatchEvent(new CustomEvent("tol:changed", { detail: "memory" })); },
   /* for sync.js */
   deviceLabel: DEVICE,
-  data: () => ({ pages, intervals }),
-  replaceData(newPages, newIntervals) {      // changes that came FROM another device: save, but don't count as a new edit here
+  data: () => ({ pages, intervals, memory }),
+  replaceData(newPages, newIntervals, changed, newMemory) {      // changes that came FROM another device: save, but don't count as a new edit here
     pages = newPages; intervals = newIntervals; store.set(K.time, intervals);
+    if (newMemory) { memory = newMemory; store.set(K.mem, memory); document.dispatchEvent(new Event("tol:memory")); }
     if (!store.set(K.pages, pages)) say("Couldn't save on this device. Export everything to keep it safe.");
     afterRemote();
   },
@@ -980,6 +1249,7 @@ function typingNow() { return typeStart !== null || holdDown || Date.now() - las
 /* After pages arrive from another device: refresh what's on screen, without ever
    overwriting what you're in the middle of typing. */
 function afterRemote() {
+  reconcileShares();
   renderList(); paintClock();
   const cur = pages[ui.last];
   if (!live(cur)) { const next = recentLive(); if (next) openPage(next.id); else newPage(null); return; }
@@ -1001,6 +1271,7 @@ function afterRemote() {
 }
 
 /* ---------- start: open where you left off ---------- */
+reconcileShares();
 paintFoldsToggle();
 if (live(pages[ui.last])) openPage(ui.last);
 else { const recent = recentLive(); recent ? openPage(recent.id) : newPage(null); }
@@ -1009,6 +1280,8 @@ if (!SANDBOX && "serviceWorker" in navigator && location.protocol === "https:") 
 }
 </script>
 <script src="claude.js"></script>
+<script src="memory.js"></script>
+<script src="ai.js"></script>
 <script src="sync.js"></script>
 </body>
 </html>
