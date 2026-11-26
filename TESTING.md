@@ -212,3 +212,10 @@ After every build: install it, go down that build's list on the iPad, and tick e
 **On the real touch frame (later)**
 - [ ] A finger or stylus draws; a second hand on the board doesn't draw
 - [ ] Holding the thumb button with one hand while writing with the other works
+
+**Text color shortcuts (laptop, v0.5)**
+- [ ] Press Ctrl+1 … Ctrl+5 while writing: your text turns blue, green, red, purple, gold
+- [ ] Ctrl+0 returns to the normal color
+- [ ] Reload: the color you chose is still there
+- [ ] Check it reads well in both light and dark mode
+- [ ] Holding Option still runs the clock; Claude's page can still change colors

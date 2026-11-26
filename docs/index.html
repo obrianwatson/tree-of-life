@@ -214,7 +214,7 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
-const APP_VERSION = "0.4";
+const APP_VERSION = "0.5";
 
 /* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
    Served from /preview/<number>/, it uses its own storage names, filled once from
@@ -362,6 +362,14 @@ setInterval(paintClock, 500);
 // laptop: hold Option
 document.addEventListener("keydown", e => { if (e.key === "Alt" && !e.repeat) setHold(true); });
 document.addEventListener("keyup", e => { if (e.key === "Alt") setHold(false); });
+// laptop: Ctrl+1 to Ctrl+5 change the text color, Ctrl+0 goes back to normal
+const INK_KEYS = { "1": "#2f6fb5", "2": "#3b8a4f", "3": "#c0443c", "4": "#8a55b5", "5": "#b8860b", "0": null };
+document.addEventListener("keydown", e => {
+  if (!e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || !(e.key in INK_KEYS)) return;
+  e.preventDefault();
+  theme = Object.assign({}, theme, { ink: INK_KEYS[e.key] });
+  store.set(K.theme, theme); applyTheme(theme);
+});
 window.addEventListener("blur", () => { setHold(false); endTyping(); });
 document.addEventListener("visibilitychange", () => { if (document.hidden) { setHold(false); endTyping(); savePages(); } });
 
