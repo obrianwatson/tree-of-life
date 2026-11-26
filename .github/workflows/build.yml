@@ -2,6 +2,7 @@ name: Build
 
 on:
   push:
+    branches-ignore: [tol-data]   # syncing pages must not start iPad builds
   workflow_dispatch:
 
 jobs:

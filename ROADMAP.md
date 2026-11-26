@@ -32,12 +32,16 @@ The Pencil is broken, so the focus is **writing in text**, on the **iPhone 16e**
 - ✅ Each second counts once; daily total "of 5:00:00" (goal adjustable)
 - ✅ Time saved as start/stop moments marked "iPhone" or "Laptop", so both devices merge without double-counting
 
-## T3 · Sync between iPhone and laptop ⬜
-- ⬜ Sign in once on each device
-- ⬜ Pages, folders and writing time sync through the cloud (Firebase, confirmed)
-- ⬜ **Pick up where you left off:** opens to the page you were last on, with the cursor where you left it
-- ⬜ Works offline; changes made on both devices while apart are merged, never lost
-- ⬜ Backup/export of everything to a file, and restore
+## T3 · Sync between iPhone and laptop ✅ (built and tested in a browser; waiting for you to try on the real devices)
+Instead of Firebase, sync goes through the GitHub project you already have, locked with your passphrase.
+- ✅ Turn on once per device: choose a passphrase on the first, type the same one on the second (capitals and spaces don't matter)
+- ✅ Your writing is encrypted on the device before it leaves (GitHub only stores scrambled text, in the `tol-data` branch)
+- ✅ Pages, folders, deletions and writing time sync; your look, saved Looks, typing pause and daily goal follow you too
+- ✅ Pick up where you left off: opening the app jumps to the page and cursor you were last writing on, on either device
+- ✅ Works offline; catches up when back online
+- ✅ Same page changed on both devices: the newer stays, the other is kept inside it as "Other version (device, time)". Writing is never lost
+- ✅ Timing: saves to the cloud about 5 s after you stop typing (and every ~10 s while you keep typing), at once when you switch away or lock the phone, and checks your other device every 10 s and the moment you come back
+- ✅ Export everything to a file, and restore (from T1)
 
 ## T4 · The book, in text ⬜
 - ⬜ Fold inward / outward

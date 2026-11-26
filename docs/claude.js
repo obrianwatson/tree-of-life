@@ -382,17 +382,18 @@
 
   /* ---------------- Looks ---------------- */
   const looks = () => st.get(LOOKS_KEY, []);
+  const looksChanged = () => document.dispatchEvent(new CustomEvent("tol:changed", { detail: "prefs" }));
   function paintLooks() {
     const list = looks();
     $("looksList").innerHTML = list.length ? list.map((l, i) =>
       `<div class="look"><span>${esc(l.name)}</span><button class="btn" data-use="${i}">Use</button><button class="btn ghost" data-del="${i}" aria-label="Delete ${esc(l.name)}">Delete</button></div>`).join("")
       : `<small>No saved looks yet.</small>`;
     $("looksList").querySelectorAll("[data-use]").forEach(b => b.onclick = () => { T.setTheme(looks()[+b.dataset.use].theme); $("msg").textContent = "Look applied."; });
-    $("looksList").querySelectorAll("[data-del]").forEach(b => b.onclick = () => { const l = looks(); l.splice(+b.dataset.del, 1); st.set(LOOKS_KEY, l); paintLooks(); });
+    $("looksList").querySelectorAll("[data-del]").forEach(b => b.onclick = () => { const l = looks(); l.splice(+b.dataset.del, 1); st.set(LOOKS_KEY, l); paintLooks(); looksChanged(); });
   }
   $("saveLook").onclick = () => {
     const name = $("lookName").value.trim() || `Look ${looks().length + 1}`;
-    const l = looks(); l.push({ name, theme: T.getTheme() }); st.set(LOOKS_KEY, l);
+    const l = looks(); l.push({ name, theme: T.getTheme() }); st.set(LOOKS_KEY, l); looksChanged();
     $("lookName").value = ""; paintLooks(); $("msg").textContent = `Saved "${name}".`;
   };
   $("resetLook").onclick = () => { T.setTheme(T.THEME_DEFAULT); $("msg").textContent = "Back to the original look."; };

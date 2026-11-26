@@ -51,6 +51,10 @@ header{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area
   font-variant-numeric:tabular-nums;font-size:17px}
 .dot{width:10px;height:10px;border-radius:50%;background:#9a9a94}.dot.on{background:var(--on)}
 .goal{font-size:13px;color:var(--muted)}
+.sync{border:0;background:none;color:var(--muted);font:13px "Hanken Grotesk",system-ui,sans-serif;padding:6px 4px;min-height:36px;cursor:pointer;white-space:nowrap}
+.sync[data-state=ok]::before{content:"● ";color:var(--on)}.sync[data-state=syncing]::before{content:"◌ "}
+.sync[data-state=locked],.sync[data-state=error]{color:#b4462f}
+#syncArea input{width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:16px "Hanken Grotesk",system-ui,sans-serif;padding:0 12px;margin:6px 0}
 textarea#page{width:100%;height:100%;resize:none;border:0;background:transparent;color:var(--ink);
   font:var(--w-size,19px)/var(--w-lh,1.7) var(--w-font,Literata,Georgia,serif);padding:28px max(24px,calc((100% - var(--page-w,720px))/2)) 140px;outline:none;-webkit-tap-highlight-color:transparent}
 textarea#page::placeholder{color:var(--muted)}
@@ -114,6 +118,7 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 .looks .look span{flex:1}
 @media (max-width:760px){
   .app{grid-template-columns:minmax(0,1fr)}
+  .sync{font-size:12px;max-width:34vw;overflow:hidden;text-overflow:ellipsis}
   aside{position:fixed;inset:0 auto 0 0;width:min(330px,86vw);z-index:10;transform:translateX(-105%);box-shadow:0 0 40px rgb(0 0 0/.25)}
   .drawer aside{transform:none}
   .drawer .scrim{display:block;position:fixed;inset:0;background:rgb(0 0 0/.3);z-index:9}
@@ -143,6 +148,7 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
     <header>
       <button class="btn menu" id="menu" aria-label="Show pages">☰</button>
       <div class="crumbs" id="crumbs"></div>
+      <button class="sync" id="syncPill" hidden aria-label="Sync status"></button>
       <div class="clock"><span class="dot" id="dot"></span><span id="total">0:00:00</span><span class="goal" id="goal">of 5:00:00</span></div>
     </header>
     <textarea id="page" spellcheck="true" autocapitalize="sentences" placeholder="Start writing. The first line becomes the page's name."></textarea>
@@ -171,7 +177,11 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 
 <dialog id="settings" aria-labelledby="setTitle">
   <h2 id="setTitle">Settings</h2>
-  <p>Saved on this device. Sync between your iPhone and laptop comes next.</p>
+  <p>With sync on, your look, Looks and writing settings follow you to your other device. The hold-button spot, device name and keys stay on this one.</p>
+  <div class="field">
+    <label><span>Sync between your devices</span></label>
+    <div id="syncArea"></div>
+  </div>
   <div class="field">
     <label for="pause"><span>Typing pause that still counts</span><span id="pauseVal"></span></label>
     <input type="range" id="pause" min="1" max="15" step="1">
@@ -214,7 +224,7 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
-const APP_VERSION = "0.4";
+const APP_VERSION = "0.5";
 
 /* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
    Served from /preview/<number>/, it uses its own storage names, filled once from
@@ -236,17 +246,23 @@ let intervals = store.get(K.time, []);
 const ui = Object.assign({ last: null, pause: 4, goal: 5, open: {} }, store.get(K.ui, {}));
 const saveUI = () => store.set(K.ui, ui);
 function savePages() { if (!store.set(K.pages, pages)) say("Couldn't save on this device. Export everything to keep it safe."); }
+/* Only real edits (typing, new page, delete, import, a kept conflict) count as changes for syncing. */
 
 function newPage(parentId) {
   const now = Date.now();
   const p = { id: uid(), parentId: parentId || null, text: "", cursor: 0, createdAt: now, updatedAt: now };
-  pages[p.id] = p; savePages();
+  pages[p.id] = p; savePages(); changedEvent();
   if (parentId) { ui.open[parentId] = true; }
   openPage(p.id, true); return p;
 }
-const titleOf = p => (p.text.split("\n").find(l => l.trim()) || "Untitled").trim().slice(0, 80);
-const children = id => Object.values(pages).filter(p => p.parentId === id).sort((a, b) => b.updatedAt - a.updatedAt);
-function path(id) { const out = []; let p = pages[id]; while (p) { out.unshift(p); p = pages[p.parentId]; } return out; }
+const titleOf = p => ((p && p.text) || "").split("\n").find(l => l.trim())?.trim().slice(0, 80) || "Untitled";
+/* A deleted page stays as a small marker ({id, deleted, updatedAt}) so the deletion can sync; it's never shown. */
+const live = p => !!p && !p.deleted;
+const parentOf = p => (p.parentId && live(pages[p.parentId])) ? p.parentId : null;   // inside a deleted page → shown at the top
+const children = id => Object.values(pages).filter(p => live(p) && parentOf(p) === id).sort((a, b) => b.updatedAt - a.updatedAt);
+const recentLive = () => Object.values(pages).filter(live).sort((a, b) => b.updatedAt - a.updatedAt)[0];
+function path(id) { const out = []; let p = pages[id]; while (live(p) && out.length < 50) { out.unshift(p); p = parentOf(p) ? pages[p.parentId] : null; } return out; }
+const changedEvent = () => document.dispatchEvent(new Event("tol:changed"));
 const ago = t => {
   const s = (Date.now() - t) / 1000;
   if (s < 60) return "just now"; if (s < 3600) return Math.floor(s / 60) + " min ago";
@@ -281,8 +297,8 @@ $("newTop").onclick = () => { newPage(null); closeDrawer(); };
 /* ---------- the page ---------- */
 const ta = $("page");
 function openPage(id, focusNow) {
-  const p = pages[id]; if (!p) return;
-  ui.last = id; saveUI();
+  const p = pages[id]; if (!live(p)) return;
+  ui.last = id; if (focusNow) ui.lastAt = Date.now(); saveUI();
   for (const a of path(id).slice(0, -1)) ui.open[a.id] = true;
   ta.value = p.text;
   $("crumbs").textContent = path(id).map(titleOf).join("  ›  ");
@@ -295,17 +311,23 @@ function openPage(id, focusNow) {
 }
 let saveTimer = null;
 function rememberCursor() { const p = pages[ui.last]; if (p) { p.cursor = ta.selectionStart; scheduleSave(); } }
-function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(savePages, 400); }
+let lastSaveAt = 0;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  if (Date.now() - lastSaveAt > 2000) { lastSaveAt = Date.now(); savePages(); return; }   // non-stop typing still saves every 2 s
+  saveTimer = setTimeout(() => { lastSaveAt = Date.now(); savePages(); }, 400);
+}
 ta.addEventListener("input", () => {
   const p = pages[ui.last]; if (!p) return;
-  p.text = ta.value; p.cursor = ta.selectionStart; p.updatedAt = Date.now();
-  scheduleSave(); typed();
+  p.text = ta.value; p.cursor = ta.selectionStart; p.updatedAt = Date.now(); p.by = window.TOL && window.TOL.deviceLabel || DEVICE;
+  ui.lastAt = p.updatedAt; lastInputAt = p.updatedAt;
+  scheduleSave(); typed(); changedEvent();
   $("crumbs").textContent = path(p.id).map(titleOf).join("  ›  ");
   clearTimeout(listTimer); listTimer = setTimeout(renderList, 800);
 });
-let listTimer = null;
+let listTimer = null, lastInputAt = 0;
 ["keyup", "click", "select"].forEach(ev => ta.addEventListener(ev, rememberCursor));
-window.addEventListener("pagehide", () => { rememberCursor(); savePages(); });
+window.addEventListener("pagehide", () => { rememberCursor(); savePages(); saveUI(); });
 
 /* ---------- the writing clock ----------
    Typing runs it; it keeps running through a pause up to the setting, and a longer
@@ -313,7 +335,7 @@ window.addEventListener("pagehide", () => { rememberCursor(); savePages(); });
    or the thumb button (phone) runs it too. Each second counts once. */
 let holdDown = false, holdSince = null, typeStart = null, typeLast = null, typeTimer = null;
 function bank(start, end) {
-  if (end > start) { intervals.push({ start, end, device: DEVICE }); store.set(K.time, intervals); }
+  if (end > start) { intervals.push({ start, end, device: DEVICE }); store.set(K.time, intervals); document.dispatchEvent(new CustomEvent("tol:changed", { detail: "time" })); }
 }
 function typed() {
   const now = Date.now();
@@ -392,8 +414,9 @@ function paintSettings() {
 }
 $("settingsBtn").onclick = () => { say(""); paintSettings(); closeDrawer(); dlg.showModal(); };
 $("closeSet").onclick = () => dlg.close();
-$("pause").oninput = e => { ui.pause = +e.target.value; saveUI(); paintSettings(); };
-$("goalIn").oninput = e => { ui.goal = +e.target.value; saveUI(); paintSettings(); paintClock(); };
+const prefsChanged = () => document.dispatchEvent(new CustomEvent("tol:changed", { detail: "prefs" }));
+$("pause").oninput = e => { ui.pause = +e.target.value; saveUI(); paintSettings(); prefsChanged(); };
+$("goalIn").oninput = e => { ui.goal = +e.target.value; saveUI(); paintSettings(); paintClock(); prefsChanged(); };
 $("exp").onclick = () => {
   const text = JSON.stringify({ format: "tol-text-export", version: 1, exportedAt: new Date().toISOString(),
                                 device: DEVICE, pages, intervals, settings: { pause: ui.pause, goal: ui.goal } }, null, 1);
@@ -417,23 +440,25 @@ $("imp").onchange = async e => {
     }
     const seen = new Set(intervals.map(i => `${i.start}:${i.end}:${i.device}`));
     for (const i of d.intervals || []) if (!seen.has(`${i.start}:${i.end}:${i.device}`)) intervals.push(i);
-    savePages(); store.set(K.time, intervals);
-    renderList(); if (ui.last) openPage(ui.last); paintClock();
+    savePages(); store.set(K.time, intervals); changedEvent();
+    renderList(); if (live(pages[ui.last])) openPage(ui.last); else { const r = recentLive(); if (r) openPage(r.id); } paintClock();
     say(`Imported: ${added} new page${added === 1 ? "" : "s"}, ${updated} updated. Nothing was deleted.`);
   } catch (err) { say("That file isn't a Tree of Life export. Nothing was changed."); }
 };
 let delArmed = null;
 $("delPage").onclick = () => {
-  const p = pages[ui.last]; if (!p) return;
+  const p = pages[ui.last]; if (!live(p)) return;
   if (!delArmed) {
     $("delPage").textContent = "Tap again to delete";
     delArmed = setTimeout(() => { delArmed = null; $("delPage").textContent = "Delete this page…"; }, 3000);
     return;
   }
   clearTimeout(delArmed); delArmed = null; $("delPage").textContent = "Delete this page…";
-  for (const c of children(p.id)) { c.parentId = p.parentId; }  // pages inside move up a level
-  delete pages[p.id]; savePages();
-  const next = Object.values(pages).sort((a, b) => b.updatedAt - a.updatedAt)[0];
+  const now = Date.now();
+  for (const c of children(p.id)) { pages[c.id] = Object.assign({}, c, { parentId: parentOf(p), updatedAt: now }); }  // pages inside move up a level
+  pages[p.id] = { id: p.id, deleted: true, updatedAt: now };      // a marker, so other devices delete it too
+  savePages(); changedEvent();
+  const next = recentLive();
   if (next) openPage(next.id); else newPage(null);
   say("Page deleted. The pages inside it moved up one level.");
 };
@@ -475,19 +500,65 @@ window.TOL = {
   THEME_DEFAULT: Object.assign({}, THEME_DEFAULT),
   getTheme: () => Object.assign({}, theme),
   previewTheme: t => applyTheme(Object.assign({}, THEME_DEFAULT, t)),
-  setTheme: t => { theme = Object.assign({}, THEME_DEFAULT, t); store.set(K.theme, theme); applyTheme(theme); },
+  setTheme: t => { theme = Object.assign({}, THEME_DEFAULT, t); store.set(K.theme, theme); applyTheme(theme); prefsChanged(); },
   currentPageText: () => (pages[ui.last] ? pages[ui.last].text : ""),
   currentPageTitle: () => (pages[ui.last] ? titleOf(pages[ui.last]) : ""),
-  showView, closeDrawer, view: () => view
+  showView, closeDrawer, view: () => view,
+  /* for sync.js */
+  deviceLabel: DEVICE,
+  data: () => ({ pages, intervals }),
+  replaceData(newPages, newIntervals) {      // changes that came FROM another device: save, but don't count as a new edit here
+    pages = newPages; intervals = newIntervals; store.set(K.time, intervals);
+    if (!store.set(K.pages, pages)) say("Couldn't save on this device. Export everything to keep it safe.");
+    afterRemote();
+  },
+  /* design and writing settings travel between devices; button position, device name and keys stay here */
+  getPrefs: () => ({ theme: store.get(K.theme, {}), looks: store.get(PREFIX + "looks", []), pause: ui.pause, goal: ui.goal }),
+  applyPrefs(p) {
+    if (p.theme) { theme = Object.assign({}, THEME_DEFAULT, p.theme); store.set(K.theme, theme); applyTheme(theme); }
+    if (Array.isArray(p.looks)) store.set(PREFIX + "looks", p.looks);
+    if (p.pause) ui.pause = p.pause;
+    if (p.goal) ui.goal = p.goal;
+    saveUI(); paintClock(); if (dlg.open) paintSettings();
+  },
+  lastSpot: () => ({ id: ui.last, cursor: live(pages[ui.last]) ? (pages[ui.last].cursor || 0) : 0, at: ui.lastAt || 0 }),
+  goTo(id, cursor, at) {
+    if (!live(pages[id]) || view !== "write" || typingNow()) return;
+    pages[id] = Object.assign({}, pages[id], { cursor: cursor || 0 });
+    openPage(id); ui.lastAt = at || Date.now(); saveUI();
+  }
 };
+function typingNow() { return typeStart !== null || holdDown || Date.now() - lastInputAt < 3000; }
+/* After pages arrive from another device: refresh what's on screen, without ever
+   overwriting what you're in the middle of typing. */
+function afterRemote() {
+  renderList(); paintClock();
+  const cur = pages[ui.last];
+  if (!live(cur)) { const next = recentLive(); if (next) openPage(next.id); else newPage(null); return; }
+  $("crumbs").textContent = view === "write" ? path(cur.id).map(titleOf).join("  ›  ") : "Claude";
+  if (cur.text === ta.value) return;
+  if ((typeStart !== null || Date.now() - lastInputAt < 3000) && document.activeElement === ta) {
+    // keep yours as the page, and save theirs inside it
+    const theirs = cur, now = Date.now();
+    const cid = "cv" + cur.id + "-" + (theirs.updatedAt || 0).toString(36);
+    pages[cur.id] = Object.assign({}, theirs, { text: ta.value, cursor: ta.selectionStart, updatedAt: now, by: window.TOL.deviceLabel || DEVICE });
+    if (!pages[cid]) pages[cid] = { id: cid, parentId: cur.id, text: `Other version (${theirs.by || "another device"}, ${new Date(theirs.updatedAt).toLocaleString()})\n\n${theirs.text || ""}`,
+                                    cursor: 0, createdAt: theirs.updatedAt, updatedAt: now, by: theirs.by };
+    savePages(); changedEvent(); renderList(); return;
+  }
+  const c = Math.min(ta.selectionStart || 0, cur.text.length);
+  ta.value = cur.text;
+  try { ta.setSelectionRange(c, c); } catch (e) {}
+}
 
 /* ---------- start: open where you left off ---------- */
-if (ui.last && pages[ui.last]) openPage(ui.last);
-else { const recent = Object.values(pages).sort((a, b) => b.updatedAt - a.updatedAt)[0]; recent ? openPage(recent.id) : newPage(null); }
+if (live(pages[ui.last])) openPage(ui.last);
+else { const recent = recentLive(); recent ? openPage(recent.id) : newPage(null); }
 paintClock();
 if (!SANDBOX && "serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 </script>
 <script src="claude.js"></script>
+<script src="sync.js"></script>
 </body>
 </html>

@@ -35,6 +35,43 @@
 
 ---
 
+## T3 · Sync between your iPhone and laptop
+
+**Turn it on (laptop first)**
+- [ ] Laptop: Settings → Sync between your devices → **Turn on sync**
+- [ ] Tap **Suggest one** (or type five or six words of your own) and **write the passphrase down on paper**
+- [ ] Type it in both boxes → **Turn on sync**. After a few seconds: "Sync is on…" and the top bar says **Synced**
+- [ ] iPhone (the Home Screen app): Settings → **Turn on sync** → type the same passphrase → **Unlock**. Capitals don't matter
+- [ ] Within a few seconds your laptop pages appear on the iPhone
+
+**Wrong passphrase**
+- [ ] On one device, Settings → Turn off on this device, then Turn on sync with a wrong passphrase: it says it doesn't match, and nothing changes. Then use the right one
+
+**Write on one, see it on the other**
+- [ ] Type a line on the laptop and stop. Within about 15 seconds it shows on the iPhone (no tapping needed)
+- [ ] Type on the iPhone, then switch to another app or lock the phone. Open the laptop's Firefox tab: the line is there almost at once
+- [ ] Open the app on the iPhone after writing on the laptop: it opens on the page you were writing, cursor where you stopped
+
+**Your look follows you**
+- [ ] On the iPhone's Claude page say "make the text bigger and warmer" → Keep it. On the laptop, within a few seconds, the page shows the same look
+- [ ] Save a Look in Settings on one device: it appears in Looks on the other
+
+**Offline**
+- [ ] Turn on Airplane Mode on the iPhone and write a line. The top bar says "Offline — will sync later"
+- [ ] Turn Airplane Mode off: it says Synced, and the line reaches the laptop
+
+**Both devices at once (conflict)**
+- [ ] Turn on Airplane Mode on the iPhone. Change the same page on both devices
+- [ ] Turn Airplane Mode off and wait a few seconds: the page has the newer writing, and inside it there's a page called "Other version (…)" holding the other writing. Nothing is lost
+
+**Delete**
+- [ ] Delete a page on one device: within about 15 seconds it's gone on the other too
+
+**Safety check (optional)**
+- [ ] On GitHub, switch the branch to `tol-data` and open a file in `sync/`: it's only scrambled letters, none of your words
+
+---
+
 ## T1 + T2 · Text app on the iPhone 16e and the laptop
 
 **Open it**
