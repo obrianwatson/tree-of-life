@@ -44,7 +44,7 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 - ✅ Export everything to a file, and restore (from T1)
 
 ## T4 · The book, in text ⬜
-- ⬜ Fold inward / outward
+- ✅ Fold inward / outward on text (web app v0.6: select words → "Nest a page inside" or "Nest this in…")
 - ⬜ Rearrange pages; links keep working
 - ⬜ Cross-fold, cross-reference with backlinks, branch, tags
 - ⬜ Open a fold in place, as a tab, or side by side (laptop)

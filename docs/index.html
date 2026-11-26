@@ -26,6 +26,15 @@
 html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);font:16px/1.5 "Hanken Grotesk",system-ui,sans-serif;overflow:hidden}
 body{display:flex;flex-direction:column;height:100dvh}
 button{font:inherit;color:inherit}
+#foldbar{display:flex;gap:6px;align-items:center;overflow-x:auto;padding:6px 16px;border-bottom:1px solid var(--line);background:var(--side);flex:none;-webkit-overflow-scrolling:touch}
+#foldbar[hidden]{display:none}
+#foldbar .chip{flex:none;height:40px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--paper);cursor:pointer;white-space:nowrap;font-size:14px}
+#foldbar .chip.cur{border-color:var(--green);background:color-mix(in srgb,var(--green) 14%,var(--paper))}
+#foldbar .chip.act{background:var(--green);border-color:var(--green);color:#fff}
+#foldbar .x{flex:none;width:30px;height:40px;margin-left:-8px;border:0;background:none;color:var(--muted);cursor:pointer}
+#foldbar .note{flex:none;font-size:14px;color:var(--muted)}
+#nestList{max-height:40vh;overflow-y:auto;margin:10px 0}
+#nestList .btn{display:block;width:100%;text-align:left;margin:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--green);outline-offset:2px}
 .app{display:grid;grid-template-columns:300px minmax(0,1fr);flex:1;min-height:0}
 aside{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;
@@ -43,7 +52,8 @@ aside{background:var(--side);border-right:1px solid var(--line);display:flex;fle
 .btn{height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-weight:500}
 .btn.primary{background:var(--green);border-color:var(--green);color:#fff}
 .btn.ghost{border-color:transparent;background:transparent}
-main{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0}
+main{display:flex;flex-direction:column;min-height:0}
+main>header{flex:none}
 header{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line)}
 .menu{display:none}
 .crumbs{flex:1;color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -55,7 +65,7 @@ header{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area
 .sync[data-state=ok]::before{content:"● ";color:var(--on)}.sync[data-state=syncing]::before{content:"◌ "}
 .sync[data-state=locked],.sync[data-state=error]{color:#b4462f}
 #syncArea input{width:100%;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:16px "Hanken Grotesk",system-ui,sans-serif;padding:0 12px;margin:6px 0}
-textarea#page{width:100%;height:100%;resize:none;border:0;background:transparent;color:var(--ink);
+textarea#page{width:100%;flex:1 1 0;min-height:0;resize:none;border:0;background:transparent;color:var(--ink);
   font:var(--w-size,19px)/var(--w-lh,1.7) var(--w-font,Literata,Georgia,serif);padding:28px max(24px,calc((100% - var(--page-w,720px))/2)) 140px;outline:none;-webkit-tap-highlight-color:transparent}
 textarea#page::placeholder{color:var(--muted)}
 .thumb{position:fixed;right:calc(18px + env(safe-area-inset-right));width:var(--thumb,86px);height:var(--thumb,86px);border-radius:50%;display:none;
@@ -88,7 +98,7 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 .banner .btn.ghost{background:transparent;color:#fff;border-color:rgb(255 255 255/.6)}
 .banner + .app header{padding-top:8px}
 .side-tools{display:flex;gap:2px}.side-tools .btn{padding:0 10px}
-#chatView{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;min-height:0}
+#chatView{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;flex:1 1 0;min-height:0}
 #chatView[hidden]{display:none}
 .chat-top{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);align-items:center}
 .chat-top select{flex:1 1 200px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:inherit;padding:0 10px}
@@ -151,6 +161,7 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
       <button class="sync" id="syncPill" hidden aria-label="Sync status"></button>
       <div class="clock"><span class="dot" id="dot"></span><span id="total">0:00:00</span><span class="goal" id="goal">of 5:00:00</span></div>
     </header>
+    <div id="foldbar" hidden aria-label="Nests"></div>
     <textarea id="page" spellcheck="true" autocapitalize="sentences" placeholder="Start writing. The first line becomes the page's name."></textarea>
     <section id="chatView" hidden aria-label="Claude">
       <div class="chat-top">
@@ -174,6 +185,13 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 </div>
 <div class="thumb" id="thumb" role="button" aria-label="Hold to count writing time"><span id="thumbLabel">hold</span></div>
 <div class="hint" id="hint">Hold Option to count thinking time</div>
+
+<dialog id="nestDlg" aria-labelledby="nestTitle">
+  <h2 id="nestTitle">Nest</h2>
+  <p id="nestSub"></p>
+  <div id="nestList"></div>
+  <div class="row"><button class="btn" id="nestCancel">Cancel</button></div>
+</dialog>
 
 <dialog id="settings" aria-labelledby="setTitle">
   <h2 id="setTitle">Settings</h2>
@@ -224,7 +242,7 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
-const APP_VERSION = "0.5";
+const APP_VERSION = "0.6.1";
 
 /* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
    Served from /preview/<number>/, it uses its own storage names, filled once from
@@ -307,7 +325,7 @@ function openPage(id, focusNow) {
   const c = Math.min(p.cursor || 0, ta.value.length);
   if (focusNow || !touch) ta.focus({ preventScroll: true });
   try { ta.setSelectionRange(c, c); } catch (e) {}
-  renderList();
+  renderList(); paintFolds();
 }
 let saveTimer = null;
 function rememberCursor() { const p = pages[ui.last]; if (p) { p.cursor = ta.selectionStart; scheduleSave(); } }
@@ -319,6 +337,7 @@ function scheduleSave() {
 }
 ta.addEventListener("input", () => {
   const p = pages[ui.last]; if (!p) return;
+  shiftFolds(p, p.text, ta.value);
   p.text = ta.value; p.cursor = ta.selectionStart; p.updatedAt = Date.now(); p.by = window.TOL && window.TOL.deviceLabel || DEVICE;
   ui.lastAt = p.updatedAt; lastInputAt = p.updatedAt;
   scheduleSave(); typed(); changedEvent();
@@ -327,6 +346,111 @@ ta.addEventListener("input", () => {
 });
 let listTimer = null, lastInputAt = 0;
 ["keyup", "click", "select"].forEach(ev => ta.addEventListener(ev, rememberCursor));
+
+/* ---------- nests: fold a page (or more text) inside a piece of your text ----------
+   Pick a piece of text (a sentence, a word, one letter, or several pieces with gaps).
+   "Nest inside" puts a page (new or existing) inside that text. "Nest in…" puts the
+   text inside another page (new or existing). Your words are never removed or moved:
+   the link lives in a small "folds" list on the page, and follows the words as you type. */
+const foldBar = $("foldbar"), nestDlg = $("nestDlg");
+let pending = [], pendingFor = null, foldNote = "", noteTimer = null;
+const squash = s => s.replace(/\s+/g, " ").trim();
+const clip = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;
+const piecesText = (text, rs) => rs.map(([a, b]) => squash(text.slice(a, b))).filter(Boolean).join(" … ");
+function shiftRanges(rs, oldT, newT) {
+  let pre = 0; const m = Math.min(oldT.length, newT.length);
+  while (pre < m && oldT[pre] === newT[pre]) pre++;
+  let suf = 0; while (suf < m - pre && oldT[oldT.length - 1 - suf] === newT[newT.length - 1 - suf]) suf++;
+  const oldEnd = oldT.length - suf, newEnd = newT.length - suf, d = newT.length - oldT.length;
+  return rs.map(([a, b]) => {
+    const f = x => x <= pre ? x : x >= oldEnd ? x + d : Math.min(x, newEnd);
+    return [f(a), f(b)];
+  }).filter(([a, b]) => b > a);
+}
+function shiftFolds(p, oldT, newT) {
+  if (oldT === newT) return;
+  if (pendingFor === p.id && pending.length) pending = shiftRanges(pending, oldT, newT);
+  if (Array.isArray(p.folds)) for (const f of p.folds) f.ranges = shiftRanges(f.ranges || [], oldT, newT);
+}
+const selRange = () => ta.selectionEnd > ta.selectionStart ? [ta.selectionStart, ta.selectionEnd] : null;
+function allPieces() {
+  const rs = pending.slice(), s = selRange(); if (s) rs.push(s);
+  return rs.sort((a, b) => a[0] - b[0]).filter(([a, b], i, arr) => !i || a !== arr[i - 1][0] || b !== arr[i - 1][1]);
+}
+function paintFolds() {
+  const p = pages[ui.last];
+  if (!live(p) || view !== "write") { foldBar.hidden = true; return; }
+  if (pendingFor !== p.id) { pending = []; pendingFor = p.id; }
+  const caret = ta.selectionStart, sel = selRange(), out = [];
+  if (sel || pending.length) {
+    const n = pending.length + (sel ? 1 : 0);
+    if (sel) out.push(`<button class="chip" data-nest="pick">+ Another piece</button>`);
+    out.push(`<button class="chip act" data-nest="in">Nest a page inside${n > 1 ? " these " + n : ""}</button>`);
+    out.push(`<button class="chip act" data-nest="out">Nest ${n > 1 ? "these " + n + " " : "this "}in…</button>`);
+    if (pending.length) out.push(`<button class="chip" data-nest="clear">Clear ${pending.length} picked</button>`);
+  }
+  for (const f of p.folds || []) {
+    const t = pages[f.page]; if (!live(t)) continue;
+    const here = (f.ranges || []).some(([a, b]) => caret >= a && caret <= b);
+    const q = (f.ranges || []).length ? piecesText(p.text, f.ranges) : (f.quote || "");
+    out.push(`<button class="chip${here ? " cur" : ""}" data-fopen="${t.id}">${f.dir === "out" ? "◂" : "▸"} “${esc(clip(q, 24))}” ${f.dir === "out" ? "in" : "holds"} ${esc(clip(titleOf(t), 24))}</button><button class="x" data-funnest="${f.id}" aria-label="Unlink this nest">✕</button>`);
+  }
+  if (foldNote) out.push(`<span class="note">${esc(foldNote)}</span>`);
+  foldBar.hidden = !out.length; foldBar.innerHTML = out.join("");
+}
+let foldRaf = 0;
+const schedFolds = () => { cancelAnimationFrame(foldRaf); foldRaf = requestAnimationFrame(paintFolds); };
+document.addEventListener("selectionchange", () => { if (document.activeElement === ta) schedFolds(); });
+["keyup", "click", "input"].forEach(ev => ta.addEventListener(ev, schedFolds));
+foldBar.addEventListener("pointerdown", e => { if (e.target.closest("button")) e.preventDefault(); });   // keep your selection
+function note(t) { foldNote = t; clearTimeout(noteTimer); noteTimer = setTimeout(() => { foldNote = ""; paintFolds(); }, 5000); paintFolds(); }
+foldBar.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const p = pages[ui.last]; if (!live(p)) return;
+  if (b.dataset.fopen) { openPage(b.dataset.fopen, true); return; }
+  if (b.dataset.funnest) {
+    p.folds = (p.folds || []).filter(f => f.id !== b.dataset.funnest); p.updatedAt = Date.now();
+    savePages(); changedEvent(); paintFolds(); note("Unlinked. The page and your words are untouched."); return;
+  }
+  const k = b.dataset.nest;
+  if (k === "pick") { const s = selRange(); if (s) { pending.push(s); ta.setSelectionRange(s[1], s[1]); } note("Piece picked. Select the next one."); }
+  else if (k === "clear") { pending = []; paintFolds(); }
+  else if (k === "in" || k === "out") openNest(k);
+});
+function openNest(dir) {
+  const p = pages[ui.last], rs = allPieces(); if (!live(p) || !rs.length) return;
+  const q = piecesText(p.text, rs);
+  $("nestTitle").textContent = dir === "in" ? "Nest inside your words" : "Nest your words in…";
+  $("nestSub").textContent = `“${clip(q, 60)}”`;
+  const blocked = new Set([p.id, ...(dir === "in" ? path(p.id).map(a => a.id) : [])]);
+  const opts = Object.values(pages).filter(x => live(x) && !blocked.has(x.id)).sort((a, b) => b.updatedAt - a.updatedAt);
+  $("nestList").innerHTML = `<button class="btn primary" data-t="">${dir === "in" ? "A new page inside" : "A new page holding this"}</button>`
+    + opts.map(x => `<button class="btn" data-t="${x.id}">${esc(titleOf(x))}</button>`).join("");
+  nestDlg.dataset.dir = dir; nestDlg.showModal();
+}
+$("nestCancel").onclick = () => nestDlg.close();
+$("nestList").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  doNest(nestDlg.dataset.dir, b.dataset.t || null); nestDlg.close();
+});
+function doNest(dir, target) {
+  const p = pages[ui.last], rs = allPieces(); if (!live(p) || !rs.length) return;
+  const now = Date.now(), by = window.TOL && window.TOL.deviceLabel || DEVICE, quote = piecesText(p.text, rs);
+  let tid = target, opened = false;
+  if (dir === "in") {
+    if (tid && live(pages[tid]) && !path(p.id).some(a => a.id === tid)) pages[tid] = Object.assign({}, pages[tid], { parentId: p.id, updatedAt: now, by });
+    else { tid = uid(); pages[tid] = { id: tid, parentId: p.id, text: "", cursor: 0, createdAt: now, updatedAt: now, by }; opened = true; }
+    ui.open[p.id] = true; saveUI();
+  } else if (tid && live(pages[tid])) {
+    const t = pages[tid];
+    pages[tid] = Object.assign({}, t, { text: ((t.text || "").replace(/\s+$/, "") ? (t.text || "").replace(/\s+$/, "") + "\n\n" : "") + quote, updatedAt: now, by });
+  } else { tid = uid(); pages[tid] = { id: tid, parentId: null, text: quote, cursor: 0, createdAt: now, updatedAt: now, by }; }
+  p.folds = (p.folds || []).concat([{ id: uid(), ranges: rs, quote, dir, page: tid, at: now }]);
+  p.updatedAt = now; pending = [];
+  savePages(); changedEvent(); renderList();
+  if (opened) openPage(tid, true);
+  else note(dir === "in" ? "Nested. Tap the chip to open it." : "Copied in. Your words here stay as they are.");
+}
 window.addEventListener("pagehide", () => { rememberCursor(); savePages(); saveUI(); });
 
 /* ---------- the writing clock ----------
@@ -489,6 +613,7 @@ function showView(v) {
   document.body.classList.toggle("chatting", v === "chat");
   ta.hidden = v !== "write";
   $("chatView").hidden = v !== "chat";
+  paintFolds();
   if (v === "write") { const p = pages[ui.last]; $("crumbs").textContent = p ? path(p.id).map(titleOf).join("  ›  ") : ""; if (!touch) ta.focus(); }
   else $("crumbs").textContent = "Claude";
   document.dispatchEvent(new CustomEvent("tol:view", { detail: v }));

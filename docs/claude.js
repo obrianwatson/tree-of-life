@@ -197,6 +197,7 @@
     kept: ["Kept", "The app updates itself within a minute or two."],
     undone: ["Undone", "Nothing was changed."]
   };
+  let lastSig = null, lastHtml = "";
   function render() {
     renderConvSelect();
     const th = $("thread"), sb = $("statusbar");
@@ -211,8 +212,19 @@
       parts.push(`<div class="bubble${m.mine ? " mine" : ""}"><span class="who">${m.mine ? "You" : "Claude"}</span>${md(m.body)}</div>`);
     }
     if (design) parts.push(designCard());
-    th.innerHTML = parts.join("");
-    th.scrollTop = th.scrollHeight;
+    const sig = (conv() ? conv().n : "none") + "|" + messages.length + "|" + (messages.length ? messages[messages.length - 1].body.length : 0) + "|" + (design ? 1 : 0);
+    const nearEnd = th.scrollHeight - th.scrollTop - th.clientHeight < 80;
+    const keep = th.scrollTop;
+    const first = lastSig === null;
+    const html2 = parts.join("");
+    if (html2 !== lastHtml) {
+      th.innerHTML = html2;
+      lastHtml = html2;
+      // only jump to the end when something new arrived and you were already at the end
+      if (first || (sig !== lastSig && nearEnd)) th.scrollTop = th.scrollHeight;
+      else th.scrollTop = keep;
+    }
+    lastSig = sig;
     bindCards();
     // status and actions
     const s = status && STATUS[status];
