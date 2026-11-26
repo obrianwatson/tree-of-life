@@ -31,13 +31,25 @@ class _Quiet(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+SERVERS = {}
+
+
 def serve(port, directory=None):
     """Serve docs/ (or another folder) at http://127.0.0.1:<port>/ in a background thread."""
     h = functools.partial(_Quiet, directory=directory or DOCS)
-    socketserver.TCPServer.allow_reuse_address = True
-    srv = socketserver.TCPServer(("127.0.0.1", port), h)
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
+    socketserver.ThreadingTCPServer.daemon_threads = True
+    srv = socketserver.ThreadingTCPServer(("127.0.0.1", port), h)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
+    SERVERS[port] = srv
     return f"http://127.0.0.1:{port}/"
+
+
+def unplug(port):
+    """Stop the server on this port: from the browser's side, the internet is gone."""
+    srv = SERVERS.pop(port, None)
+    if srv:
+        srv.shutdown(); srv.server_close()
 
 
 class Checks:

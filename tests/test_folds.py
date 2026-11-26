@@ -194,6 +194,9 @@ async def main():
 
         # ---------- export / import keeps folds ----------
         await pg.click("#settingsBtn")
+        on_top = await pg.evaluate("""(() => { const out = {}; for (const id of ['exp', 'delPage', 'closeSet']) { const b = document.getElementById(id); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); out[id] = hit === b || b.contains(hit); } return out; })()""")
+        C.ok(all(on_top.values()), f"nothing invisible sits on top of the Export, Delete and Done buttons ({on_top})")
         async with pg.expect_download() as dl:
             await pg.click("#exp")
         path = await (await dl.value).path()
@@ -202,7 +205,9 @@ async def main():
         await pg.keyboard.press("Escape")
         ctx2, pg2 = await new_device(br, url, token=False, viewport={"width": 1280, "height": 800})
         await pg2.click("#settingsBtn")
-        await pg2.set_input_files("#imp", path); await pg2.wait_for_timeout(400)
+        async with pg2.expect_file_chooser() as fc:                  # tapping Import opens the file box
+            await pg2.click("label[for=imp]")
+        await (await fc.value).set_files(path); await pg2.wait_for_timeout(600)
         p2 = {k: v for k, v in (await pg2.evaluate("window.TOL.data().pages")).items() if not v.get("deleted")}
         C.ok(sum(1 for v in p2.values() if v.get("anchor")) == sum(1 for v in exp["pages"].values() if v.get("anchor")), "import brings the folds back")
         await pg2.keyboard.press("Escape")

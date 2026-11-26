@@ -121,7 +121,8 @@ dialog p{margin:0 0 14px;color:var(--muted)}
 input[type=range]{width:100%;height:44px}
 .row{display:flex;flex-wrap:wrap;gap:8px}
 .msg{min-height:1.4em;margin-top:10px!important}
-input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+/* the real file box is kept off the screen and can't be touched: in Safari it sat, invisible, on top of "Export everything" and took its taps. The Import button (its label) still opens it. */
+input[type=file]{position:absolute;left:-200vw;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
 .scrim{display:none}
 .banner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;
   background:var(--green);color:#fff;font-weight:500}
@@ -335,7 +336,7 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
-const APP_VERSION = "1.3";
+const APP_VERSION = "1.4";
 
 /* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
    Served from /preview/<number>/, it uses its own storage names, filled once from

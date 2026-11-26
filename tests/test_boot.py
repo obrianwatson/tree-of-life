@@ -3,7 +3,7 @@ from opening, an update that arrives late is offered, and the book opens with no
 Run:  python3 tests/test_boot.py"""
 import asyncio, os, shutil, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from helpers import serve, Checks, new_device, launch, DOCS, BROWSER
+from helpers import serve, unplug, Checks, new_device, launch, DOCS, BROWSER
 from playwright.async_api import async_playwright
 
 C = Checks()
@@ -83,23 +83,28 @@ async def main():
         await ctx.close()
 
         # ---------- 4. the offline helper (service worker): the book opens with no internet at all ----------
-        if BROWSER == "chromium":
-            ctx, pg = await new_device(br, url, token=False, viewport={"width": 1200, "height": 800})
+        off_url = serve(8854)                                          # its own address, so it can be unplugged
+        ctx, pg = await new_device(br, off_url, token=False, viewport={"width": 1200, "height": 800})
+        if await pg.evaluate("'serviceWorker' in navigator"):
             await pg.click("#writer textarea"); await pg.keyboard.type("Written before going offline.", delay=5); await pg.wait_for_timeout(700)
-            await pg.evaluate("navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready)")
-            await pg.wait_for_function("navigator.serviceWorker.controller !== null || true"); await pg.wait_for_timeout(1500)
-            await pg.reload(); await pg.wait_for_timeout(800)          # now the page is under the helper
+            await pg.evaluate("navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready).then(() => true)")
+            await pg.wait_for_timeout(2500)
+            await pg.reload(); await pg.wait_for_timeout(1000)          # now the page is under the helper
             C.ok(await pg.evaluate("!!navigator.serviceWorker.controller"), "(the offline helper is running)")
-            await ctx.set_offline(True)
-            await pg.reload(); await pg.wait_for_timeout(1000)
+            pic = await pg.evaluate("fetch('icon-192.png').then(r => r.ok && r.headers.get('content-type'))")
+            C.ok(pic and "png" in pic, f"with the helper running, the app's own files still load normally ({pic})")
+            unplug(8854)                                               # the server is gone: no internet, as far as this page can tell
+            await pg.reload(); await pg.wait_for_timeout(1500)
             C.ok(await pg.evaluate("!!(window.__bolwBoot && window.__bolwBoot.ok)"), "with no internet, the book opens")
             C.ok("going offline" in await pg.locator("#writer textarea").first.input_value(), "…with your words, and you can keep writing")
-            await pg.goto(url + "?safe=1"); await pg.wait_for_timeout(800)
+            pic = await pg.evaluate("fetch('icon-192.png').then(r => r.ok && r.headers.get('content-type')).catch(e => 'failed: ' + e.message)")
+            C.ok(pic and "png" in str(pic), f"…and the files it saved are served from this device ({pic})")
+            await pg.goto(off_url + "?safe=1"); await pg.wait_for_timeout(1000)
             C.ok(await pg.evaluate("!!(window.__bolwBoot && window.__bolwBoot.ok && window.__bolwBoot.safe)"), "safe mode opens offline too")
-            await ctx.set_offline(False)
-            await ctx.close()
+            C.ok(not pg.errs, f"no page errors {pg.errs}")
         else:
-            print("SKIP offline-helper check (run in Chromium only: the other engines can't be taken offline reliably here)")
+            print("SKIP offline-helper check (this browser build has no service workers)")
+        await ctx.close()
         await br.close()
     print(f"\n{C.passes} passed, {C.fails} failed")
     sys.exit(1 if C.fails else 0)

@@ -5,7 +5,7 @@
      never answered from here, so the app's files are always one complete set (fresh from the network, or
      the last complete set the bootloader saved on this device), never a mix of old and new.
    If you add a file the app needs, add it to SHELL and bump CACHE. */
-const CACHE = "tol-v12";
+const CACHE = "tol-v13";
 const SHELL = ["./", "./index.html", "./app.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./icon-192.png", "./icon-512.png",
                "./claude.js", "./memory.js", "./safe.js", "./ai.js", "./agent.js", "./addons.js", "./drill.js", "./code.js", "./codefolds.js", "./sync.js", "./check.js"];
 const WAIT = 4000;   // how long the network gets before the saved copy is used
@@ -21,7 +21,7 @@ self.addEventListener("fetch", e => {
     const saved = (await cache.match(req)) || (nav ? await cache.match("./index.html") : undefined);   // any page address opens the book
     const net = fetch(req).then(res => { if (res && res.ok && res.type === "basic" && !res.redirected) cache.put(req, res.clone()).catch(() => {}); return res; });
     if (!saved) return net;
-    e.waitUntil(net.catch(() => {}));                    // (if the saved copy is used, the fresh one still gets saved for next time)
+    try { e.waitUntil(net.catch(() => {})); } catch (err) {}   // (if the saved copy is used, the fresh one still gets saved for next time)
     let timer;
     const slow = new Promise(res => { timer = setTimeout(() => res(null), WAIT); });
     try { const res = await Promise.race([net, slow]); return res && res.ok ? res : saved; }
