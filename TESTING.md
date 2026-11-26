@@ -2,6 +2,39 @@
 
 ---
 
+## T6 · Claude inside the app
+
+**Before you start (once)**
+- [ ] Claude Code token added to GitHub (Shadow PC: `claude setup-token`, then repo Settings → Secrets and variables → Actions → `CLAUDE_CODE_OAUTH_TOKEN`)
+- [ ] App's GitHub key made: GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token
+  - Name: Tree of Life app · Expiration: 1 year
+  - Repository access: **Only select repositories** → tree-of-life
+  - Repository permissions: **Contents**, **Issues**, **Pull requests** → each **Read and write**
+  - Generate, copy (starts with `github_pat_`)
+- [ ] Pasted into the app (Claude page or Settings → Claude Code key) on the **iPhone** and the **laptop**: it says "Connected. Claude Code is ready."
+
+**Instant design (works even before the keys)**
+- [ ] Tap **Claude** (top of the page list). Type "make the text bigger and warmer" → the page changes right away and a card says what changed
+- [ ] **Look at my page** shows it; back on Claude, **Undo** puts it back; try again and **Keep it**
+- [ ] Try "typewriter", "dark mode", "wider page", "more space between lines", "bigger hold button", "original look"
+- [ ] Settings → Looks: name and **Save this look**, switch to another, **Use** it again; **Original look** resets
+- [ ] On the iPhone, the hold button is hidden on the Claude page and comes back on your writing
+
+**A real change from Claude Code**
+- [ ] Type "show a word count at the bottom of the page" → status **Sent**, then **Claude is working…** within a minute or two
+- [ ] Claude's reply appears in plain words; status becomes **Getting your preview ready…**, then **Ready to try**
+- [ ] **Try it**: a green banner says "Trying…"; the word count is there; your pages are there (a copy)
+- [ ] Type something in the preview, tap **Back to my real app**: your real page does NOT have that typing
+- [ ] Try it again → **Keep it** in the banner → back in the real app, a banner says "Kept…"; after a minute or two, **Reload** shows the word count
+- [ ] Claude → **Changes** lists it; **Undo this change** starts a new conversation that removes it (try → keep)
+- [ ] Ask for something, then **Undo** while it's preparing: status **Undone**, nothing changes
+- [ ] Ask for a fix while a change is **Ready to try** ("make the count smaller"): Claude works on the same change; try again
+
+**Privacy**
+- [ ] Ticking "Include the page I was on" shows the public-project warning; untick it and your page isn't sent
+
+---
+
 ## T1 + T2 · Text app on the iPhone 16e and the laptop
 
 **Open it**

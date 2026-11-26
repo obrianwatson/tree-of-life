@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <title>Tree of Life</title>
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,500&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
 <style>
 /* VOICE: a quiet writer's notebook; nothing between you and the words
    IDEA: a bound book whose pages hold pages, with a clock in the spine
@@ -24,13 +24,14 @@
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);font:16px/1.5 "Hanken Grotesk",system-ui,sans-serif;overflow:hidden}
+body{display:flex;flex-direction:column;height:100dvh}
 button{font:inherit;color:inherit}
 button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--green);outline-offset:2px}
-.app{display:grid;grid-template-columns:300px minmax(0,1fr);height:100dvh}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);flex:1;min-height:0}
 aside{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;
   padding:calc(12px + env(safe-area-inset-top)) 10px calc(12px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left))}
 .side-head{display:flex;align-items:center;gap:8px;padding:4px 6px 12px}
-.side-head h1{font-size:18px;font-weight:600;margin:0;flex:1}
+.side-head h1{font-size:18px;font-weight:600;margin:0;flex:1;white-space:nowrap}
 .list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .item{display:flex;align-items:center;gap:2px;border-radius:10px}
 .item.current{background:color-mix(in srgb,var(--green) 13%,transparent)}
@@ -51,13 +52,14 @@ header{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area
 .dot{width:10px;height:10px;border-radius:50%;background:#9a9a94}.dot.on{background:var(--on)}
 .goal{font-size:13px;color:var(--muted)}
 textarea#page{width:100%;height:100%;resize:none;border:0;background:transparent;color:var(--ink);
-  font:19px/1.7 Literata,Georgia,serif;padding:28px max(24px,calc((100% - 720px)/2)) 140px;outline:none;-webkit-tap-highlight-color:transparent}
+  font:var(--w-size,19px)/var(--w-lh,1.7) var(--w-font,Literata,Georgia,serif);padding:28px max(24px,calc((100% - var(--page-w,720px))/2)) 140px;outline:none;-webkit-tap-highlight-color:transparent}
 textarea#page::placeholder{color:var(--muted)}
-.thumb{position:fixed;right:calc(18px + env(safe-area-inset-right));width:86px;height:86px;border-radius:50%;display:none;
+.thumb{position:fixed;right:calc(18px + env(safe-area-inset-right));width:var(--thumb,86px);height:var(--thumb,86px);border-radius:50%;display:none;
   place-items:center;border:2px solid color-mix(in srgb,var(--ink) 25%,transparent);background:color-mix(in srgb,var(--ink) 8%,var(--paper));
   color:var(--muted);font-weight:500;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;z-index:5}
 .thumb.on{background:var(--on);border-color:var(--on);color:#fff}
 .touch .thumb{display:grid}
+.chatting .thumb,.chatting .hint{display:none!important}
 .hint{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);font-size:13px;color:var(--muted);
   background:var(--side);padding:6px 12px;border-radius:999px;pointer-events:none;white-space:nowrap}
 .touch .hint{display:none}
@@ -74,6 +76,42 @@ input[type=range]{width:100%;height:44px}
 .msg{min-height:1.4em;margin-top:10px!important}
 input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
 .scrim{display:none}
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;
+  background:var(--green);color:#fff;font-weight:500}
+.banner[hidden]{display:none}
+.banner span{flex:1 1 220px}
+.banner .btn{height:40px;background:#fff;color:#1c1d1b;border-color:#fff}
+.banner .btn.ghost{background:transparent;color:#fff;border-color:rgb(255 255 255/.6)}
+.banner + .app header{padding-top:8px}
+.side-tools{display:flex;gap:2px}.side-tools .btn{padding:0 10px}
+#chatView{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;min-height:0}
+#chatView[hidden]{display:none}
+.chat-top{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);align-items:center}
+.chat-top select{flex:1 1 200px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:inherit;padding:0 10px}
+.thread{overflow-y:auto;padding:16px max(16px,calc((100% - 760px)/2));display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch}
+.bubble{max-width:88%;padding:10px 14px;border-radius:16px;background:var(--side);line-height:1.5;overflow-wrap:anywhere}
+.bubble.mine{align-self:flex-end;background:color-mix(in srgb,var(--green) 16%,var(--paper))}
+.bubble .who{display:block;font-size:13px;color:var(--muted);margin-bottom:2px}
+.bubble a{color:var(--green)}
+.card{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--paper)}
+.card h3{margin:0 0 6px;font-size:17px}
+.card p{margin:0 0 10px;color:var(--muted)}
+.card ol{margin:0 0 10px;padding-left:22px}
+.card li{margin:4px 0}
+.card input[type=password],.card input[type=text],.field input[type=text],.field input[type=password]{width:100%;height:44px;border-radius:10px;border:1px solid var(--line);
+  background:var(--paper);color:var(--ink);font:16px "Hanken Grotesk",system-ui,sans-serif;padding:0 12px;margin:6px 0}
+.statusbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--line);min-height:52px}
+.statusbar:empty{display:none}
+.statusbar .state{flex:1 1 200px;font-weight:500}
+.statusbar .state small{display:block;font-weight:400;color:var(--muted)}
+.composer{padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:grid;gap:8px}
+.composer textarea{width:100%;min-height:64px;max-height:30vh;resize:vertical;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink);
+  font:16px/1.45 "Hanken Grotesk",system-ui,sans-serif;padding:10px 12px}
+.composer label{display:flex;align-items:center;gap:6px;color:var(--muted);flex:1}
+.composer small{color:var(--muted)}
+.looks .row{align-items:center}
+.looks .look{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line)}
+.looks .look span{flex:1}
 @media (max-width:760px){
   .app{grid-template-columns:minmax(0,1fr)}
   aside{position:fixed;inset:0 auto 0 0;width:min(330px,86vw);z-index:10;transform:translateX(-105%);box-shadow:0 0 40px rgb(0 0 0/.25)}
@@ -82,17 +120,18 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
   .menu{display:inline-grid;place-items:center;width:44px;padding:0}
   .goal{display:none}
   header{padding-left:calc(8px + env(safe-area-inset-left))}
-  textarea#page{font-size:18px;padding:20px 18px 160px}
+  textarea#page{font-size:calc(var(--w-size,19px) - 1px);padding:20px 18px 160px}
 }
 @media (prefers-reduced-motion:no-preference){aside{transition:transform .2s ease}.thumb,.dot{transition:background .12s}}
 </style>
 </head>
 <body>
+<div class="banner" id="banner" hidden></div>
 <div class="app" id="app">
   <aside aria-label="Pages">
     <div class="side-head">
       <h1>Tree of Life</h1>
-      <button class="btn ghost" id="settingsBtn" aria-label="Settings">Settings</button>
+      <div class="side-tools"><button class="btn ghost" id="claudeBtn">Claude</button><button class="btn ghost" id="settingsBtn" aria-label="Settings">Settings</button></div>
     </div>
     <div class="list" id="list"></div>
     <div class="row" style="padding-top:10px">
@@ -107,6 +146,24 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
       <div class="clock"><span class="dot" id="dot"></span><span id="total">0:00:00</span><span class="goal" id="goal">of 5:00:00</span></div>
     </header>
     <textarea id="page" spellcheck="true" autocapitalize="sentences" placeholder="Start writing. The first line becomes the page's name."></textarea>
+    <section id="chatView" hidden aria-label="Claude">
+      <div class="chat-top">
+        <select id="convSel" aria-label="Conversation"></select>
+        <button class="btn" id="newConv">New</button>
+        <button class="btn" id="changesBtn">Changes</button>
+        <button class="btn" id="backWrite">Back to writing</button>
+      </div>
+      <div class="thread" id="thread" aria-live="polite"></div>
+      <div class="statusbar" id="statusbar"></div>
+      <form class="composer" id="composer">
+        <textarea id="ask" rows="2" placeholder="Tell Claude what you'd like. For example: make the text bigger and warmer, or add a word count."></textarea>
+        <div class="row" style="align-items:center">
+          <label><input type="checkbox" id="attach"> Include the page I was on</label>
+          <button class="btn primary" type="submit" id="sendBtn">Send</button>
+        </div>
+        <small id="attachWarn" hidden>Your project on GitHub is public, so anyone could read a page you include.</small>
+      </form>
+    </section>
   </main>
 </div>
 <div class="thumb" id="thumb" role="button" aria-label="Hold to count writing time"><span id="thumbLabel">hold</span></div>
@@ -123,6 +180,17 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
   <div class="field">
     <label for="goalIn"><span>Daily goal</span><span id="goalVal"></span></label>
     <input type="range" id="goalIn" min="1" max="12" step="0.5">
+  </div>
+  <div class="field looks">
+    <label><span>Looks</span></label>
+    <small>Designs you've kept from Claude. Tap one to switch.</small>
+    <div id="looksList"></div>
+    <div class="row"><input type="text" id="lookName" placeholder="Name this look" style="flex:1 1 160px"><button class="btn" id="saveLook">Save this look</button><button class="btn" id="resetLook">Original look</button></div>
+  </div>
+  <div class="field">
+    <label><span>Claude Code (GitHub key)</span><span id="ghState"></span></label>
+    <small>Lets this device ask Claude Code to change the app. Kept only on this device.</small>
+    <div class="row"><input type="password" id="ghToken" placeholder="Paste your GitHub key (github_pat_…)" autocomplete="off" style="flex:1 1 200px"><button class="btn" id="ghSave">Save</button><button class="btn" id="ghRemove">Remove</button></div>
   </div>
   <div class="row">
     <button class="btn" id="exp">Export everything</button>
@@ -146,8 +214,23 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
+const APP_VERSION = "0.4";
+
+/* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
+   Served from /preview/<number>/, it uses its own storage names, filled once from
+   your real pages. Nothing it does can reach your real writing. */
+const SANDBOX = (/\/preview\/(\d+)\//.exec(location.pathname) || [])[1] || null;
+const PREFIX = SANDBOX ? `tol-sbx${SANDBOX}-` : "tol-";
+if (SANDBOX && !store.get(PREFIX + "seeded", false)) {
+  for (const n of ["pages", "intervals", "ui", "theme", "looks"]) {
+    const v = store.get("tol-" + n, null);
+    if (v !== null) store.set(PREFIX + n, v);
+  }
+  store.set(PREFIX + "seeded", true);
+}
+
 /* ---------- data: pages (each page can hold pages) ---------- */
-const K = { pages: "tol-pages", time: "tol-intervals", ui: "tol-ui" };
+const K = { pages: PREFIX + "pages", time: PREFIX + "intervals", ui: PREFIX + "ui", theme: PREFIX + "theme" };
 let pages = store.get(K.pages, {});
 let intervals = store.get(K.time, []);
 const ui = Object.assign({ last: null, pause: 4, goal: 5, open: {} }, store.get(K.ui, {}));
@@ -355,12 +438,56 @@ $("delPage").onclick = () => {
   say("Page deleted. The pages inside it moved up one level.");
 };
 
+/* ---------- look and feel (vibe design changes these instantly) ---------- */
+const THEME_DEFAULT = { font: "serif", size: 19, lh: 1.7, width: 720, paper: null, ink: null, mode: "auto", thumb: 86 };
+const FONTS = { serif: "Literata, Georgia, serif", sans: '"Hanken Grotesk", system-ui, sans-serif',
+                typewriter: '"Courier Prime", "Courier New", monospace' };
+let theme = Object.assign({}, THEME_DEFAULT, store.get(K.theme, {}));
+function applyTheme(t) {
+  const r = document.documentElement, st = r.style;
+  st.setProperty("--w-font", FONTS[t.font] || FONTS.serif);
+  st.setProperty("--w-size", t.size + "px");
+  st.setProperty("--w-lh", String(t.lh));
+  st.setProperty("--page-w", t.width + "px");
+  st.setProperty("--thumb", t.thumb + "px");
+  if (t.paper) st.setProperty("--paper", t.paper); else st.removeProperty("--paper");
+  if (t.ink) st.setProperty("--ink", t.ink); else st.removeProperty("--ink");
+  if (t.mode === "light" || t.mode === "dark") r.dataset.theme = t.mode; else delete r.dataset.theme;
+}
+applyTheme(theme);
+
+/* ---------- views: writing or Claude ---------- */
+let view = "write";
+function showView(v) {
+  view = v;
+  if (v === "chat") { setHold(false); endTyping(); }
+  document.body.classList.toggle("chatting", v === "chat");
+  ta.hidden = v !== "write";
+  $("chatView").hidden = v !== "chat";
+  if (v === "write") { const p = pages[ui.last]; $("crumbs").textContent = p ? path(p.id).map(titleOf).join("  ›  ") : ""; if (!touch) ta.focus(); }
+  else $("crumbs").textContent = "Claude";
+  document.dispatchEvent(new CustomEvent("tol:view", { detail: v }));
+}
+
+/* What the Claude part of the app (claude.js) is allowed to use. */
+window.TOL = {
+  store, K, PREFIX, SANDBOX, APP_VERSION, DEVICE, esc, say,
+  THEME_DEFAULT: Object.assign({}, THEME_DEFAULT),
+  getTheme: () => Object.assign({}, theme),
+  previewTheme: t => applyTheme(Object.assign({}, THEME_DEFAULT, t)),
+  setTheme: t => { theme = Object.assign({}, THEME_DEFAULT, t); store.set(K.theme, theme); applyTheme(theme); },
+  currentPageText: () => (pages[ui.last] ? pages[ui.last].text : ""),
+  currentPageTitle: () => (pages[ui.last] ? titleOf(pages[ui.last]) : ""),
+  showView, closeDrawer, view: () => view
+};
+
 /* ---------- start: open where you left off ---------- */
 if (ui.last && pages[ui.last]) openPage(ui.last);
 else { const recent = Object.values(pages).sort((a, b) => b.updatedAt - a.updatedAt)[0]; recent ? openPage(recent.id) : newPage(null); }
 paintClock();
-if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+if (!SANDBOX && "serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 </script>
+<script src="claude.js"></script>
 </body>
 </html>

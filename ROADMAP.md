@@ -48,9 +48,16 @@ The Pencil is broken, so the focus is **writing in text**, on the **iPhone 16e**
 ## T5 · Timers anywhere ⬜
 - ⬜ Set a timer at any moment; active or elapsed; chain them; fold them
 
-## T6 · Claude in the app ⬜
-- ⬜ Claude Code on GitHub (`@claude` in an issue) — token step pending on the Shadow PC
-- ⬜ Ask Claude Code from inside the app; Claude chat on a page
+## T6 · Claude in the app 🔨 (built; switches on once the Claude Code token is added)
+- ✅ Claude page in the app: one conversation per request, Claude's replies and progress, status (Sent → Working → Ready to try → Kept / Undone)
+- ✅ Vibe design, instant: text size, paper warmth, typewriter/book/clean type, dark/light, page width, line spacing, hold-button size; Keep / Undo; saved **Looks** in Settings
+- ✅ Code changes go to Claude Code on GitHub; the app opens the change and shows a live preview
+- ✅ Try it on a **copy** of your pages (sandbox); Keep it / Undo from the app or from the preview banner
+- ✅ Changes list with "Undo this change"
+- ✅ GitHub key kept only on the device; page text sent only when you tick "Include the page I was on"
+- ⬜ Add the Claude Code token on the Shadow PC (`CLAUDE_CODE_OAUTH_TOKEN`)
+- ⬜ Make the app's GitHub key (steps in the app) and save it on the iPhone and the laptop
+- ⬜ First real run: "show a word count at the bottom" → try → keep → undo
 
 ---
 

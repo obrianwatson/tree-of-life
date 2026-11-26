@@ -1,19 +1,25 @@
 name: Publish web app
 
-# Publishes the docs/ folder (the Tree of Life web app and the Board)
-# to https://obrianwatson.github.io/tree-of-life/
-# Needs Settings → Pages → Source set to "GitHub Actions".
+# Publishes the Tree of Life web app to https://obrianwatson.github.io/tree-of-life/
+# - main's docs/ is the real app.
+# - every open change from Claude Code (pull request from this repository, opened by the owner
+#   or by Claude) is added as a preview at /tree-of-life/preview/<PR number>/ so it can be tried
+#   on a copy of the pages before keeping it.
+# Previews only COPY files from the change; nothing from a pull request is run here.
+# pull_request_target runs in main's context, which the github-pages environment allows to deploy.
 
 on:
   push:
     branches: [main]
-    paths: ["docs/**", ".github/workflows/pages.yml"]
+  pull_request_target:
+    types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: read
 
 concurrency:
   group: pages
@@ -27,9 +33,38 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Assemble the site (main + previews of open changes)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          rm -rf _site && mkdir -p _site && cp -R docs/. _site/
+          git rev-parse HEAD > _site/version.txt
+          gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 50 \
+            --json number,headRefName,headRefOid,isCrossRepository,author \
+            --jq ".[] | select(.isCrossRepository == false and (.author.login == \"$OWNER\" or .author.is_bot == true)) | \"\(.number) \(.headRefName) \(.headRefOid)\"" \
+            > prs.txt || true
+          while read -r num ref sha; do
+            [ -z "${num:-}" ] && continue
+            echo "Preview for #$num ($ref)"
+            git fetch --no-tags --depth 1 "https://github.com/$GITHUB_REPOSITORY.git" "$sha" || { echo "skip $num"; continue; }
+            work="$(mktemp -d)"
+            git archive "$sha" docs | tar -x -C "$work" || { echo "no docs in $num"; continue; }
+            mkdir -p "_site/preview/$num"
+            cp -R "$work/docs/." "_site/preview/$num/"
+            echo "$sha" > "_site/preview/$num/version.txt"
+          done < prs.txt
+          ls _site _site/preview 2>/dev/null || true
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
