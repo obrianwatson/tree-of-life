@@ -140,15 +140,19 @@ async def main():
         await ctxC.close()
 
         # 4. a leftover delta from an older base is ignored (the base already holds it)
-        stale = fake.files[delta_path]
+        stale_sha = fake.files[delta_path][1]                           # the delta as it is now: it belongs to the base about to be replaced
         await A.evaluate(f"window.TOL.setText('{first}', 'Page 0\\n' + 'rewritten again '.repeat(300))"); await A.wait_for_timeout(200)
         await A.evaluate("window.__tolSync._newBase()")                 # (as when the delta has grown, or ten minutes have passed)
-        await sync(A)                                                   # → a new base
-        C.ok(fake.puts[-1][0] == base_path, "(a new base was written)")
-        fake.files[delta_path] = (stale[0], "f" * 40); fake.blobs["f" * 40] = stale[0]     # GitHub still shows the old delta, as new
+        await sync(A)                                                   # → a new base; the old delta is still there on GitHub
+        C.ok(fake.puts[-1][0] == base_path and fake.files[delta_path][1] == stale_sha, "(a new base was written; GitHub still shows the old delta next to it)")
         await sync(B)
         C.ok((await book(B))["pages"][first]["text"].startswith("Page 0\nrewritten again"), "the other device keeps the newer base's words")
         C.ok(not await others(B), "…and the leftover delta makes no 'Other version' page")
+        ctxD, Dd = await new_device(br, url, fake, viewport={"width": 1000, "height": 700})      # a device that has read neither
+        await turn_on(Dd, False); await sync(Dd)
+        C.ok((await book(Dd))["pages"][first]["text"].startswith("Page 0\nrewritten again"), "a device that joins now takes the new base's words, not the leftover delta's older ones")
+        C.ok(not await others(Dd), "…with no 'Other version' page")
+        await ctxD.close()
 
         # 4b. GitHub's list a moment behind: it shows the OLD base next to a delta that belongs to the NEW base.
         #     The delta must not be thrown away for good; it is used as soon as the list shows the new base.
@@ -168,9 +172,9 @@ async def main():
 
         # 5. a file that can't be read is skipped; the device stays unlocked and keeps syncing
         junk = json.dumps({"format": "tol-sealed", "v": 1, "iv": base64.b64encode(os.urandom(12)).decode(), "ct": base64.b64encode(os.urandom(200)).decode(), "updatedAt": 1}).encode()
-        fake.files["sync/aaaaaaaaaaaaaaaa.json"] = (junk, "a" * 40); fake.blobs["a" * 40] = junk
-        fake.files["sync/bbbbbbbbbbbbbbbb.json"] = (b"this is not even JSON", "b" * 40); fake.blobs["b" * 40] = b"this is not even JSON"
-        fake.files["sync/cccccccccccccccc.d.json"] = (b'{"format":"tol-sealed","v":1,"iv":"!!","ct":"??"}', "c" * 40); fake.blobs["c" * 40] = fake.files["sync/cccccccccccccccc.d.json"][0]
+        fake.plant("sync/aaaaaaaaaaaaaaaa.json", junk)
+        fake.plant("sync/bbbbbbbbbbbbbbbb.json", b"this is not even JSON")
+        fake.plant("sync/cccccccccccccccc.d.json", b'{"format":"tol-sealed","v":1,"iv":"!!","ct":"??"}')
         await A.evaluate(f"window.TOL.setText('{first}', 'Page 0\\nshort again')"); await A.wait_for_timeout(200); await sync(A)
         st = await sync(B)
         C.ok(not st["locked"] and st["phase"] == "ok", f"three unreadable files don't lock the device or stop sync ({st['phase']})")
@@ -180,6 +184,14 @@ async def main():
         await B.evaluate("document.getElementById('settings').close()")
         for k in ("sync/aaaaaaaaaaaaaaaa.json", "sync/bbbbbbbbbbbbbbbb.json", "sync/cccccccccccccccc.d.json"):
             del fake.files[k]
+        # GitHub lists a new version before it can hand it over, and reading by path gives the OLDER copy: nothing is taken from it
+        older = fake.files[delta_path][0]
+        await A.evaluate(f"window.TOL.setText('{first}', 'Page 0\\nlisted before it could be read')"); await A.wait_for_timeout(200); await sync(A)
+        fake.late[fake.files[delta_path][1]] = 1; fake.old_by_path[delta_path] = older
+        st = await sync(B)
+        C.ok((await book(B))["pages"][first]["text"] != "Page 0\nlisted before it could be read" and st["phase"] == "ok" and st["lagging"] >= 1, "(the newest delta is listed but only an older copy can be read: it's checked against its fingerprint and not used)")
+        await B.wait_for_timeout(4200); await settle(B)                 # the app looks again by itself a few seconds later
+        C.ok((await book(B))["pages"][first]["text"] == "Page 0\nlisted before it could be read", "…a few seconds later the app looks again by itself and has it")
         # a read that went wrong once is tried again, not given up on
         await A.evaluate(f"window.TOL.setText('{first}', 'Page 0\\nsent while the download was garbled')"); await A.wait_for_timeout(200); await sync(A)
         fake.garble.add(fake.files[delta_path][1])

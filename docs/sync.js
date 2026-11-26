@@ -150,9 +150,25 @@
   const getMeta = async () => { const t = await gh(repo(`/contents/${META}${q}`), { raw: true, allow404: true }); return t ? JSON.parse(t) : null; };
   const listDir = () => gh(repo(`/contents/${DIR}${q}`), { allow404: true });
   const getRaw = path => gh(repo(`/contents/${path}${q}`), { raw: true });
-  async function getListed(f) {      // exactly the version the list named (by its fingerprint), so a slow copy on GitHub's side can't hand us an older one
-    try { return await gh(repo(`/git/blobs/${f.sha}`), { raw: true }); }
-    catch (e) { if (e.status !== 403 && e.status !== 404 && e.status !== 406 && e.status !== 415) throw e; return getRaw(f.path); }
+  /* Exactly the version the list named. It is asked for by its fingerprint and, if GitHub can't give it that way,
+     by its path; either way what arrives is CHECKED against the fingerprint (git's own: SHA-1 of "blob <length>\0" +
+     the bytes). Anything else (GitHub not caught up with its own list yet, an older copy, a download that broke)
+     is "not there yet": nothing is taken from it and it is looked at again next time. */
+  async function gitSha(text) {
+    const body = enc.encode(text), head = enc.encode(`blob ${body.length}\0`), all = new Uint8Array(head.length + body.length);
+    all.set(head); all.set(body, head.length);
+    return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-1", all)), x => x.toString(16).padStart(2, "0")).join("");
+  }
+  const LAG = () => Object.assign(new Error("LAG"), { lag: true });
+  async function getListed(f) {
+    let text;
+    try { text = await gh(repo(`/git/blobs/${f.sha}`), { raw: true }); }
+    catch (e) {
+      if (e.status !== 403 && e.status !== 404 && e.status !== 406 && e.status !== 415) throw e;
+      text = await gh(repo(`/contents/${f.path}${q}`), { raw: true, allow404: true });
+    }
+    if (text == null || (await gitSha(text)) !== f.sha) throw LAG();
+    return text;
   }
   const KEEPALIVE_MAX = 60000;       // browsers refuse a closing-app request over 64 KiB
   async function putFile(path, text, sha, keepalive) {
@@ -279,7 +295,7 @@
         if (!box || box.format !== "tol-sealed") throw BAD();
         try { return await unseal(key, box, aad); } catch (e) { throw BAD(); }
       };
-      let unread = 0;
+      let unread = 0, waiting = 0;
       for (const [id, d] of Object.entries(devs)) {
         // a delta that didn't belong to the listed base is remembered together with that base ("delta@base"):
         // it is looked at again as soon as the listed base changes (GitHub's list can show the base a moment late)
@@ -291,6 +307,7 @@
           if ((badTries[f.sha] || 0) >= 3) { bad = true; return null; }                   // already tried three times this session
           try { return await open(f, aad); }
           catch (e) {
+            if (e.lag) { lagTries[f.sha] = (lagTries[f.sha] || 0) + 1; if (lagTries[f.sha] > 6) { badTries[f.sha] = 3; bad = true; } else waiting++; return null; }   // not there yet: look again next time
             if (!e.bad) throw e;
             if (!(await keyStillOpens())) throw Object.assign(new Error("LOCK"), { name: "OperationError" });   // the passphrase really was changed
             badTries[f.sha] = (badTries[f.sha] || 0) + 1; bad = true; return null;
@@ -311,6 +328,7 @@
         if (base) S.seen[id] = d.base.sha;                       // only what was really read counts as seen
         if (other || delta) S.seen[id + ".d"] = other ? d.delta.sha + "@" + d.base.sha : d.delta.sha;
       }
+      if (waiting) setTimeout(() => { if (!running) syncNow("timer"); }, 3000);     // something wasn't there yet: look again in a moment rather than at the next 10 s check
       detail = unread ? `${unread} synced file${unread === 1 ? "" : "s"} from another device couldn't be read and ${unread === 1 ? "was" : "were"} skipped.` : "";
       if (changed.size) T.replaceData(P, I, changed, changed.has("#memory") ? M : null);
       if (prefs && prefs.at > (S.prefsAt || 0)) { T.applyPrefs(prefs); S.prefsJson = JSON.stringify(T.getPrefs()); S.prefsAt = prefs.at; }
@@ -340,7 +358,7 @@
 
   /* What this device's base file on GitHub holds (fingerprints), kept in this device's database.
      Unknown or out of date → null → the next write is a whole new base. */
-  const badTries = {};               // file fingerprint → how many times it arrived but couldn't be opened, this session
+  const badTries = {}, lagTries = {};   // file fingerprint → how many times it arrived but couldn't be opened / wasn't the listed version yet, this session
   let baseIdx;
   async function baseIndex() {
     if (baseIdx === undefined) { try { baseIdx = (await idb.get("base")) || null; } catch (e) { baseIdx = null; } }
@@ -532,6 +550,7 @@
     paint();
     if (canSync()) syncNow("resume");
   })();
-  window.__tolSync = { normalize, strength, suggest, syncNow: r => syncNow(r || "resume"), state: () => ({ phase, on: S.on, locked: !key, label: label(), running, dirtySince, lastWriteAt, nextTry, pushAt, detail, mySha: S.mySha, myDeltaSha: S.myDeltaSha, baseAt: S.baseAt || 0 }),
+  window.__tolSync = { normalize, strength, suggest, syncNow: r => syncNow(r || "resume"), state: () => ({ phase, on: S.on, locked: !key, label: label(), running, dirtySince, lastWriteAt, nextTry, pushAt, detail, mySha: S.mySha, myDeltaSha: S.myDeltaSha, baseAt: S.baseAt || 0,
+                                       seen: Object.assign({}, S.seen), lagging: Object.keys(lagTries).length }),
                        _quick: quick, _indexOf: indexOf, _deltaOf: deltaOf, _overlay: overlay, _newBase: () => { baseIdx = null; } };
 })();

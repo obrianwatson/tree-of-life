@@ -87,14 +87,17 @@ def same(a, b):
     return json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
 
 async def crossed(dev, oth, first, tail):
-    """Sync dev then oth; GitHub's file list can lag a moment behind a write, so look up to three times."""
+    """Sync dev then oth; GitHub can lag a moment behind a write, so look up to six times (about 15 s)."""
+    n = len(calls)
     s1 = await sync(dev)
-    for look in range(3):
+    for look in range(6):
         s2 = await sync(oth)
         if (await book(oth))[first]["text"].endswith(tail):
             return True, look, s1, s2
         await oth.wait_for_timeout(2500)
-    return False, 3, s1, s2
+    print("   did not cross. The receiving device says:", json.dumps({k: s2.get(k) for k in ("phase", "detail", "lagging", "seen", "mySha", "myDeltaSha")}))
+    print("   requests during this round:", [(c[0], c[1][-30:], c[2]) for c in calls[n:]])
+    return False, 6, s1, s2
 
 async def main():
     if not FAKE and (not TOKEN or not re.match(r"^tol-selftest-[\w-]+$", BR)):

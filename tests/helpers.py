@@ -77,6 +77,14 @@ class FakeGitHub:
         self.no_blobs = False   # True: answer 404 for /git/blobs (the app must fall back to reading by path)
         self.lag = {}           # path → an older sha: the folder list shows that older version (GitHub's list a moment behind)
         self.garble = set()     # shas whose NEXT read returns garbage once (a download that went wrong)
+        self.late = {}          # sha → how many reads answer 404 first (GitHub lists a new file a moment before it can hand it over)
+        self.old_by_path = {}   # path → older content handed out ONCE when the file is read by its path (a copy that is behind)
+
+    def plant(self, path, data):
+        """Put a file there as if some device had written it (with git's real fingerprint)."""
+        sha = hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+        self.files[path] = (data, sha); self.blobs[sha] = data
+        return sha
 
     async def handle(self, route):
         req = route.request
@@ -112,7 +120,12 @@ class FakeGitHub:
             if data is None:
                 return await j(404, {"message": "Not Found"})
             if mm.group(1) in self.garble:
-                self.garble.discard(mm.group(1)); data = b'{"format":"tol-sealed","v":1,"iv":"AAAA","ct":"garbled'  
+                self.garble.discard(mm.group(1)); data = b'{"format":"tol-sealed","v":1,"iv":"AAAA","ct":"garbled'
+            if mm.group(1) in self.late:
+                self.late[mm.group(1)] -= 1
+                if self.late[mm.group(1)] <= 0:
+                    del self.late[mm.group(1)]
+                return await j(404, {"message": "Not Found"})
             if "raw" in req.headers.get("accept", ""):
                 return await route.fulfill(status=200, headers=cors, content_type="text/plain", body=data)
             return await j(200, {"sha": mm.group(1), "encoding": "base64", "content": base64.b64encode(data).decode()})
@@ -129,6 +142,8 @@ class FakeGitHub:
                     return await j(404, {"message": "Not Found"})
                 data, sha = self.files[p]
                 if "raw" in req.headers.get("accept", ""):
+                    if p in self.old_by_path:
+                        data = self.old_by_path.pop(p)
                     return await route.fulfill(status=200, headers=cors, content_type="text/plain", body=data)
                 return await j(200, {"sha": sha, "content": base64.b64encode(data).decode()})
             if req.method == "PUT":
@@ -137,7 +152,7 @@ class FakeGitHub:
                 if cur and body.get("sha") != cur[1]:
                     return await j(409, {"message": "sha does not match"})
                 data = base64.b64decode(body["content"])
-                sha = hashlib.sha1(data + str(time.time()).encode()).hexdigest()
+                sha = hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()      # git's own fingerprint of a file, as the real GitHub gives
                 self.files[p] = (data, sha)
                 self.blobs[sha] = data
                 self.puts.append((p, len(data)))
