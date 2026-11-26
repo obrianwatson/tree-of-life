@@ -93,13 +93,20 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 - ✅ Versions kept; Settings → Add-ons: turn on/off, view code, remove, turn all off; problems shown in plain words
 - ✅ Safe mode (`?safe`); synced between devices; undo of a just-made add-on
 
+## D · Drills (loop until natural, then grow) ✅ built
+- ✅ A drill = saved steps over a set of folds: show it → hide it (with a hint) → type it → review word by word; loop until a rule is met (3 perfect in a row by default; or a score, or perfect and fast), then extend: the next level, the next group, then chain the groups (1+2, 1+2+3…)
+- ✅ Hints fade as you get it; a word missed twice keeps a first-letter hint; three misses step back; fast perfect runs extend sooner. Each change is said in one line
+- ✅ Directions: forward, backward, both. Orders: front to back, back to front, shuffled, weakest first, interleaved, chain-building, arranged by Claude (with a one-line reason)
+- ✅ Edit the steps in plain words; Claude builds, changes and starts drills from plain words; a mastered drill joins spaced review and shows "due today"
+- ✅ Sample: "Add sample: Psalm 23 (KJV)" in the Memory menu (6 verses × 5 levels, level 5 = the King James words)
+
 ## M · Memory palace (folds as pegs) ✅ (built and tested in a browser; waiting for you to try)
 - ✅ M1 Practice: hide what's inside a fold with hints (first letters, word shapes, every other word, blank lines); press and hold to peek
 - ✅ M2 Test me: on any fold or page (it and everything inside), walked in order room by room or shuffled. Prompt = the fold's words with what's inside hidden (default), or the other way round (per fold), or your own questions, or questions the AI suggested and you kept
 - ✅ M3 Type it from memory → Submit → the correct answer beside yours, word by word (matched / missed / added / changed); AI feedback if you've added a key; you grade Missed / Almost / Got it / Easy (the AI's suggestion is highlighted; you can overrule). Per fold: AI suggests the grade, AI feedback but you grade, or only you. End: score, weak pegs, next review
 - ✅ M4 Spaced review with FSRS (the modern open scheduler): each prompt comes back right before you'd likely forget it. Simple limits in Settings → Memory: how sure you want to be (80–95%), most reviews per day, new prompts per day, longest gap. "N to review today" in the page list; a "due" badge on folds
 - ✅ Typing answers counts on the writing clock; holding counts; AI never does. Everything syncs encrypted; answers given on two devices are all kept
-- Later (planned): drills/loops (repeat a recipe until mastered, then extend), prompts in both directions at once, the same fold in many places (cross-folds)
+- Later (planned): the same fold in many places (cross-folds)
 
 ## AI ✅ (built; switches on when you add an Anthropic key in Settings → AI)
 - ✅ Feedback on memory answers (what you got, what you missed, meaning kept, a tip, a suggested grade)

@@ -2,6 +2,17 @@
 
 ---
 
+## D · Drills
+- [ ] Open Memory (top of the page list) → **Add sample: Psalm 23 (KJV)**. A page "Psalm 23 (KJV)" appears with Verse 1–6; each verse opens to Level 1–5 (Level 5 is the King James words). The drill's steps open in plain words.
+- [ ] **Save and drill.** You see "God cares for me." → **Hide it** → a hint (G c f m.) → type it → **Check** → Perfect. The clock counts while you type.
+- [ ] Do it 3 times right in a row: a line says Level 2 joins. The next round asks Level 1, then Level 2. The hint fades as you get it.
+- [ ] Leave one word out twice: a line says that word now keeps its first letter. Get it wrong 3 rounds in a row: a line says it steps back.
+- [ ] Hold **Hold to peek**: the words show while you hold. A right answer after a peek isn't counted as perfect.
+- [ ] **Edit drill**: change "3" to 1, the order, or "Backward" (it then shows the verse and asks "Level 1"). Save. It drills the new way.
+- [ ] Ask ✦ Claude: "make a drill for verse 4, two in a row, both ways" → a new drill in Memory → Drills. **Undo Claude's changes** removes it.
+- [ ] When it's all mastered (try with 1 in a row), it chains the verses, then says Mastered; later "Drills · 1 due today" shows in the page list, and a review is the whole psalm once.
+- [ ] With sync on: the drill and how far you got show on the other device.
+
 ## A · Add-ons
 
 - [ ] Ask Claude: "add a word count button" — within seconds a **Words** button appears in the header; tapping it shows the count

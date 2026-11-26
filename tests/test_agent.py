@@ -38,6 +38,7 @@ class FakeClaude:
     def __init__(self):
         self.queue = []
         self.calls = []
+        self.plain = []   # replies to non-streaming asks (text)
 
     async def handle(self, route):
         req = route.request
@@ -48,7 +49,7 @@ class FakeClaude:
         self.calls.append(body)
         if not body.get("stream"):
             return await route.fulfill(status=200, headers=cors, content_type="application/json",
-                                       body=json.dumps({"content": [{"type": "text", "text": "OK"}], "usage": {"input_tokens": 10, "output_tokens": 2}}))
+                                       body=json.dumps({"content": [{"type": "text", "text": self.plain.pop(0) if self.plain else "OK"}], "usage": {"input_tokens": 10, "output_tokens": 2}}))
         fn = self.queue.pop(0) if self.queue else (lambda b: ([{"type": "text", "text": "Done."}], "end_turn"))
         blocks, stop = fn(body)
         return await route.fulfill(status=200, headers=cors, content_type="text/event-stream", body=sse(blocks, stop))

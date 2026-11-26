@@ -317,7 +317,7 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
-const APP_VERSION = "0.8";
+const APP_VERSION = "0.9";
 
 /* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
    Served from /preview/<number>/, it uses its own storage names, filled once from
@@ -1181,7 +1181,7 @@ function showView(v) {
   writer.hidden = v !== "write";
   document.querySelectorAll("main > section[data-view]").forEach(sec => { sec.hidden = sec.dataset.view !== v; });
   if (v === "write") { paintCrumbs(); sizeAll(); if (!touch) { const a = ui.active; placeCaret(a && a.root === ui.last && screen[a.id] !== undefined ? { id: a.id, start: a.pos } : { id: ui.last, start: (pages[ui.last] || {}).cursor || 0 }, true); } }
-  else { hideBar(); $("crumbs").textContent = v === "chat" ? "Claude" : v === "test" ? "Memory" : ""; }
+  else { hideBar(); $("crumbs").textContent = v === "chat" ? "Claude" : v === "test" ? "Memory" : v === "drill" ? "Drill" : ""; }
   document.dispatchEvent(new CustomEvent("tol:view", { detail: v }));
 }
 
@@ -1321,6 +1321,7 @@ if (!SANDBOX && "serviceWorker" in navigator && location.protocol === "https:") 
 <script src="ai.js"></script>
 <script src="agent.js"></script>
 <script src="addons.js"></script>
+<script src="drill.js"></script>
 <script src="sync.js"></script>
 </body>
 </html>

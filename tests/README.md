@@ -13,6 +13,8 @@ python3 tests/test_folds.py       # folds: create, overlap, picker, edits, stair
 python3 tests/test_folds_sync.py  # folds between two devices through encrypted sync
 python3 tests/test_memory.py      # Nest in (wrap/move), memory tests, practice, FSRS, AI (Anthropic faked), old data
 python3 tests/test_memory_sync.py # memory history, settings and shared words between two devices
+python3 tests/test_drill.py       # drills: Psalm 23 sample, loop/extend/chain, adapting, orders, directions, rules, spaced review, Claude's drill tools
+python3 tests/test_drill_sync.py  # drills, conversations and add-ons between two devices (encrypted)
 python3 tests/test_addons.py      # add-ons: made by Claude, sealed (no storage/keys/network/removing words), versions, off, safe mode
 python3 tests/test_agent.py       # Claude in the book: streaming, tools, ask-first, undo, per-page conversations, offline (Anthropic faked)
 ```
