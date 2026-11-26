@@ -52,4 +52,3 @@ jobs:
           claude_code_oauth_token: ${{ env.CLEAN_CLAUDE_TOKEN }}
           # Either one works: a Claude plan token (preferred) or an Anthropic API key (billed by use).
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          show_full_output: true  # temporary: shows the exact error while we set things up
