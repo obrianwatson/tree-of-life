@@ -102,10 +102,14 @@ Every page, nest and fold is one node type. Core fields: `id`, `text`, `createdA
 
 ## 6. Data, storage and sync
 
-- **Local:** localStorage (pages, intervals, UI/settings) plus IndexedDB (sync key, code vault). Per-device only: thumb-button position, device name, open/closed fold state, keys.
-- **Export/import:** full JSON; import merges (newest wins per item; nothing deleted).
-- **Sync (live):** branch `tol-data`, one sealed file per device `sync/<deviceId>.json`, plus `sync/meta.json` (salt, iterations, encrypted check). PBKDF2-SHA256 600k → AES-GCM-256, fresh IV per write. Merge rules: per node newest wins; same-node concurrent edits → keep newer, save the other as "Other version (<device>, <time>)" inside it; tombstones for deletions; intervals unioned. Synced: nodes, intervals, looks/theme, typing pause, goal, memory data, conversations, add-ons, code versions (additive fields).
-- **Timing:** push ~5 s after typing stops (max one write per ~6 s; forced every ~10–30 s during long typing), immediately on hide/blur/pagehide; pull on show/focus and every ~10 s; back off on GitHub 403/429. Respect GitHub content-creation limits (~80/min, ~500/hr).
+- **Local:** localStorage (pages, intervals, UI/settings, memory) plus IndexedDB (sync key and base fingerprints `tol-vault`, code vault `bolw-code`, safety copies `bolw-safe`). Per-device only: thumb-button position, device name, open/closed fold state, keys, safety copies.
+- **A save that fails is loud:** a red "Not saved" bar on the page until a save works again; meanwhile the whole book is kept in a rescue copy (IndexedDB) and merged back at the next start. Settings shows storage in use; a warning appears near 80%.
+- **Safety copies (device only):** the book at the end of each of the last 7 days written; Recently deleted (30 days) with Restore; "This page as it was"; "Bring back what's been deleted since". They guard against mistakes, not against losing the device (that's what sync and export are for).
+- **One tab at a time:** the first tab holds a Web Lock; a second tab is paused (cannot save) until the owner chooses it.
+- **A page can never be inside itself:** loops of parents (possible when two devices move pages into each other) are broken deterministically at start, after sync and after import.
+- **Export/import:** full JSON (share sheet on the phone); import merges (newest wins per item; nothing is ever deleted; a file can't bring app code; add-ons from a file arrive off; pages deleted here can be brought back from the file).
+- **Sync (live):** branch `tol-data`, two sealed files per device, plus `sync/meta.json` (salt, iterations, encrypted check): the BASE `sync/<deviceId>.json` (the whole book) and the DELTA `sync/<deviceId>.d.json` (only what changed since that base: changed pages, changed memory records, time entries added; `kind: "delta"`, `baseSha`). An ordinary save writes the delta (a few KB); the base is rewritten when the delta outgrows it. Readers combine a device's base and delta before merging and ignore a delta left over from an older base. Version 1.1 reads bases only. A file that can't be opened is skipped, never a reason to lock. PBKDF2-SHA256 600k → AES-GCM-256, fresh IV per write. Merge rules: per node newest wins; same-node concurrent edits → keep newer, save the other as "Other version (<device>, <time>)" inside it; tombstones for deletions; intervals unioned. Synced: nodes, intervals, looks/theme, typing pause, goal, memory data, conversations, add-ons, code versions (additive fields).
+- **Timing:** push ~5 s after typing stops (at most one write per 15 s; at least every 60 s during long typing), immediately on hide/blur/pagehide (as a `keepalive` request when under 60 KB, which a delta normally is); pull on show/focus and every ~10 s (the check never pushes early); back off on GitHub 403/429. Respect GitHub content-creation limits (~80/min, ~500/hr).
 
 ---
 
@@ -181,8 +185,10 @@ Small JS extensions written by Claude, run in a sandboxed iframe/Worker with no 
 ## 13. Testing and release discipline
 
 - Playwright (Python) suites in `tests/` (see `tests/README.md`); mock GitHub and Anthropic. Test laptop (1280×800) and iPhone 13 sizes. Look at screenshots. No page errors.
-- Every feature gets a plain-words checklist in `TESTING.md` for the owner to run on real devices (iPhone 16e, Firefox on Catalina).
-- Release = all suites pass → commit → push → confirm the Pages workflow succeeds (retry GitHub's transient "artifact metadata" failures).
+- GitHub Actions (`tests.yml`) runs every suite on each change in Chromium, WebKit and Firefox, plus a three-device sync through the real GitHub on a scratch branch; outcomes are kept on the `test-results` branch.
+- Each device can check itself: Settings → Check this device → a report with no writing in it, copied or sent as a GitHub issue.
+- What only a person can judge (keyboard feel, share sheet, Home Screen) is a short list in `TESTPLAN.md`; feature checklists stay in `TESTING.md`.
+- Release = all suites pass → commit → push → confirm the Pages and Tests workflows succeed (retry GitHub's transient "artifact metadata" failures).
 
 ---
 
@@ -190,7 +196,11 @@ Small JS extensions written by Claude, run in a sandboxed iframe/Worker with no 
 
 **Live:** pages; writing clock; folds (overlap, staircase, focus); Nest in (wrap/move); memory tests, cues, FSRS; AI feedback/questions/AI folds; looks; encrypted sync; Claude Code page with previews; rename and logo; Claude in the book (Phase 1); add-ons (Phase 2); drill engine with the Psalm 23 sample (Phase 3); fold anywhere and code-folds (Phase 4); onboard self-changing code with bootloader, code vault, sealed tries with self-test, versions, safe-mode fallback, version sync and optional publishing (Phase 5).
 
+**Hardening (1.2+):** loud save failures with rescue copy; safety copies and Recently deleted; one tab at a time; loop-free pages; delta sync; complete-set boot with timeout; sealed frames can't navigate out; device check; three-engine CI and real-GitHub sync test.
+
 **In progress:** nothing; Phases 1–5 are live.
+
+**Next (in order):** a compact, exact archive for writing-time entries (they are the largest thing that grows in localStorage); onboard versions kept as small patches instead of whole files; then the back pocket.
 
 **Planned / back pocket:** more AI providers; onboard small model; chained timers anywhere; 40-day / 200-hour view; Board hardware; native iPad (when the Pencil is replaced: draw-and-hold shapes, Goodnotes-style toolbar); MIDI piano roll / channel rack (FL Studio). Dropped: AI drawing beside writing.
 

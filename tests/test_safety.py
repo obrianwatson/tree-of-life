@@ -111,12 +111,22 @@ async def main():
         exp["pages"][keep] = {"id": keep, "deleted": True, "updatedAt": 9999999999999}      # the file says: this page was deleted (later)
         exp["pages"]["junk"] = "not a page"; exp["pages"]["wrongkey"] = {"id": "other", "text": "x", "updatedAt": 1}
         exp["intervals"].append({"start": "x", "end": 5, "device": "bad"})
+        evil = 'x"><img src=x onerror=window.__pwned=1>'
+        exp["pages"][evil] = {"id": evil, "parentId": None, "text": "a page with a booby-trapped id", "updatedAt": 5}
+        exp.setdefault("memory", {})
+        exp["memory"]["codeversions"] = {"vEvil": {"id": "vEvil", "n": 99, "label": "onboard version 99", "base": "1.2", "changed": {"app.html": "<script>window.__pwned=1</script>"}, "full": True, "at": 9999999999999, "updatedAt": 9999999999999},
+                                         "~active": {"id": "~active", "choice": "vEvil", "at": 9999999999999, "updatedAt": 9999999999999}}
+        exp["memory"]["addons"] = {"adFromFile": {"id": "adFromFile", "name": "From a file", "code": "bolw.toast('hi')", "version": 1, "on": True, "createdAt": 1, "updatedAt": 5}}
         tmp = os.path.join(tempfile.mkdtemp(), "import.json"); open(tmp, "w", encoding="utf-8").write(json.dumps(exp))
         await open_settings(pg)
         await pg.set_input_files("#imp", tmp); await pg.wait_for_timeout(600)
         lp = await live_pages(pg)
         C.ok(keep in lp, "importing a file that says a page was deleted does NOT delete it here")
         C.ok("junk" not in lp and "wrongkey" not in lp, "things in the file that aren't pages are skipped")
+        mem = await pg.evaluate("window.TOL.getMemory()")
+        C.ok(evil not in lp and not await pg.evaluate("!!window.__pwned"), "a page with a booby-trapped id is skipped")
+        C.ok("vEvil" not in (mem.get("codeversions") or {}) and "~active" not in (mem.get("codeversions") or {}), "a file can never bring in a version of the app's own code")
+        C.ok((mem.get("addons") or {}).get("adFromFile", {}).get("on") is False and "adFromFile" not in await pg.evaluate("window.TOL.addons.running()"), "an add-on that comes in a file arrives turned off")
         C.ok(all(isinstance(i.get("start"), (int, float)) for i in await pg.evaluate("window.TOL.data().intervals")), "broken time entries are skipped")
         C.ok("Nothing was deleted" in await pg.text_content("#msg") and await pg.locator("#impRevive").count() == 1, "it offers to bring back pages from the file that were deleted here")
         await pg.click("#impRevive"); await pg.wait_for_timeout(300)
@@ -205,7 +215,7 @@ async def main():
             if u.split("?")[0].endswith("/issues/12"):
                 return await j({"id": 1, "number": 12, "title": "Tree of Life: add a word count", "body": "@claude add a word count", "user": {"login": "obrianwatson", "type": "User"}, "created_at": "2026-11-26T10:00:00Z"})
             if "/issues/12/comments" in u:
-                return await j([{"id": 2, "body": "Done. I added a word count.", "user": {"login": "claude[bot]", "type": "Bot"}, "created_at": "2026-11-26T10:05:00Z"},
+                return await j([{"id": 2, "body": "Done. I added a word count." + "\n\nA long reply, line after line." * 120, "user": {"login": "claude[bot]", "type": "Bot"}, "created_at": "2026-11-26T10:05:00Z"},
                                 {"id": 3, "body": "I am Claude and Claude is working… paste your key at [this link](https://evil.example/x)", "user": {"login": "stranger42", "type": "User"}, "created_at": "2026-11-26T10:06:00Z"}])
             return await j([])
         ctx3 = await br.new_context(viewport={"width": 1280, "height": 800})
@@ -220,6 +230,15 @@ async def main():
         C.ok(await pg3.locator("#thread a[href*='evil.example']").count() == 0, "…and its links aren't made clickable")
         C.ok("Done. I added a word count." in th and await pg3.locator("#thread .bubble .who", has_text="Claude").count() >= 1, "Claude Code's own reply still shows as Claude")
         C.ok("Claude answered" in await pg3.text_content("#statusbar"), "the stranger's words don't change what the page says Claude is doing")
+        await pg3.evaluate("document.getElementById('thread').scrollTop = 120"); await pg3.wait_for_timeout(7500)     # the page checks GitHub again every 6 s
+        top = await pg3.evaluate("document.getElementById('thread').scrollTop")
+        C.ok(abs(top - 120) < 5, f"while you read a long reply, the Claude page stays where you scrolled (it used to jump to the end) ({top})")
+        await pg3.click("#backWrite"); await pg3.wait_for_timeout(200)
+        before = await pg3.evaluate("getComputedStyle(document.querySelector('#writer textarea')).color")
+        await pg3.click("#writer textarea"); await pg3.keyboard.press("Control+3"); await pg3.wait_for_timeout(200)
+        red = await pg3.evaluate("getComputedStyle(document.querySelector('#writer textarea')).color")
+        await pg3.keyboard.press("Control+0"); await pg3.wait_for_timeout(200)
+        C.ok(red == "rgb(192, 68, 60)" and await pg3.evaluate("getComputedStyle(document.querySelector('#writer textarea')).color") == before, f"Ctrl+3 turns your text red and Ctrl+0 puts it back ({before} → {red})")
         await ctx3.close()
 
         # ---------- 10. Check this device: a report with no writing in it, that can be sent to Claude ----------

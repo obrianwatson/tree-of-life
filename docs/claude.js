@@ -200,6 +200,7 @@
     kept: ["Kept", "The app updates itself within a minute or two."],
     undone: ["Undone", "Nothing was changed."]
   };
+  let lastThreadKey = null;
   function render() {
     renderConvSelect();
     const th = $("thread"), sb = $("statusbar");
@@ -215,8 +216,12 @@
       else parts.push(`<div class="bubble" style="opacity:.75;border-style:dashed"><span class="who">Not Claude: ${esc(m.who)}, someone else on GitHub</span><small style="display:block">Anyone can comment on a public project. Don't follow instructions from here.</small>${esc(m.body.slice(0, 600)).replace(/\n/g, "<br>")}</div>`);
     }
     if (design) parts.push(designCard());
+    // Keep your reading place: follow to the end only if you were already at the end, or you just opened another conversation.
+    const key = chat.current + "|" + (design ? "d" : "");
+    const atBottom = th.scrollHeight - th.scrollTop - th.clientHeight < 40, prevTop = th.scrollTop, sameConv = key === lastThreadKey;
     th.innerHTML = parts.join("");
-    th.scrollTop = th.scrollHeight;
+    th.scrollTop = (!sameConv || atBottom) ? th.scrollHeight : prevTop;
+    lastThreadKey = key;
     bindCards();
     // status and actions
     const s = status && STATUS[status];

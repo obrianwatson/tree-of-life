@@ -10,6 +10,19 @@ Status key: ✅ done · 🔨 in progress · ⬜ not started · ⏸ on hold
 
 # ▶ NOW: Text Tree of Life on the iPhone 16e + the laptop
 
+## H · Hardening: nothing lost, sync that lasts, tests that run themselves ✅ built (versions 1.2–1.3)
+- [x] A save that fails shows a red "Not saved" bar; the book is kept in a rescue copy and comes back at the next open
+- [x] Safety copies (7 days), Recently deleted (30 days), "This page as it was"
+- [x] One tab at a time; a page can never end up inside itself; import never deletes
+- [x] Sync sends only what changed (small delta files); a file that can't be read never locks a device
+- [x] Opening never hangs on a slow network and never mixes old and new files; sealed frames can't reach other websites
+- [x] Settings → Check this device (a report with no writing in it)
+- [x] Tests run by themselves on every change in three browser engines, plus a sync through the real GitHub (`TESTPLAN.md`)
+- [x] From your two open requests: Ctrl+1…5 text colors, and the Claude page keeps your place while you read
+- [ ] **Next: a compact archive for writing-time entries.** Each typing burst is one entry; at 5 hours a day they would fill the phone's small storage in a month or two. The archive must keep every second exactly. Until then Settings shows storage in use and warns near 80%.
+- [ ] Onboard versions kept as small patches (a kept change to the main file currently stores the whole file)
+- [ ] Your 10-minute list in `TESTPLAN.md` (sync on both devices, keyboard, share sheet, airplane mode, device check)
+
 The Pencil is broken, so the focus is **writing in text**, on the **iPhone 16e** and the **2011 MacBook**, synced through the cloud so you can pick up where you left off on either one.
 
 **How it's built:** one web app, used on both devices.
@@ -221,7 +234,7 @@ TV + IR touch frame + cheap mini PC running the Board in a full-screen web brows
 
 ## ⏸ Back pocket
 - **One living screen.** Use the whole book through a single surface, like a terminal, canvas or pad that is also the page: you write, ask, fold, test, drill and change the book all in one place, with no separate menus or panels. Every existing ability stays; only the way in changes.
-- **Real-device test walkthrough.** Round 1 (pages + clock) passed on the iPhone on Nov 26. Rounds 2–7 still to do: sync, folds, memory, Claude in the book (needs a workspace-scoped key), drills, fold anywhere/add-ons/versions.
+- **Real-device test walkthrough.** Replaced by `TESTPLAN.md`: robots test everything they can on every change; each device checks itself with one tap; what's left for a person is a 10-minute list. (Round 1, pages + clock, passed on the iPhone on Nov 26.)
 - MIDI controller / sequencer mode: piano roll + channel rack (MIDI channels, in and out), to the iPad itself or FL Studio over USB
 
 ## Dropped

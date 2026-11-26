@@ -1,4 +1,31 @@
-# The Tree of Life: Build Checklists
+# The Book of Living Waters: Build Checklists
+
+**Start with `TESTPLAN.md`.** Robots now test everything they can on every change, and each device can check itself
+(Settings → Check this device). The lists below are for trying a feature by hand when you want to.
+
+---
+
+## H · Hardening (versions 1.2–1.3): nothing lost, sync that lasts
+**Nothing gets lost**
+- [ ] Laptop: open the book in a second tab. It says the book is already open and pauses. "Use it here instead" swaps them
+- [ ] Delete a page (Settings → Delete this page…, twice). Settings → Safety copies → Recently deleted → Restore: it's back, word for word
+- [ ] A few seconds after writing, Settings → Safety copies shows today's copy. "This page as it was" adds an "Earlier version" page inside the page; nothing is replaced
+- [ ] Bottom of Settings shows "Backups: …" and "Storage on this device: …"
+- [ ] iPhone: Settings → Export everything opens the share sheet. Choose Save to Files
+- [ ] Import an old export: nothing disappears, even pages you deleted in that old file's time
+
+**Sync (after it's on for both devices)**
+- [ ] Write a line on the phone; it shows on the laptop within about 15 seconds (at once when you click into the laptop)
+- [ ] Leave the phone mid-sentence (go to the Home Screen). Open the laptop: the sentence is there
+- [ ] Settings → Check this device: Sync says "Synced" with "base file up, delta file up"
+
+**Opening**
+- [ ] Airplane mode on: the book opens from the Home Screen and you can write. Airplane mode off: it syncs
+- [ ] On a weak connection the book still opens within a few seconds; if an update arrives late, a small note offers it
+
+**Small things you asked for**
+- [ ] Laptop: Ctrl+1 … Ctrl+5 turn your text blue, green, red, purple, gold; Ctrl+0 goes back
+- [ ] Claude page: scroll up in a long reply and wait; it stays where you are
 
 ---
 

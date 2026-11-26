@@ -76,9 +76,60 @@ jobs:
           path: results/
           retention-days: 14
 
-  # Keep the three result files on a small branch of their own, so they can be read with one request.
+  # Sync through the REAL GitHub (not the fake one the other tests use), on a scratch branch that is deleted
+  # afterwards. Only made-up text is written, sealed with a made-up passphrase. The real sync data (the
+  # tol-data branch) is never touched, and writes made with this job's key start no other workflow.
+  real-sync:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      SCRATCH_BRANCH: tol-selftest-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright and Chromium
+        run: |
+          pip install --quiet playwright
+          python -m playwright install --with-deps chromium
+      - name: Sync through the real GitHub
+        env:
+          GH_REAL_TOKEN: ${{ github.token }}
+          BROWSER: chromium
+          CHROME: ''
+        run: |
+          set +e
+          mkdir -p results
+          timeout 900 python tests/real_sync.py 2>&1 | tee results/real_sync.log
+          code=${PIPESTATUS[0]}
+          {
+            echo "browser: real-github"
+            echo "commit: $GITHUB_SHA"
+            echo "when: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "result: $([ $code -eq 0 ] && echo PASS || echo FAIL)"
+            grep '^PASS \|^FAIL \|^SKIP \|^   (\|passed\|Error' results/real_sync.log | head -80
+          } > results/real-github.txt
+          { echo "### real GitHub"; echo '```'; cat results/real-github.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $code
+      - name: Delete the scratch branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${SCRATCH_BRANCH}" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results-real-github
+          path: results/
+          retention-days: 14
+
+  # Keep the result files on a small branch of their own, so they can be read with one request.
   report:
-    needs: test
+    needs: [test, real-sync]
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:

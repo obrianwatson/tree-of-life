@@ -1175,6 +1175,14 @@ setInterval(() => {          // the heartbeat: a long silence means the device s
 // laptop: hold Option
 document.addEventListener("keydown", e => { if (e.key === "Alt" && !e.repeat) setHold(true); });
 document.addEventListener("keyup", e => { if (e.key === "Alt") setHold(false); });
+// laptop: Ctrl+1 to Ctrl+5 change the color of your text (blue, green, red, purple, gold); Ctrl+0 goes back to normal
+const INK_KEYS = { "1": "#2f6fb5", "2": "#3b8a4f", "3": "#c0443c", "4": "#8a55b5", "5": "#b8860b", "0": null };
+document.addEventListener("keydown", e => {
+  if (!e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || !(e.key in INK_KEYS)) return;
+  e.preventDefault();
+  theme = Object.assign({}, theme, { ink: INK_KEYS[e.key] });
+  store.set(K.theme, theme); applyTheme(theme); prefsChanged();
+});
 window.addEventListener("blur", () => { setHold(false); endTyping(); savePages(); });
 document.addEventListener("visibilitychange", () => { if (document.hidden) { setHold(false); endTyping(); savePages(); } });
 
@@ -1248,10 +1256,12 @@ $("exp").onclick = () => exportAll();
 /* Bringing in pages from an export or a safety copy. The newer version of each page wins and nothing is ever
    deleted: a page that's alive here stays, even if the file says it was deleted. Returns what happened, and
    `gone`: pages that are in the file but were deleted here later (they can be brought back with revive). */
-function mergeData(d) {
+const SAFE_ID = /^[\w.:|#~-]{1,200}$/;      // what the app's own ids look like (letters, digits and a few marks)
+function mergeData(d, fromFile) {
   const out = { added: 0, updated: 0, gone: [] };
   for (const [key, p] of Object.entries(d.pages || {})) {
     if (!p || typeof p !== "object" || typeof p.id !== "string" || p.id !== key) continue;      // not a page
+    if (fromFile && (!SAFE_ID.test(p.id) || (p.parentId != null && !SAFE_ID.test(String(p.parentId))))) continue;   // a file from anywhere: only ids the app could have made
     const mine = pages[p.id];
     if (!mine) { pages[p.id] = p; if (!p.deleted) out.added++; }
     else if (p.deleted) continue;                                                            // importing never deletes
@@ -1263,7 +1273,20 @@ function mergeData(d) {
     if (!i || !isFinite(i.start) || !isFinite(i.end) || i.end <= i.start) continue;
     const k = `${i.start}:${i.end}:${i.device}`; if (!seen.has(k)) { seen.add(k); intervals.push(i); }
   }
-  if (d.memory && typeof d.memory === "object" && window.TOL.mergeMemory) { const m = JSON.parse(JSON.stringify(memory)); if (window.TOL.mergeMemory(m, d.memory)) { memory = m; store.set(K.mem, memory); document.dispatchEvent(new Event("tol:memory")); } }
+  if (d.memory && typeof d.memory === "object" && window.TOL.mergeMemory) {
+    let theirs = d.memory;
+    if (fromFile) {       // a file can bring pages, questions, drills and notes, but never the app's own code; add-ons it brings arrive turned off
+      theirs = {};
+      for (const [part, v] of Object.entries(d.memory)) {
+        if (part === "codeversions") continue;
+        if (!v || typeof v !== "object" || Array.isArray(v) || part === "settings") { theirs[part] = v; continue; }
+        theirs[part] = {};
+        for (const [k, r] of Object.entries(v)) if (SAFE_ID.test(k) && r && typeof r === "object") theirs[part][k] = part === "addons" && !(memory.addons || {})[k] ? Object.assign({}, r, { on: false }) : r;
+      }
+    }
+    const m = JSON.parse(JSON.stringify(memory));
+    if (window.TOL.mergeMemory(m, theirs)) { memory = m; store.set(K.mem, memory); document.dispatchEvent(new Event("tol:memory")); }
+  }
   healTree(); reconcileShares();
   savePages(); store.set(K.time, intervals); changedEvent();
   renderList(); if (live(pages[ui.last])) openPage(ui.last); else { const r = recentLive(); if (r) openPage(r.id); } paintClock();
@@ -1285,7 +1308,7 @@ $("imp").onchange = async e => {
   try {
     const d = JSON.parse(await f.text());
     if (d.format !== "tol-text-export" || !d.pages || typeof d.pages !== "object") throw 0;
-    const r = mergeData(d); impGone = r.gone;
+    const r = mergeData(d, true); impGone = r.gone;
     say(`Imported: ${r.added} new page${r.added === 1 ? "" : "s"}, ${r.updated} updated. Nothing was deleted.`);
     if (impGone.length) {
       const b = document.createElement("button"); b.className = "btn"; b.id = "impRevive";
@@ -1325,7 +1348,7 @@ let theme = Object.assign({}, THEME_DEFAULT, store.get(K.theme, {}));
 function applyTheme(t) {
   const r = document.documentElement, st = r.style;
   st.setProperty("--w-font", FONTS[t.font] || FONTS.serif);
-  st.setProperty("--w-size", t.size + "px");
+  st.setProperty("--w-size", Math.max(isPhone ? 16 : 11, Math.min(44, +t.size || THEME_DEFAULT.size)) + "px");   // (under 16 px, the iPhone zooms the page when you tap to type)
   st.setProperty("--w-lh", String(t.lh));
   st.setProperty("--page-w", t.width + "px");
   st.setProperty("--thumb", t.thumb + "px");
