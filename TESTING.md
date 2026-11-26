@@ -266,3 +266,9 @@ After every build: install it, go down that build's list on the iPad, and tick e
 - [ ] The ✕ next to a chip only unlinks it; the page and all words stay
 - [ ] Selecting text doesn't close the keyboard or lose the selection when you tap the bar
 - [ ] Sync: nests show on the other device; the writing clock is not affected by nesting
+
+## Web app 0.6.1 · Claude page no longer jumps to the end
+
+- [ ] Open the Claude page on a conversation with a long reply; scroll up to the start of Claude's reply and read for a minute: the page stays where you put it (it used to jump down every few seconds)
+- [ ] If you are at the bottom when a new reply arrives, it still scrolls down to show it
+- [ ] If you are reading higher up when a new reply arrives, your place is kept
