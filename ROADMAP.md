@@ -35,6 +35,13 @@ your time → fold → practice and test → Claude in the page → drills → s
 - **Scope of folding in Trial #01: the simplest single case, made perfect first.** No overlapping folds and
   no folds made from several selections. A page holds at most TWO folds: the first fold, and a second fold
   inside it (page → fold → fold). Everything richer comes back later, one step at a time.
+  - **A staircase.** The first fold drops open under the line its words are on, one step in. The second fold
+    is made from words inside the first, and drops open under its line, one more step in.
+  - **Chunks, clearly by line.** Any chunk of text can be highlighted and folded. Where it opens is always
+    the line right under the chunk, so it reads line by line.
+  - **No overlaps.** A chunk can't overlap a chunk that's already folded. To fold an overlapping chunk, first
+    remove the fold that's there (its writing is kept in Recently deleted). The book says so in one line instead
+    of making the fold. This is for the first tests only.
 - **To decide during the trial:** whether Ask Claude sits next to Fold or behind ⋯.
 - **Not in this trial:** a bar that learns your habits.
 
