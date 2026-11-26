@@ -66,9 +66,7 @@ You never need to open GitHub, a terminal or a settings page somewhere else for 
    hours a day they would fill the phone's small storage in a month or two. The archive keeps every second,
    exactly, in a fraction of the space. Until it's built, Settings shows how full the storage is and warns you
    long before it matters.
-3. **Lighter app versions** (mine). Why: when Claude changes the app from inside and you keep it, the whole
-   changed file is stored. Small patches would take a hundredth of the space.
-4. **Then we learn the book by using it.** Psalm 23, one verse, one drill.
+3. **Then we learn the book by using it.** Psalm 23, one verse, one drill.
 
 ## What the robots can't promise (the honest list)
 

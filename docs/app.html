@@ -322,7 +322,13 @@ const $ = id => document.getElementById(id);
 const store = {
   bad: {},          // names whose last save failed (this device's storage is full or blocked)
   paused: false,    // true when the book is open in another tab: this one stops saving, so the two can't overwrite each other
-  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  get(k, d) {
+    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }
+    catch (e) {       // something is stored but can't be read: keep it aside untouched before anything saves over it
+      try { const raw = localStorage.getItem(k); if (raw && /-(pages|intervals|memory)$/.test(k)) localStorage.setItem(k + "-unreadable", raw); } catch (e2) {}
+      return d;
+    }
+  },
   set(k, v) {
     if (store.paused) return true;
     try { localStorage.setItem(k, JSON.stringify(v)); if (store.bad[k]) { delete store.bad[k]; store.changed(); } return true; }
@@ -336,7 +342,7 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
-const APP_VERSION = "1.4";
+const APP_VERSION = "1.5";
 
 /* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
    Served from /preview/<number>/, it uses its own storage names, filled once from

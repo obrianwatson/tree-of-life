@@ -46,12 +46,27 @@
   async function returnToPublished() { await setMeta("pinned", null); return use(null); }
   async function pin(on) { await setMeta("pinned", on ? B.id : null); }
 
-  /* the synced copy of a kept version: only the files that differ from its published base */
+  /* the synced copy of a kept version: only the files that differ from its published base, and for each of those
+     only the stretch that differs when that is much smaller than the file ("patched": [same at the start, same at
+     the end, the new middle]). A small change to the main file then takes a few hundred characters, not 90,000. */
+  function patchOf(a, b) {
+    let p = 0; const max = Math.min(a.length, b.length);
+    while (p < max && a.charCodeAt(p) === b.charCodeAt(p)) p++;
+    let s = 0; while (s < max - p && a.charCodeAt(a.length - 1 - s) === b.charCodeAt(b.length - 1 - s)) s++;
+    const mid = b.slice(p, b.length - s);
+    return mid.length < b.length * 0.5 ? [p, s, mid] : null;
+  }
+  const unpatch = (a, x) => a.slice(0, x[0]) + x[2] + a.slice(a.length - x[1]);
+  const sumOf = t => { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + "." + t.length; };   // a quick check that a rebuilt file is the right one
   async function shareVersion(v) {
-    const base = await (await V()).get("pub-" + v.base), changed = {};
-    for (const [n, t] of Object.entries(v.files)) if (!base || base.files[n] !== t) changed[n] = t;
+    const base = await (await V()).get("pub-" + v.base), changed = {}, patched = {}, sums = {};
+    for (const [n, t] of Object.entries(v.files)) {
+      if (base && base.files[n] === t) continue;
+      const x = base && typeof base.files[n] === "string" ? patchOf(base.files[n], t) : null;
+      if (x && unpatch(base.files[n], x) === t) { patched[n] = x; sums[n] = sumOf(t); } else changed[n] = t;
+    }
     const removed = base ? Object.keys(base.files).filter(n => !(n in v.files)) : [];
-    M.putRecord("codeversions", v.id, { id: v.id, n: v.n, label: v.label, base: v.base, parent: v.parent, note: v.note, by: v.by, at: v.at, changed, removed, full: !base });
+    M.putRecord("codeversions", v.id, { id: v.id, n: v.n, label: v.label, base: v.base, parent: v.parent, note: v.note, by: v.by, at: v.at, changed, patched, sums, removed, full: !base });
     const recs = Object.values(M.getPart("codeversions")).filter(r => r.id !== "~active" && !r.deleted).sort((a, b) => b.at - a.at);
     for (const r of recs.slice(KEEP_SYNCED)) M.putRecord("codeversions", r.id, { id: r.id, deleted: true });
   }
@@ -67,6 +82,12 @@
         if (!base && !r.full) { try { const p = await window.__bolwPublished(); if (p.base === r.base) { await vv.put(p); base = p; } } catch (e) {} }
         if (!base && !r.full) continue;                // its published base isn't here yet
         const files = Object.assign({}, r.full ? {} : base.files, r.changed); for (const n of r.removed || []) delete files[n];
+        let whole = true;
+        for (const [n, x] of Object.entries(r.patched || {})) {
+          if (base && typeof base.files[n] === "string" && Array.isArray(x)) { files[n] = unpatch(base.files[n], x); if ((r.sums || {})[n] !== sumOf(files[n])) whole = false; }
+          else whole = false;
+        }
+        if (!whole) continue;                          // the file a patch belongs to isn't here (or isn't the same one): never build a wrong version
         await vv.put({ id: r.id, n: r.n, origin: "onboard", label: r.label, base: r.base, parent: r.parent, note: r.note, by: r.by, at: r.at, files });
       }
       const c = recs["~active"];

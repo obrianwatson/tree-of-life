@@ -200,7 +200,7 @@ Small JS extensions written by Claude, run in a sandboxed iframe/Worker with no 
 
 **In progress:** nothing; Phases 1–5 are live.
 
-**Next (in order):** a compact, exact archive for writing-time entries (they are the largest thing that grows in localStorage); onboard versions kept as small patches instead of whole files; then the back pocket.
+**Next (in order):** a compact, exact archive for writing-time entries (they are the largest thing that grows in localStorage); then the back pocket. (Smaller housekeeping when convenient: prune old saved app versions in the code vault; move sync's per-page stamps out of localStorage.)
 
 **Planned / back pocket:** more AI providers; onboard small model; chained timers anywhere; 40-day / 200-hour view; Board hardware; native iPad (when the Pencil is replaced: draw-and-hold shapes, Goodnotes-style toolbar); MIDI piano roll / channel rack (FL Studio). Dropped: AI drawing beside writing.
 

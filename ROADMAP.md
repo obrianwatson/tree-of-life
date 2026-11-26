@@ -10,7 +10,7 @@ Status key: ✅ done · 🔨 in progress · ⬜ not started · ⏸ on hold
 
 # ▶ NOW: Text Tree of Life on the iPhone 16e + the laptop
 
-## H · Hardening: nothing lost, sync that lasts, tests that run themselves ✅ built (versions 1.2–1.3)
+## H · Hardening: nothing lost, sync that lasts, tests that run themselves ✅ built (versions 1.2–1.5)
 - [x] A save that fails shows a red "Not saved" bar; the book is kept in a rescue copy and comes back at the next open
 - [x] Safety copies (7 days), Recently deleted (30 days), "This page as it was"
 - [x] One tab at a time; a page can never end up inside itself; import never deletes
@@ -19,8 +19,9 @@ Status key: ✅ done · 🔨 in progress · ⬜ not started · ⏸ on hold
 - [x] Settings → Check this device (a report with no writing in it)
 - [x] Tests run by themselves on every change in three browser engines, plus a sync through the real GitHub (`TESTPLAN.md`)
 - [x] From your two open requests: Ctrl+1…5 text colors, and the Claude page keeps your place while you read
+- [x] Found by the Safari-engine run and fixed: the hidden Import box covered "Export everything"; the little fold bar popped back up after opening a fold
+- [x] App versions made in the book sync as small patches (a small change to the main file is a few hundred characters, not the whole file)
 - [ ] **Next: a compact archive for writing-time entries.** Each typing burst is one entry; at 5 hours a day they would fill the phone's small storage in a month or two. The archive must keep every second exactly. Until then Settings shows storage in use and warns near 80%.
-- [ ] Onboard versions kept as small patches (a kept change to the main file currently stores the whole file)
 - [ ] Your 10-minute list in `TESTPLAN.md` (sync on both devices, keyboard, share sheet, airplane mode, device check)
 
 The Pencil is broken, so the focus is **writing in text**, on the **iPhone 16e** and the **2011 MacBook**, synced through the cloud so you can pick up where you left off on either one.
