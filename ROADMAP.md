@@ -43,6 +43,19 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 - ✅ Timing: saves to the cloud about 5 s after you stop typing (and every ~10 s while you keep typing), at once when you switch away or lock the phone, and checks your other device every 10 s and the moment you come back
 - ✅ Export everything to a file, and restore (from T1)
 
+## F · Folds in the text ✅ (built, waiting for you to try)
+- ✅ Select any continuous stretch (one character up to a whole passage) → **Nest** → **New text** or **Existing page or fold** (it moves under those words)
+- ✅ As many folds as you like, overlapping the same words; each has its own colored line, stacked under the words
+- ✅ Tap into folded words → choose which fold to open or fold away (when several share a spot)
+- ✅ "Folds shown / hidden" switch for the lines
+- ✅ Folds follow edits: typing before/after moves them, typing inside grows them; deleting all their words keeps the fold as "unattached"
+- ✅ **Staircase view:** an open fold unfolds right under the line its words end on, one step in; folds inside fold further in; write in any of them directly (the clock counts)
+- ✅ **Focus view:** "Open on its own" makes any fold the page; "‹ Step out" and the path at the top (Book › … › here) go back out, with the way back unfolded
+- ✅ Pages and folds are the same thing; folds show in the page list with a ⌁ mark
+- ✅ Reopening puts you back in the fold you were writing in; folds sync (encrypted) and export/import
+- ⬜ **Nest in… (going outward):** wrap selected words in something new or existing. Waiting on your decision: should the words **move** into the wrapper, or **stay** and be **shared** with it?
+- ⬜ Later: several separate pieces in one fold; the same fold in several places (cross-folds); open a fold as a tab or side by side
+
 ## T4 · The book, in text ⬜
 - ⬜ Fold inward / outward
 - ⬜ Rearrange pages; links keep working

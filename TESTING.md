@@ -1,5 +1,37 @@
 # The Tree of Life: Build Checklists
 
+## F · Folds in the text
+
+**Make folds**
+- [ ] Write "The tree is brown." Select the whole sentence → **Nest** (the green button just below your selection) → **New text**. A box opens right under the line, stepped in, with a colored line on its left; the sentence gets a colored underline. Type inside it.
+- [ ] Back in the page, select just "tree" → Nest → New text. A second underline appears in a different color.
+- [ ] Select just the "b" of "brown" → Nest → New text. One letter can be a fold too.
+- [ ] Make two folds that overlap ("tree is" and "is brown"): the words in the middle show both lines, stacked, in different colors.
+
+**Open and close**
+- [ ] Tap into folded words: a small bar appears above the line, listing each fold there with its color dot. Tap one to open it; tap "Fold away" on it (or in the bar) to close it.
+- [ ] The switch at the bottom of the page list: **Folds hidden** removes the lines; **Folds shown** brings them back.
+
+**Writing around folds**
+- [ ] Type before a folded word: the underline stays on the same word.
+- [ ] Type in the middle of a folded word: the underline grows to include it.
+- [ ] Delete all of a fold's words: the fold isn't lost — in the page list it shows as "unattached fold".
+- [ ] With a fold open in the middle of a page, Backspace at the start of the line below it joins the lines; Enter splits them again. Arrow keys move in and out of the open fold.
+
+**Staircase and focus**
+- [ ] Inside a fold, select words and nest again, and again: three steps in, each further right. Write in the deepest one; the clock counts.
+- [ ] On a fold, tap **Open on its own**: it becomes the page; the path at the top shows Book › page › fold.
+- [ ] Tap **‹ Step out**: you're one level up, with the fold you were in open in place. Tap a name in the path to jump further out.
+- [ ] Close the app while writing in a fold and reopen: you're back in that fold, cursor where you left it.
+
+**Between devices (with sync on)**
+- [ ] Make a fold on the laptop; on the iPhone, open the same page: the same words are underlined (open/closed is per device).
+- [ ] Type before the fold on one device; on the other, the underline is still on the same word.
+
+**Existing pages**
+- [ ] Select words → Nest → **Existing page or fold…** → search → pick a page. It moves under those words (it disappears from where it was in the list).
+
+
 ---
 
 ## T6 · Claude inside the app

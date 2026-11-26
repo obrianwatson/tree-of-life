@@ -6,13 +6,16 @@ Writing is "to enscribe oneself into life". Keep the spelling "enscribe".
 
 ## The app (current focus: the web app)
 - `docs/` is the Tree of Life web app, used on an iPhone 16e (Home Screen app, Safari) and a 2011 MacBook (Firefox on macOS Catalina, so no newest-only browser features).
-  - `docs/index.html`: pages (pages can hold pages), the writing clock, settings, export/import, look-and-feel theme.
+  - `docs/index.html`: pages and folds, the writing surface, the writing clock, settings, export/import, look-and-feel theme.
   - `docs/claude.js`: the in-app Claude page (talks to GitHub issues/pull requests), instant look-and-feel changes, Looks, previews.
   - `docs/sync.js`: encrypted sync between the owner's devices through GitHub (branch `tol-data`, folder `sync/`).
   - `docs/sw.js`: offline support. If you add a file the app needs, add it to `SHELL` and bump `CACHE`.
   - `docs/board/`: the big-screen Board (on hold).
 - `.github/workflows/pages.yml` publishes `docs/` to https://obrianwatson.github.io/tree-of-life/ and publishes every open pull request's `docs/` as a preview at `/tree-of-life/preview/<PR number>/`.
 - The owner asks for changes from inside the app. Each request is a GitHub issue that starts with `@claude`. Work on your branch; the app opens the pull request for you and shows the preview. Follow-ups arrive as comments on the pull request.
+- Folds: a fold is just a page with an `anchor` = a stretch of its parent's text: `{start, end, text, before, after}` (+ `lost: true` when its words were deleted → "unattached", kept, never deleted) and `anchorAt` (its own clock: moving a fold's words never bumps `updatedAt`). Folds may overlap. The anchor's `text` + `before`/`after` context lets `locate()` re-find the words if positions are stale (e.g. after sync). Open/closed folds (`ui.folds`) and "Folds shown" (`ui.showFolds`) are per device. Views: staircase (folds open in place under the line their words end on) and focus ("Open on its own" makes a fold the page; "Step out"/crumbs go back).
+- The writing surface is plain `<textarea>`s (one per piece of text between open folds) over a `.bd` backdrop that mirrors the text exactly and draws the fold lines. Keep the textarea and backdrop styles identical (font, size, line height, wrapping, padding) or the lines will drift. `tests/test_folds.py` checks this.
+- Browser tests live in `tests/` (see `tests/README.md`). Run them after changes to the writing surface, folds or sync.
 - The native iPad app (`Sources/`, `project.yml`, `build.yml`) is ON HOLD until the Apple Pencil is replaced. Don't change it unless asked.
 
 ## Rules that must never break
@@ -21,7 +24,8 @@ Writing is "to enscribe oneself into life". Keep the spelling "enscribe".
 - Look-and-feel choices belong in the theme (`THEME_DEFAULT` / `applyTheme` in index.html) so they can be changed instantly from the Claude page.
 - Never put secrets in the repository. The GitHub key lives only on the owner's devices.
 - SYNC IS SACRED (`docs/sync.js`): never write anything readable to the repository; never weaken the encryption (PBKDF2-SHA256 600,000 rounds → AES-GCM-256, fresh IV per write, AAD `tol-state:<deviceId>` / `tol-check`); never remove fields from `sync/meta.json` (`tol-vault`), the sealed files (`tol-sealed`: format, v, iv, ct, updatedAt) or the state inside (`tol-state`: deviceId, deviceName, savedAt, spot, prefs, pages, intervals) — only add. Never store the passphrase. Each device writes only its own `sync/<deviceId>.json`. Merging must never lose writing (conflicts become an "Other version" page inside the page). Deleted pages are markers `{id, deleted:true, updatedAt}` and must stay hidden everywhere. Previews (`/preview/`) must never sync. Don't touch the `tol-data` branch by hand.
-- Synced between devices (newest wins): pages, writing time, theme, Looks, typing pause, daily goal. Stays per device: hold-button spot, device name, GitHub key, sync key.
+- Synced between devices (newest wins): pages (with folds' `anchor`, which merges by `anchorAt`), writing time, theme, Looks, typing pause, daily goal. Stays per device: hold-button spot, device name, GitHub key, sync key, which folds are open, "Folds shown".
+- Folds must never lose writing: deleting a page turns folds anchored in it into unattached folds one level up; deleting a fold's words leaves it unattached.
 
 ## How to work
 - Keep each change small and safe. Read the related code first. You can't run the app on a phone, so keep changes simple and test what you can (e.g. `node --check` on scripts).

@@ -142,14 +142,22 @@
       if (!rp || !rp.id) continue;
       const lp = P[rp.id], base = S.base[rp.id] || 0;
       if (!lp) { P[rp.id] = rp; changed.add(rp.id); continue; }
-      if ((rp.updatedAt || 0) === (lp.updatedAt || 0)) continue;
+      // where a fold sits in its parent's words moves on its own clock (anchorAt), so typing
+      // in a parent never counts as editing the fold itself
+      const anchorNewer = (rp.anchorAt || 0) > (lp.anchorAt || 0) ? rp : lp;
+      const keepAnchor = node => (!node || node.deleted || node.id !== rp.id || !anchorNewer.anchor || node.anchorAt === anchorNewer.anchorAt) ? node
+        : Object.assign({}, node, { anchor: anchorNewer.anchor, anchorAt: anchorNewer.anchorAt });
+      if ((rp.updatedAt || 0) === (lp.updatedAt || 0)) {
+        const k = keepAnchor(lp); if (k !== lp) { P[rp.id] = k; changed.add(rp.id); }
+        continue;
+      }
       const remoteNewer = rp.updatedAt > lp.updatedAt;
       const newer = remoteNewer ? rp : lp, older = remoteNewer ? lp : rp;
       const bothChanged = lp.updatedAt > base && rp.updatedAt > base;
       if (bothChanged && !!lp.deleted !== !!rp.deleted) {
         // deleted on one device, written on the other: keep the writing
         const alive = lp.deleted ? rp : lp;
-        P[rp.id] = Object.assign({}, alive, { updatedAt: Math.max(lp.updatedAt, rp.updatedAt) + 1 });
+        P[rp.id] = keepAnchor(Object.assign({}, alive, { updatedAt: Math.max(lp.updatedAt, rp.updatedAt) + 1 }));
         changed.add(rp.id); continue;
       }
       if (bothChanged && !lp.deleted && !rp.deleted && (lp.text || "") !== (rp.text || "")) {
@@ -161,7 +169,8 @@
           changed.add(cid);
         }
       }
-      if (remoteNewer) { P[rp.id] = rp; changed.add(rp.id); }
+      if (remoteNewer) { P[rp.id] = keepAnchor(rp); changed.add(rp.id); }
+      else { const k = keepAnchor(P[rp.id]); if (k !== P[rp.id]) { P[rp.id] = k; changed.add(rp.id); } }
     }
     const seen = new Set(I.map(i => `${i.start}:${i.end}:${i.device}`));
     for (const i of remote.intervals || []) {
@@ -205,7 +214,7 @@
       }
       if (changed.size) T.replaceData(P, I, changed);
       if (prefs && prefs.at > (S.prefsAt || 0)) { T.applyPrefs(prefs); S.prefsJson = JSON.stringify(T.getPrefs()); S.prefsAt = prefs.at; }
-      if (reason === "resume" && spot && spot.at > (T.lastSpot().at || 0)) T.goTo(spot.id, spot.cursor, spot.at);
+      if (reason === "resume" && spot && spot.at > (T.lastSpot().at || 0)) T.goTo(spot.id, spot.cursor, spot.at, spot);
       if (dirtySince || !S.mySha) {
         const background = reason === "timer" || reason === "interval";
         if (background && S.mySha && Date.now() - lastWriteAt < MIN_GAP) changedSoon();   // too soon after the last write; it'll go shortly
@@ -231,7 +240,7 @@
   async function writeMine(keepalive) {
     const cur = T.data(), spot = T.lastSpot();
     const prefs = Object.assign(T.getPrefs(), { at: S.prefsAt || 0 });
-    const fingerprint = await sha256(JSON.stringify([cur.pages, cur.intervals, spot.id, spot.cursor, S.deviceName, prefs]));
+    const fingerprint = await sha256(JSON.stringify([cur.pages, cur.intervals, spot.id, spot.cursor, spot.node, spot.pos, S.deviceName, prefs]));
     if (fingerprint === S.lastHash && S.mySha) { dirtySince = 0; return; }
     const now = Date.now();
     const state = { format: "tol-state", v: 1, deviceId: S.deviceId, deviceName: S.deviceName, savedAt: now, spot, prefs, pages: cur.pages, intervals: cur.intervals };
