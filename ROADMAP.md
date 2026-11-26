@@ -32,8 +32,11 @@ your time → fold → practice and test → Claude in the page → drills → s
   **Plus a menu bar** along the top of the laptop screen with everything the book can do.
 - **Less clunk:** no messages for things that worked; one way to do each thing; Undo appears in the bar
   right after a fold action.
-- **To decide during the trial:** whether Ask Claude sits next to Fold or behind ⋯; whether the bar learns
-  your habits (moves the choice you use most up front).
+- **Scope of folding in Trial #01: the simplest single case, made perfect first.** No overlapping folds and
+  no folds made from several selections. A page holds at most TWO folds: the first fold, and a second fold
+  inside it (page → fold → fold). Everything richer comes back later, one step at a time.
+- **To decide during the trial:** whether Ask Claude sits next to Fold or behind ⋯.
+- **Not in this trial:** a bar that learns your habits.
 
 ## H · Hardening: nothing lost, sync that lasts, tests that run themselves ✅ built (versions 1.2–1.5)
 - [x] A save that fails shows a red "Not saved" bar; the book is kept in a rescue copy and comes back at the next open
