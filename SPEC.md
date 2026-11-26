@@ -56,14 +56,26 @@ Status as of 2026-11-26. This is the authoritative description of what the app i
 ## 4. Architecture
 
 - **Web app** in `docs/` (plain HTML/CSS/JS, no framework), published by GitHub Pages workflow `.github/workflows/pages.yml` to `https://obrianwatson.github.io/tree-of-life/`. A service worker (`docs/sw.js`) caches the app for offline use; bump its cache name on every release.
-- **Modules (current):** `index.html` (shell, editor, folds, views, clock), `sync.js` (encrypted sync), `claude.js` (Claude Code over GitHub), `memory.js` (tests, practice, FSRS), `ai.js` (Anthropic client, AI features), plus files added by in-progress phases (Claude-in-book, add-ons, drills, code vault).
+- **Modules (current):** `index.html` (the bootloader), `app.html` (shell, editor, folds, placements, views, clock), `sync.js` (encrypted sync), `claude.js` (Claude Code over GitHub), `memory.js` (tests, practice, FSRS), `ai.js` (Anthropic client, AI features), `agent.js` (Claude in the book), `addons.js` (sealed add-ons), `drill.js` (drills), `code.js` (onboard versions), `codefolds.js` (The App / code-folds).
 - **Board prototype:** `docs/board/` (TV + IR touch frame); on hold.
 - **Native iPad app:** `Sources/`, `project.yml` (XcodeGen), `.github/workflows/build.yml` (unsigned .ipa; TestFlight path prepared). ON HOLD.
 - **Three speeds of change:**
   1. **Instant:** Claude in the app uses tools over app primitives (seconds).
   2. **Add-ons:** Claude writes sandboxed extensions (seconds).
   3. **Deep:** code changes. Target: **onboard** (code vault, seconds). Fallback/backup: Claude Code on GitHub (minutes).
-- **Onboard code (Phase 5):** a tiny stable bootloader loads the app from an on-device, versioned code vault, seeded from the published files. Edits are previewed in a sandbox on a copy of the data, checked by a built-in self-test, then Kept or Undone. Version history, rollback, automatic safe-mode fallback to the last version that booted, and synced versions across devices. Publishing to GitHub is optional.
+- **Onboard code (Phase 5, live):**
+  - **Bootloader** `docs/index.html` (tiny, stable; never in the vault). It reads the CODE VAULT (IndexedDB `bolw-code`: store `versions` {id, n, origin published|onboard, label, base, parent, files{name:text}, note, by, at} and store `meta`: active, pinned, lastGood, booting, bad, choiceAt). It starts the pinned or active version; otherwise it fetches the published `app.html` plus every script it names, saves them as `pub-<APP_VERSION>`, and starts them. Offline with nothing reachable, it starts the newest saved published copy. Previews (`/preview/N/`) always use their own files.
+  - **Starting a version:** parse `app.html`, put its head and body in place, and run its scripts in order (`window.__bolwRun`). It writes `booting=<id>` first and clears it on success (window.TOL and #writer exist, with no errors while starting). If there are errors, or `booting` is still set on the next start (it froze), the version is marked bad and the last good one starts, with the banner "A change didn't work, so I started the last good version. Undo it?" (Undo it / Try it again).
+  - **Safe mode:** `?safe`, Shift held while it opens, or "Start safely instead" on the opening screen. These start the published files with no add-ons.
+  - **The app's side** `docs/code.js`:
+    - Settings → App versions: history, Use this (rollback or forward), Return to published version, pin on this device, Restart in safe mode, What changed (plain words + lines), Publish to GitHub….
+    - Claude's tool `propose_change` (exact find/replace edits, or base "published" to carry changes onto a newer published version) opens a sealed preview: an iframe `sandbox="allow-scripts"` (opaque origin) with a CSP that has no network. It runs the change on an in-memory COPY of the book (pages, time, ui, theme, looks, memory; never keys). IndexedDB and caches are absent.
+    - Built-in self-test: the app starts; all your writing is still there; pages open; the writing clock counts; folds show; sync code loads; no errors while starting.
+    - **Keep** (only when the self-test passes) or **Undo**. Claude cannot keep.
+    - Claude's changes may not touch `sync.js` or `code.js`, nor mention keys, sync or the vault.
+    - Other tools: `list_versions`, `onboard_changes`.
+  - **Sync:** `memory.codeversions` (additive). Each kept version carries only its files that differ from its published base, and the 5 newest are kept. `~active` = the newest choice and wins on every unpinned device (with a "Reload to use it" offer). A pinned device keeps its version but still receives the history.
+  - **Publish (optional, existing GitHub key):** a branch `onboard-v<n>-…` with only the changed files plus a pull request, or a commit straight to main after a second confirming tap. Writing is never sent. When the published version is newer than the onboard base, the app says so and offers "Use the published version" or "Bring my changes over with Claude".
 
 ---
 
@@ -176,9 +188,9 @@ Small JS extensions written by Claude, run in a sandboxed iframe/Worker with no 
 
 ## 14. Status
 
-**Live:** pages; writing clock; folds (overlap, staircase, focus); Nest in (wrap/move); memory tests, cues, FSRS; AI feedback/questions/AI folds; looks; encrypted sync; Claude Code page with previews; rename and logo; Claude in the book (Phase 1); add-ons (Phase 2); drill engine with the Psalm 23 sample (Phase 3); fold anywhere and code-folds (Phase 4).
+**Live:** pages; writing clock; folds (overlap, staircase, focus); Nest in (wrap/move); memory tests, cues, FSRS; AI feedback/questions/AI folds; looks; encrypted sync; Claude Code page with previews; rename and logo; Claude in the book (Phase 1); add-ons (Phase 2); drill engine with the Psalm 23 sample (Phase 3); fold anywhere and code-folds (Phase 4); onboard self-changing code with bootloader, code vault, sealed tries with self-test, versions, safe-mode fallback, version sync and optional publishing (Phase 5).
 
-**In progress:** Phase 5 (onboard self-changing code).
+**In progress:** nothing; Phases 1–5 are live.
 
 **Planned / back pocket:** more AI providers; onboard small model; chained timers anywhere; 40-day / 200-hour view; Board hardware; native iPad (when the Pencil is replaced: draw-and-hold shapes, Goodnotes-style toolbar); MIDI piano roll / channel rack (FL Studio). Dropped: AI drawing beside writing.
 

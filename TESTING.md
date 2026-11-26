@@ -2,6 +2,17 @@
 
 ---
 
+## O · Onboard, self-changing code
+- [ ] Open the app as usual: it opens as before (it now starts through a tiny starter page).
+- [ ] ✦ Claude: "put a little flower on the New page button". A full-screen "Trying: …" opens with the self-test list (all ✓) and the app below, running on a copy. Type there: your real book doesn't change.
+- [ ] **What changed**: plain words (which part, lines added/removed). **Keep**: the app restarts with the flower. Your writing is all there.
+- [ ] Settings → App versions: "Running: onboard version 1". **What changed**, **Return to published version** (no flower), **Use this** on version 1 (flower back).
+- [ ] Airplane mode, then reopen: it still opens, with your version.
+- [ ] Add `?safe` to the address (or hold Shift while it opens on the laptop, or tap "Start safely instead"): the published version with no add-ons. Remove it: your version is back.
+- [ ] With sync on: keep a change on the laptop; on the iPhone a message offers "Reload"; after reloading it has the change. Tick "Keep this device on this version" on the iPhone: later changes from the laptop don't move it.
+- [ ] Settings → App versions → **Publish to GitHub…** → pull request: GitHub shows a pull request with only the changed file.
+- [ ] If anything ever goes wrong while starting, you'll see "A change didn't work, so I started the last good version. Undo it?" — tap **Undo it**.
+
 ## P · Fold anywhere
 - [ ] Make a fold in page A. In page B select a word → **Nest** → **Place here too…** → pick that fold. It opens in B too, with a ⇄ head "the same writing, also in 1 place".
 - [ ] Type in it inside B. Go to page A and open the fold: your new words are there too.

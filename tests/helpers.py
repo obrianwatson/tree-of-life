@@ -114,3 +114,27 @@ async def new_device(browser, url, fake=None, token=True, **ctx_kw):
     await pg.goto(url)
     await pg.wait_for_timeout(400)
     return ctx, pg
+
+
+# The app now starts through a small bootloader (docs/index.html) that loads the app's files a moment
+# after the page loads. Every test's goto/reload waits until the app has started.
+from playwright.async_api import Page as _Page
+_goto, _reload = _Page.goto, _Page.reload
+
+async def _wait_app(pg):
+    try:
+        await pg.wait_for_function("window.__bolwBoot && 'ok' in window.__bolwBoot || /couldn't/.test((document.getElementById('bolwBoot') || {}).textContent || '')", timeout=15000)
+    except Exception as e:
+        print("boot wait:", str(e)[:200])
+
+async def _goto_wait(self, url, **kw):
+    r = await _goto(self, url, **kw)
+    await _wait_app(self)
+    return r
+
+async def _reload_wait(self, **kw):
+    r = await _reload(self, **kw)
+    await _wait_app(self)
+    return r
+
+_Page.goto, _Page.reload = _goto_wait, _reload_wait

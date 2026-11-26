@@ -93,6 +93,13 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 - ✅ Versions kept; Settings → Add-ons: turn on/off, view code, remove, turn all off; problems shown in plain words
 - ✅ Safe mode (`?safe`); synced between devices; undo of a just-made add-on
 
+## O · Onboard, self-changing code ✅ built
+- ✅ A tiny bootloader starts the app from a code vault on this device (offline too), or from the published files
+- ✅ Claude proposes a change → it's tried on a copy of your book with a built-in self-test → you Keep it (seconds) or Undo
+- ✅ Versions with notes and plain-words "What changed"; use any version; "Return to published version"; pin a device
+- ✅ If a version fails to start, the last good one starts with a calm banner; safe mode with ?safe, Shift or "Start safely instead"
+- ✅ Kept versions sync (encrypted); publish to GitHub as a pull request (or to main after confirming); a newer published version is noticed
+
 ## P · Fold anywhere ✅ built
 - ✅ Place any page or fold under words anywhere else (Nest → Place here too…): one writing, many places; edit it anywhere
 - ✅ Cycle-safe: a page inside itself, pages inside each other → "↻ already open above"; the page list shows each once with "also in N places"

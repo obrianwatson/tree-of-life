@@ -401,7 +401,7 @@
 
   /* ---------------- banners: trying a preview, or just updated ---------------- */
   const banner = $("banner");
-  if (T.SANDBOX) {
+  if (T.SANDBOX && /^\d+$/.test(T.SANDBOX)) {
     const trying = st.get(TRYING_KEY, null);
     const name = trying && String(trying.pr) === T.SANDBOX ? trying.title : `change #${T.SANDBOX}`;
     banner.innerHTML = `<span>Trying: ${esc(name)}. This is a copy of your pages; your real writing is safe.</span>

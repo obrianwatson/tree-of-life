@@ -8,7 +8,7 @@
 (() => {
   const T = window.TOL; if (!T || !T.memoryApi) return;
   const $ = id => document.getElementById(id), esc = T.esc, H = T.hooks, M = T.memoryApi;
-  const FILES = ["index.html", "claude.js", "memory.js", "ai.js", "agent.js", "addons.js", "drill.js", "codefolds.js", "sync.js", "sw.js"];
+  const FILES = ["app.html", "claude.js", "memory.js", "ai.js", "agent.js", "addons.js", "drill.js", "codefolds.js", "sync.js", "sw.js"];
   const cache = {};
   const code = T.code = T.code || {};
   code.files = code.files || (() => FILES.slice());
@@ -68,6 +68,7 @@
     const seenKeys = {};
     return final.map(c => { const b = name + "#" + slug(c.title); seenKeys[b] = (seenKeys[b] || 0) + 1; return { key: b + (seenKeys[b] > 1 ? "-" + seenKeys[b] : ""), file: name, title: c.title, from: c.start + 1, to: c.start + c.lines.length, text: c.lines.join("\n") }; });
   }
+  code.split = chunks;
   code.chunks = async name => chunks(name, await code.read(name));
   code.chunk = async (file, key) => (await code.chunks(file)).find(c => c.key === key) || null;
 

@@ -13,6 +13,7 @@ python3 tests/test_folds.py       # folds: create, overlap, picker, edits, stair
 python3 tests/test_folds_sync.py  # folds between two devices through encrypted sync
 python3 tests/test_memory.py      # Nest in (wrap/move), memory tests, practice, FSRS, AI (Anthropic faked), old data
 python3 tests/test_memory_sync.py # memory history, settings and shared words between two devices
+python3 tests/test_onboard.py     # onboard code: bootloader + vault, try/keep/undo with self-test, isolation, offline, fallback, safe mode, rollback, diff, version sync, publish
 python3 tests/test_anywhere.py    # fold anywhere (placements, cycles, also-in-N) and code-folds (The App, notes, place, Claude Code hand-off, offline), two-device sync
 python3 tests/test_drill.py       # drills: Psalm 23 sample, loop/extend/chain, adapting, orders, directions, rules, spaced review, Claude's drill tools
 python3 tests/test_drill_sync.py  # drills, conversations and add-ons between two devices (encrypted)
