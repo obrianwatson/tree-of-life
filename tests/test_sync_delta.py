@@ -180,6 +180,13 @@ async def main():
         await B.evaluate("document.getElementById('settings').close()")
         for k in ("sync/aaaaaaaaaaaaaaaa.json", "sync/bbbbbbbbbbbbbbbb.json", "sync/cccccccccccccccc.d.json"):
             del fake.files[k]
+        # a read that went wrong once is tried again, not given up on
+        await A.evaluate(f"window.TOL.setText('{first}', 'Page 0\\nsent while the download was garbled')"); await A.wait_for_timeout(200); await sync(A)
+        fake.garble.add(fake.files[delta_path][1])
+        st = await sync(B)
+        C.ok("garbled" not in (await book(B))["pages"][first]["text"] and not st["locked"], "(one download arrives garbled: nothing is taken from it, and the device stays unlocked)")
+        await sync(B)
+        C.ok((await book(B))["pages"][first]["text"] == "Page 0\nsent while the download was garbled", "…the next look reads it properly, so nothing is missed")
 
         # 6. GitHub refusing the read-by-fingerprint call: the app reads by path instead
         fake.no_blobs = True

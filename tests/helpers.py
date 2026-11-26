@@ -76,6 +76,7 @@ class FakeGitHub:
         self.blobs = {}         # every version ever written, by its sha (like git)
         self.no_blobs = False   # True: answer 404 for /git/blobs (the app must fall back to reading by path)
         self.lag = {}           # path → an older sha: the folder list shows that older version (GitHub's list a moment behind)
+        self.garble = set()     # shas whose NEXT read returns garbage once (a download that went wrong)
 
     async def handle(self, route):
         req = route.request
@@ -110,6 +111,8 @@ class FakeGitHub:
             data = None if self.no_blobs else self.blobs.get(mm.group(1))
             if data is None:
                 return await j(404, {"message": "Not Found"})
+            if mm.group(1) in self.garble:
+                self.garble.discard(mm.group(1)); data = b'{"format":"tol-sealed","v":1,"iv":"AAAA","ct":"garbled'  
             if "raw" in req.headers.get("accept", ""):
                 return await route.fulfill(status=200, headers=cors, content_type="text/plain", body=data)
             return await j(200, {"sha": mm.group(1), "encoding": "base64", "content": base64.b64encode(data).decode()})

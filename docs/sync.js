@@ -137,7 +137,8 @@
       }
       throw e;
     }
-    return opts.raw ? res.text() : res.json();
+    try { return await (opts.raw ? res.text() : res.json()); }
+    catch (e) { const x = new Error("OFFLINE"); x.offline = true; throw x; }   // the answer broke off on the way: a connection problem, try again later
   }
   const q = `?ref=${BRANCH}`;
   async function ensureBranch() {
@@ -268,7 +269,16 @@
       if (Date.now() - lastWriteAt > 30000) {                    // (right after a write, what we just wrote is the truth; the list can lag a moment)
         S.mySha = mine.base ? mine.base.sha : null; S.myDeltaSha = mine.delta ? mine.delta.sha : null;
       }
-      const open = async (f, aad) => { const box = JSON.parse(await getListed(f)); return box && box.format === "tol-sealed" ? unseal(key, box, aad) : null; };
+      // Reading one file. Trouble reaching GitHub stops the round (it is tried again later). A file that arrives but
+      // can't be opened is "bad": it is skipped, looked at again next time (three tries a session), and never a
+      // reason to lock this device as long as the key still opens the vault.
+      const BAD = () => Object.assign(new Error("BADFILE"), { bad: true });
+      const open = async (f, aad) => {
+        const text = await getListed(f);
+        let box; try { box = JSON.parse(text); } catch (e) { throw BAD(); }
+        if (!box || box.format !== "tol-sealed") throw BAD();
+        try { return await unseal(key, box, aad); } catch (e) { throw BAD(); }
+      };
       let unread = 0;
       for (const [id, d] of Object.entries(devs)) {
         // a delta that didn't belong to the listed base is remembered together with that base ("delta@base"):
@@ -276,17 +286,19 @@
         const newBase = !!d.base && S.seen[id] !== d.base.sha,
               newDelta = !!d.delta && S.seen[id + ".d"] !== d.delta.sha && S.seen[id + ".d"] !== d.delta.sha + "@" + (d.base ? d.base.sha : "");
         if (!newBase && !newDelta) continue;
-        let base = null, delta = null;
-        try {
-          if (newBase) base = await open(d.base, "tol-state:" + id);
-          if (newDelta) delta = await open(d.delta, "tol-state:" + id + ":delta");
-        } catch (e) {
-          if (e.offline || e.status || e.noToken) throw e;                                // trouble reaching GitHub: stop here and try again later
-          if (!(await keyStillOpens())) throw Object.assign(new Error("LOCK"), { name: "OperationError" });   // the passphrase really was changed
-          unread++;                                                                     // one file that can't be read never stops the rest
-          if (d.base) S.seen[id] = d.base.sha; if (d.delta) S.seen[id + ".d"] = d.delta.sha;
-          continue;
-        }
+        let base = null, delta = null, bad = false;
+        const read = async (f, aad) => {
+          if ((badTries[f.sha] || 0) >= 3) { bad = true; return null; }                   // already tried three times this session
+          try { return await open(f, aad); }
+          catch (e) {
+            if (!e.bad) throw e;
+            if (!(await keyStillOpens())) throw Object.assign(new Error("LOCK"), { name: "OperationError" });   // the passphrase really was changed
+            badTries[f.sha] = (badTries[f.sha] || 0) + 1; bad = true; return null;
+          }
+        };
+        if (newBase) base = await read(d.base, "tol-state:" + id);
+        if (newDelta && !(newBase && !base)) delta = await read(d.delta, "tol-state:" + id + ":delta");   // (changes without the base they belong to wait for it)
+        if (bad) unread++;
         const other = !!delta && !!d.base && !!delta.baseSha && delta.baseSha !== d.base.sha;
         if (other) delta = null;                                 // not for the listed base: left over from an older base (the new base holds it all), or the list is a moment behind
         const remote = base && delta ? overlay(base, delta) : (base || delta);
@@ -296,8 +308,8 @@
           if (remote.spot && remote.spot.id && (!spot || remote.spot.at > spot.at)) spot = remote.spot;
           if (remote.prefs && (remote.prefs.at || 0) > (prefs ? prefs.at : 0)) prefs = remote.prefs;
         }
-        if (d.base) S.seen[id] = d.base.sha;
-        if (d.delta) S.seen[id + ".d"] = other ? d.delta.sha + "@" + d.base.sha : d.delta.sha;
+        if (base) S.seen[id] = d.base.sha;                       // only what was really read counts as seen
+        if (other || delta) S.seen[id + ".d"] = other ? d.delta.sha + "@" + d.base.sha : d.delta.sha;
       }
       detail = unread ? `${unread} synced file${unread === 1 ? "" : "s"} from another device couldn't be read and ${unread === 1 ? "was" : "were"} skipped.` : "";
       if (changed.size) T.replaceData(P, I, changed, changed.has("#memory") ? M : null);
@@ -328,6 +340,7 @@
 
   /* What this device's base file on GitHub holds (fingerprints), kept in this device's database.
      Unknown or out of date → null → the next write is a whole new base. */
+  const badTries = {};               // file fingerprint → how many times it arrived but couldn't be opened, this session
   let baseIdx;
   async function baseIndex() {
     if (baseIdx === undefined) { try { baseIdx = (await idb.get("base")) || null; } catch (e) { baseIdx = null; } }
