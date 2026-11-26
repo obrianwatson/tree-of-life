@@ -93,6 +93,15 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 - ✅ Versions kept; Settings → Add-ons: turn on/off, view code, remove, turn all off; problems shown in plain words
 - ✅ Safe mode (`?safe`); synced between devices; undo of a just-made add-on
 
+## P · Fold anywhere ✅ built
+- ✅ Place any page or fold under words anywhere else (Nest → Place here too…): one writing, many places; edit it anywhere
+- ✅ Cycle-safe: a page inside itself, pages inside each other → "↻ already open above"; the page list shows each once with "also in N places"
+- ✅ "Remove from here" removes only the placement; Claude can place things too (undo works)
+
+## K · Code-folds ✅ built
+- ✅ "The App": the app's own code, read-only, folded into parts; search; notes on any part (synced); works offline
+- ✅ Place a part of the code in a page or under selected words; "Change this with Claude Code" sends that code to Claude Code
+
 ## D · Drills (loop until natural, then grow) ✅ built
 - ✅ A drill = saved steps over a set of folds: show it → hide it (with a hint) → type it → review word by word; loop until a rule is met (3 perfect in a row by default; or a score, or perfect and fast), then extend: the next level, the next group, then chain the groups (1+2, 1+2+3…)
 - ✅ Hints fade as you get it; a word missed twice keeps a first-letter hint; three misses step back; fast perfect runs extend sooner. Each change is said in one line
@@ -106,7 +115,7 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 - ✅ M3 Type it from memory → Submit → the correct answer beside yours, word by word (matched / missed / added / changed); AI feedback if you've added a key; you grade Missed / Almost / Got it / Easy (the AI's suggestion is highlighted; you can overrule). Per fold: AI suggests the grade, AI feedback but you grade, or only you. End: score, weak pegs, next review
 - ✅ M4 Spaced review with FSRS (the modern open scheduler): each prompt comes back right before you'd likely forget it. Simple limits in Settings → Memory: how sure you want to be (80–95%), most reviews per day, new prompts per day, longest gap. "N to review today" in the page list; a "due" badge on folds
 - ✅ Typing answers counts on the writing clock; holding counts; AI never does. Everything syncs encrypted; answers given on two devices are all kept
-- Later (planned): the same fold in many places (cross-folds)
+- ✅ The same fold in many places (Phase 4)
 
 ## AI ✅ (built; switches on when you add an Anthropic key in Settings → AI)
 - ✅ Feedback on memory answers (what you got, what you missed, meaning kept, a tip, a suggested grade)

@@ -2,6 +2,22 @@
 
 ---
 
+## P · Fold anywhere
+- [ ] Make a fold in page A. In page B select a word → **Nest** → **Place here too…** → pick that fold. It opens in B too, with a ⇄ head "the same writing, also in 1 place".
+- [ ] Type in it inside B. Go to page A and open the fold: your new words are there too.
+- [ ] Page list: the fold shows once, saying "also in 1 place".
+- [ ] In page A, place page A itself under one of its words: it says "↻ already open above" (no endless loop).
+- [ ] **Remove from here**: the placement goes; the fold and its writing stay.
+- [ ] With sync on: the placement shows on the other device (open it there); writing through it there reaches the laptop.
+
+## K · Code-folds
+- [ ] Page list → **The App**: the app's files, each opens into parts. "Find in the code": type "writing clock".
+- [ ] Open a part: the code shows, read-only. Write a note under it; leave and come back: the note is kept (and syncs).
+- [ ] **Place in a page…** → pick a page: a "⌘ file · part" line appears at the end with the code folded under it.
+- [ ] Select words in a page → **Nest** → **App code…** → pick a part: it folds under your words.
+- [ ] **Change this with Claude Code**: the Claude page opens with that code in the request box, ending "What I'd like changed:".
+- [ ] Airplane mode: The App still opens (after you've opened it once online).
+
 ## D · Drills
 - [ ] Open Memory (top of the page list) → **Add sample: Psalm 23 (KJV)**. A page "Psalm 23 (KJV)" appears with Verse 1–6; each verse opens to Level 1–5 (Level 5 is the King James words). The drill's steps open in plain words.
 - [ ] **Save and drill.** You see "God cares for me." → **Hide it** → a hint (G c f m.) → type it → **Check** → Perfect. The clock counts while you type.

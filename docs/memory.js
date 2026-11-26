@@ -41,7 +41,7 @@
     let changed = false;
     M.settings = M.settings || {}; M.folds = M.folds || {}; M.prompts = M.prompts || {}; M.cards = M.cards || {};
     if (R.settings && (R.settings.updatedAt || 0) > (M.settings.updatedAt || 0)) { M.settings = R.settings; changed = true; }
-    for (const part of ["folds", "prompts", "drills", "convos", "addons"]) {   // drills, Claude conversations, add-ons: added parts, newest wins per record
+    for (const part of ["folds", "prompts", "drills", "convos", "addons", "codenotes"]) {   // drills, Claude conversations, add-ons: added parts, newest wins per record
       M[part] = M[part] || {};
       for (const [k, v] of Object.entries(R[part] || {})) {
         const mine = M[part][k];

@@ -234,7 +234,7 @@ async def main():
             window.TOL.setMemory(m); window.TOL.refreshList(); }})()""")
         n_due = await pg.evaluate("window.TOL.memoryApi.dueItems().reviews.length")
         C.ok(n_due >= 1, f"a prompt last seen 20 days ago is due today ({n_due})")
-        C.ok("to review today" in await pg.locator(".memrow").inner_text(), "the page list shows what's due")
+        C.ok("to review today" in await pg.locator(".memrow:has([data-listtop=memory])").inner_text(), "the page list shows what's due")
         await pg.evaluate("window.TOL.rerender()")
         C.ok(await pg.locator(f'[data-fold="{tbl["id"]}"] .duebadge').count() == 1, "the fold shows a 'due' badge")
         await pg.click(".memrow [data-listtop]"); await pg.wait_for_selector("#memHub[open]")
@@ -392,7 +392,7 @@ async def main():
             localStorage.setItem('tol-ui', JSON.stringify({last:'a'})); }""")
         O = await ctxO.new_page(); O.errs = []; O.on("pageerror", lambda e: O.errs.append(str(e)))
         await O.goto(url); await O.wait_for_timeout(600)
-        C.ok("Old page" in await O.locator("#writer").inner_text() and await O.locator(".memrow").count() == 1, "data from before memory opens fine, with the Memory row")
+        C.ok("Old page" in await O.locator("#writer").inner_text() and await O.locator(".memrow:has([data-listtop=memory])").count() == 1, "data from before memory opens fine, with the Memory row")
         await O.evaluate("window.TOL.memoryStart('a', 'order')"); await O.wait_for_selector("#tAns")
         C.ok("page" in await O.locator(".t-q").inner_text(), "an old fold can be tested right away")
 

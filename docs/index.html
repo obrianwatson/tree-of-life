@@ -89,6 +89,7 @@ header{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area
 .crumbs .sep{color:var(--muted);flex:none}
 .fmk{font-weight:600}
 :root{--share:color-mix(in srgb,var(--green) 12%,transparent)}
+.cyc{font:14px/1.4 "Hanken Grotesk",system-ui,sans-serif;color:var(--muted);padding:6px 10px;border:1px dashed var(--line);border-radius:8px;margin:2px 0 6px}
 .fnote{font-size:12px;color:var(--muted);border:1px dashed var(--line);border-radius:6px;padding:1px 6px}
 .aimark{font:600 11px/1 "Hanken Grotesk",system-ui,sans-serif;letter-spacing:.02em;color:var(--fc,var(--green));border:1px solid currentColor;border-radius:5px;padding:2px 4px}
 .fold.ai{border-left-style:dashed}
@@ -317,7 +318,7 @@ const DEVICE = isPhone ? "iPhone" : "Laptop";
 const touch = matchMedia("(pointer:coarse)").matches;
 if (touch) document.body.classList.add("touch");
 
-const APP_VERSION = "0.9";
+const APP_VERSION = "1.0";
 
 /* ---------- sandbox: a preview from Claude runs on a COPY of your pages ----------
    Served from /preview/<number>/, it uses its own storage names, filled once from
@@ -372,13 +373,14 @@ const H = {};
 const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 function renderList() {
-  const rows = [];
+  const rows = [], refs = {};
+  for (const p of Object.values(pages)) if (live(p) && p.ref && live(pages[p.parentId])) refs[p.ref] = (refs[p.ref] || 0) + 1;
   const walk = (parentId, depth) => {
-    for (const p of children(parentId)) {
-      const kids = children(p.id).length;
+    for (const p of children(parentId).filter(x => !x.ref)) {
+      const kids = children(p.id).filter(x => !x.ref).length, also = refs[p.id] || 0;
       rows.push(`<div class="item${p.id === ui.last ? " current" : ""}" style="padding-left:${depth * 16}px">
         <button class="tw${kids ? "" : " leaf"}" data-tw="${p.id}" aria-label="${ui.open[p.id] ? "Hide" : "Show"} pages inside">${ui.open[p.id] ? "▾" : "▸"}</button>
-        <button class="open" data-open="${p.id}">${p.anchor ? `<span class="fmk" style="color:${foldColor(p)}" aria-hidden="true">⌁</span> ` : ""}${esc(titleOf(p))}<small>${p.anchor ? (isUnattached(p) ? "unattached fold · " : "fold · ") : ""}${kids ? kids + " inside · " : ""}${ago(p.updatedAt)}</small></button>
+        <button class="open" data-open="${p.id}">${p.anchor ? `<span class="fmk" style="color:${foldColor(p)}" aria-hidden="true">⌁</span> ` : ""}${esc(titleOf(p))}<small>${p.anchor ? (isUnattached(p) ? "unattached fold · " : "fold · ") : ""}${kids ? kids + " inside · " : ""}${also ? `also in ${also} place${also === 1 ? "" : "s"} · ` : ""}${ago(p.updatedAt)}</small></button>
         <button class="add" data-add="${p.id}" aria-label="New page inside ${esc(titleOf(p))}">+</button></div>`);
       if (kids && ui.open[p.id]) walk(p.id, depth + 1);
     }
@@ -439,6 +441,10 @@ function placed(n) {
   }
   return list;
 }
+/* Fold anywhere: a PLACEMENT is a fold whose "ref" points at another page or fold. It shows that node
+   right here; editing through it edits the one node. A node shown twice on one screen (or inside itself)
+   appears once, and the other places say "↻ already open above". */
+const placementsOf = id => Object.values(pages).filter(p => live(p) && p.ref === id && live(pages[p.parentId]));
 const isUnattached = f => !!f.anchor && (f.anchor.lost || !live(pages[f.parentId]) || !locate(f, pages[f.parentId].text || ""));
 function foldColor(f) { const par = pages[f.parentId]; if (!live(par)) return PALETTE[0]; const m = placed(par).find(x => x.f.id === f.id); return m ? m.color : "var(--muted)"; }
 
@@ -547,6 +553,7 @@ function addChunk(box, n, pc, marks, levels, depth) {
   wireTA(t);
 }
 function renderFold(m, depth, seen) {
+  if (m.f.ref || m.f.code) return renderPlacement(m, depth, seen);
   const f = m.f, box = el("div", "fold");
   box.style.setProperty("--fc", m.color); box.dataset.fold = f.id;
   const words = f.anchor.text.replace(/\s+/g, " ").trim();
@@ -555,15 +562,43 @@ function renderFold(m, depth, seen) {
   if (isAI) box.classList.add("ai");
   head.innerHTML = `<span class="fdot"></span>${isAI ? '<span class="aimark" title="Written by AI">AI</span>' : ""}<span class="ftitle">“${esc(words.slice(0, 48))}${words.length > 48 ? "…" : ""}”</span>${H.foldBadge ? H.foldBadge(f) : ""}` +
     (f.share && f.share.frozen ? '<span class="fnote">source removed: a saved copy</span>' : f.share ? '<span class="fnote">shared words</span>' : "") +
+    (placementsOf(f.id).length ? `<span class="fnote">also in ${placementsOf(f.id).length} place${placementsOf(f.id).length === 1 ? "" : "s"}</span>` : "") +
     `<button class="fbtn" data-own="${f.id}">Open on its own</button><button class="fbtn" data-close="${f.id}">Fold away</button>` +
     (H.foldMenu ? `<button class="fbtn" data-more="${f.id}" aria-label="More for this fold">More…</button>` : "");
   box.appendChild(head);
   const s2 = new Set(seen); s2.add(f.id);
   const extra = H.foldBody ? H.foldBody(f, depth) : null;   // memory practice or AI (memory.js / ai.js)
   if (extra && extra.prepend) box.appendChild(extra.prepend);
-  if (extra && extra.replace) box.appendChild(extra.replace);
+  if (screen[f.id] !== undefined) box.appendChild(cycNote());
+  else if (extra && extra.replace) box.appendChild(extra.replace);
   else box.appendChild(renderNode(f, depth + 1, s2));
   return box;
+}
+const cycNote = () => { const d = el("div", "cyc"); d.textContent = "↻ already open above"; return d; };
+function renderPlacement(m, depth, seen) {
+  const f = m.f, t = pages[f.ref], box = el("div", "fold place");
+  box.style.setProperty("--fc", m.color); box.dataset.fold = f.id; box.dataset.ref = f.ref;
+  const head = el("div", "fold-head");
+  const n = live(t) ? placementsOf(t.id).length : 0;
+  head.innerHTML = `<span class="fdot"></span><span class="ftitle" title="The same writing as “${esc(live(t) ? titleOf(t) : "")}”">⇄ ${esc(live(t) ? titleOf(t).slice(0, 48) : "a removed page")}</span>` +
+    (live(t) ? `<span class="fnote">the same writing, also in ${n} place${n === 1 ? "" : "s"}</span><button class="fbtn" data-own="${t.id}">Open on its own</button>` : "") +
+    `<button class="fbtn" data-close="${f.id}">Fold away</button><button class="fbtn" data-unplace="${f.id}">Remove from here</button>` +
+    (H.placeExtra ? H.placeExtra(f, t) : "");
+  box.appendChild(head);
+  if (H.placeBody && H.placeBody(f, box, depth)) return box;           // e.g. code-folds (codefolds.js)
+  if (!live(t)) { const d = el("div", "cyc"); d.textContent = "The page this showed was deleted."; box.appendChild(d); }
+  else if (seen.has(t.id) || screen[t.id] !== undefined) box.appendChild(cycNote());
+  else { const s2 = new Set(seen); s2.add(f.id); s2.add(t.id); box.appendChild(renderNode(t, depth + 1, s2)); }
+  return box;
+}
+function placeHere(st, targetId, extra) {
+  const n = pages[st.id]; if (!live(n) || st.e <= st.s) return null;
+  const now = Date.now();
+  const f = Object.assign({ id: uid(), parentId: n.id, text: "", cursor: 0, createdAt: now, updatedAt: now,
+              by: window.TOL && window.TOL.deviceLabel || DEVICE, anchor: makeAnchor(n.text || "", st.s, st.e), anchorAt: now }, targetId ? { ref: targetId } : {}, extra || {});
+  pages[f.id] = f; ui.folds[f.id] = true;
+  savePages(); saveUI(); changedEvent();
+  renderWriter(); renderList(); return f;
 }
 function refreshMarks(id) {   // after typing: redraw the lines under the words, without rebuilding
   const n = pages[id]; if (!n) return;
@@ -777,7 +812,7 @@ function showBar(st) {
   const dot = col => `<span class="fdot" style="background:${col}"></span>`;
   if (st.mode === "sel") bar.innerHTML = `<button class="go" data-b="nest">Nest</button><button data-b="nestin">Nest in…</button>` +
     (H.askSelection ? `<button data-b="ask">Ask Claude</button>` : "") + (H.aiSelection ? `<button data-b="ai">Write deeper with AI</button>` : "");
-  else if (st.mode === "nest") bar.innerHTML = `<button class="go" data-b="new">New text</button><button data-b="existing">Existing page or fold…</button><button data-b="x" aria-label="Cancel">✕</button>`;
+  else if (st.mode === "nest") bar.innerHTML = `<button class="go" data-b="new">New text</button><button data-b="existing">Existing page or fold…</button><button data-b="place" title="It stays where it is and also opens here">Place here too…</button>${H.nestExtra ? H.nestExtra() : ""}<button data-b="x" aria-label="Cancel">✕</button>`;
   else if (st.mode === "nestin") bar.innerHTML =
     `<button class="go" data-b="wrapnew" title="The words stay here and are shared with a new fold around them">Wrap here: new</button>` +
     `<button data-b="wrapold" title="The words stay here and are shared with a fold you already have">Wrap here: existing…</button>` +
@@ -811,6 +846,8 @@ bar.addEventListener("click", e => {
   else if (b.dataset.b === "x") hideBar();
   else if (b.dataset.b === "new") nestNew(st);
   else if (b.dataset.b === "existing") openPicker(Object.assign({}, st, { action: "nest" }));
+  else if (b.dataset.b === "place") openPicker(Object.assign({}, st, { action: "place" }));
+  else if (H.nestClick && H.nestClick(b.dataset.b, st)) {}
   else if (b.dataset.b === "wrapnew") wrapHere(st, null);
   else if (b.dataset.b === "wrapold") openPicker(Object.assign({}, st, { action: "wrap" }));
   else if (b.dataset.b === "movenew") moveInto(st, null);
@@ -847,13 +884,14 @@ function openPicker(st) {
   pickFor = st; hideBar();
   const T = { nest: ["Nest an existing page or fold", "It moves here, under the words you selected. (The same page in several places comes later.)"],
               wrap: ["Wrap these words in…", "The words stay where they are and are also added inside the page or fold you pick, as shared words: change them in either place and both change. That page or fold moves here, around the words."],
+              place: ["Place here too…", "Pick a page or fold. It stays where it is and also opens here, under the words you selected. It's the same writing: change it here or there and it changes everywhere. It can even hold itself (it'll say “already open above”)."],
               move: ["Move these words into…", "The words are added at the end of the page or fold you pick. A ⤷ marker stays here; tap it to go there."] }[st.action || "nest"];
   $("pickTitle").textContent = T[0]; $("pickNote").textContent = T[1];
   $("pickSearch").value = ""; paintPick(); $("pickDlg").showModal();
 }
 function paintPick() {
   const q = $("pickSearch").value.trim().toLowerCase(), st = pickFor; if (!st) return;
-  const opts = Object.values(pages).filter(p => live(p) && !p.portal && p.id !== st.id && (st.action === "move" || !isAncestor(p.id, st.id)))
+  const opts = Object.values(pages).filter(p => live(p) && !p.portal && !p.ref && !p.code && (st.action === "place" || (p.id !== st.id && (st.action === "move" || !isAncestor(p.id, st.id)))))
     .filter(p => !q || (p.text || "").toLowerCase().includes(q) || titleOf(p).toLowerCase().includes(q))
     .sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 80);
   $("pickList").innerHTML = opts.map(p => `<button data-pick="${p.id}">${esc(titleOf(p))}<small>${p.anchor ? "fold · " : ""}${path(p.id).slice(0, -1).map(titleOf).map(esc).join(" › ") || "top level"}</small></button>`).join("")
@@ -865,6 +903,7 @@ $("pickList").addEventListener("click", e => {
   const b = e.target.closest("[data-pick]"); if (!b || !pickFor) return;
   const st = pickFor, x = pages[b.dataset.pick], n = pages[st.id]; if (!live(x) || !live(n)) return;
   if (st.action === "move") { $("pickDlg").close(); pickFor = null; moveInto(st, x.id); return; }
+  if (st.action === "place") { $("pickDlg").close(); pickFor = null; placeHere(st, x.id); return; }
   if (isAncestor(x.id, st.id)) return;
   if (st.action === "wrap") { $("pickDlg").close(); pickFor = null; wrapHere(st, x.id); return; }
   const now = Date.now();
@@ -955,6 +994,7 @@ writer.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.own) openPage(b.dataset.own, true);
   else if (b.dataset.close) toggleFold(b.dataset.close);
+  else if (b.dataset.unplace) { const id = b.dataset.unplace; if (pages[id] && pages[id].ref !== undefined || pages[id] && pages[id].code) { pages[id] = { id, deleted: true, updatedAt: Date.now() }; savePages(); changedEvent(); renderWriter(); renderList(); toast("Removed from here. The writing itself is untouched."); } }
   else if (b.dataset.more && H.foldMenu) H.foldMenu(b.dataset.more, b);
 });
 $("foldsToggle").onclick = () => {
@@ -1239,6 +1279,7 @@ window.TOL = {
     setSetting(k, v) { if (k === "pause") ui.pause = Math.max(1, Math.min(15, +v)); if (k === "goal") ui.goal = Math.max(1, Math.min(12, +v)); saveUI(); paintClock(); prefsChanged(); }
   },
   /* put nodes back exactly as they were (undo): value null = the node didn't exist before */
+  placementsOf, placeHere: (id, s, e, targetId, extra) => placeHere({ id, s, e }, targetId, extra), cycNote,
   restoreNodes(map) {
     const now = Date.now();
     for (const [id, v] of Object.entries(map)) {
@@ -1322,6 +1363,7 @@ if (!SANDBOX && "serviceWorker" in navigator && location.protocol === "https:") 
 <script src="agent.js"></script>
 <script src="addons.js"></script>
 <script src="drill.js"></script>
+<script src="codefolds.js"></script>
 <script src="sync.js"></script>
 </body>
 </html>

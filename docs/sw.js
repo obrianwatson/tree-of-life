@@ -1,7 +1,7 @@
 // Keeps the app opening with no internet. Always tries the network first,
 // so a new version shows up as soon as you're online.
-const CACHE = "tol-v9";
-const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./icon-192.png", "./icon-512.png", "./claude.js", "./memory.js", "./ai.js", "./agent.js", "./addons.js", "./drill.js", "./sync.js"];
+const CACHE = "tol-v10";
+const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./icon-192.png", "./icon-512.png", "./claude.js", "./memory.js", "./ai.js", "./agent.js", "./addons.js", "./drill.js", "./codefolds.js", "./sync.js"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));

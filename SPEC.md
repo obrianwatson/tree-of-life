@@ -70,7 +70,7 @@ Status as of 2026-11-26. This is the authoritative description of what the app i
 ## 5. Building blocks
 
 ### 5.1 Node (page = nest = fold)
-Every page, nest and fold is one node type. Core fields: `id`, `text`, `createdAt`, `updatedAt`, `parentId` (list placement), optional `anchor {start,end}` (continuous range in the parent's text), optional `share` (Wrap-here shared span reference), optional `portal` (Move-into link), optional `ai` marker, `deleted` tombstone. Phase 4 adds **placements** (one node in many places), **lateral links**, and **self-containment**.
+Every page, nest and fold is one node type. Core fields: `id`, `text`, `createdAt`, `updatedAt`, `parentId` (list placement), optional `anchor {start,end}` (continuous range in the parent's text), optional `share` (Wrap-here shared span reference), optional `portal` (Move-into link), optional `ai` marker, `deleted` tombstone. **Placements (Phase 4, live):** a placement is a fold-shaped node with `ref: <nodeId>` anchored to words in its parent; it shows that node right there, holds no copy, and every edit through it edits the one node. Lateral links and self-containment are placements too. A **code-fold** is a placement with `code: {file, key, title}` instead of `ref`. Notes on code parts live in `memory.codenotes[key]` (synced).
 
 ### 5.2 Folds on text
 - Created from any continuous selection, from 1 character to a whole passage. MUST support unlimited overlapping folds on the same text.
@@ -83,7 +83,8 @@ Every page, nest and fold is one node type. Core fields: `id`, `text`, `createdA
 - **Nest in (outward):**
   - **Wrap here:** the words stay in place and are shared live with a wrapper fold (edit either, both change; source deleted → frozen copy, "source removed").
   - **Move into:** the words move to a destination; a ⤷ portal marker remains; undo available.
-- **Fold anywhere (Phase 4):** cross-folds (same node in many places), lateral links, self-containment rendered once with "↻ already open above", and code-folds (the app's own code as read-only foldable nodes, annotatable; changes only through Claude).
+- **Fold anywhere (Phase 4, live):** select words → Nest → **Place here too…** picks any page or fold (even the page itself or an ancestor). It stays where it is and also opens here. A node is drawn at most once per screen; any other place (including a page inside itself, or two pages inside each other) shows "↻ already open above". The page list shows each node once, with "also in N places". "Remove from here" removes only the placement. A placement of a deleted node says so.
+- **Code-folds (Phase 4, live):** "The App" (page list) shows the app's own files, read-only, split into foldable parts at section comments, functions and Claude's tools. You can search, note any part (synced), place a part in a page (a "⌘ file · part" line is added with the code folded under it) or under selected words (Nest → App code…), and use "Change this with Claude Code" to open the Deep tier with that code attached. Files are cached for offline use. Claude tools: `list_code`, `read_code`, `place_code`, `note_code`, `place_here`. Code-folds read through `T.code.source`, which Phase 5 points at the onboard version.
 
 ---
 
@@ -175,9 +176,9 @@ Small JS extensions written by Claude, run in a sandboxed iframe/Worker with no 
 
 ## 14. Status
 
-**Live:** pages; writing clock; folds (overlap, staircase, focus); Nest in (wrap/move); memory tests, cues, FSRS; AI feedback/questions/AI folds; looks; encrypted sync; Claude Code page with previews; rename and logo; Claude in the book (Phase 1); add-ons (Phase 2); drill engine with the Psalm 23 sample (Phase 3).
+**Live:** pages; writing clock; folds (overlap, staircase, focus); Nest in (wrap/move); memory tests, cues, FSRS; AI feedback/questions/AI folds; looks; encrypted sync; Claude Code page with previews; rename and logo; Claude in the book (Phase 1); add-ons (Phase 2); drill engine with the Psalm 23 sample (Phase 3); fold anywhere and code-folds (Phase 4).
 
-**In progress:** Phase 4 (fold anywhere, code-folds); Phase 5 (onboard self-changing code).
+**In progress:** Phase 5 (onboard self-changing code).
 
 **Planned / back pocket:** more AI providers; onboard small model; chained timers anywhere; 40-day / 200-hour view; Board hardware; native iPad (when the Pencil is replaced: draw-and-hold shapes, Goodnotes-style toolbar); MIDI piano roll / channel rack (FL Studio). Dropped: AI drawing beside writing.
 

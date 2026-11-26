@@ -254,6 +254,14 @@ body.agent-open .thumb{display:none!important}`;
       if (!ctx.prefs) ctx.prefs = T.getPrefs(); T.ops.setSetting(inp.name, inp.value);
       return { summary: `Set ${inp.name === "pause" ? "typing pause" : "daily goal"} to ${inp.value}` };
     });
+  tool("place_here", "Fold anywhere: show an existing page or fold ALSO under some words (a cross-fold / lateral link). It stays where it is; it's the same writing in both places. It may even be placed inside itself or its own folds (shown as 'already open above').",
+    { node_id: S("where the words are (page or fold id)"), words: S("the exact words to place it under"), target_id: S("the page or fold to show there") }, ["node_id", "words", "target_id"], (inp, ctx) => {
+      const n = need(inp.node_id), t = need(inp.target_id), r = findWords(n, inp.words);
+      const f = T.placeHere(n.id, r[0], r[1], t.id); if (!f) throw new Error("couldn't place it there");
+      ctx.nodes[f.id] = null;
+      return { data: { id: f.id }, summary: `Placed “${T.titleOf(t).slice(0, 40)}” under “${clip(inp.words, 40)}” too` };
+    });
+
   tool("ask_claude_code", "For big changes to the app's own structure that the tools and add-ons can't do: hand the request to Claude Code (on GitHub; takes minutes, the writer tries it and keeps or undoes it).",
     { request: S("the request, in plain words") }, ["request"], inp => {
       setTimeout(() => { close(); T.showView("chat"); const a = $("ask"); if (a) { a.value = inp.request; a.focus(); } }, 500);
