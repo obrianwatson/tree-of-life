@@ -219,3 +219,8 @@ After every build: install it, go down that build's list on the iPad, and tick e
 - [ ] Reload: the color you chose is still there
 - [ ] Check it reads well in both light and dark mode
 - [ ] Holding Option still runs the clock; Claude's page can still change colors
+
+**Claude page keeps your place (v0.6)**
+- [ ] Open a long Claude reply and scroll up to read it; wait 10+ seconds: the page stays where you left it
+- [ ] If you're already at the very bottom, new text still follows along
+- [ ] Opening a different conversation starts at its end

@@ -197,6 +197,7 @@
     kept: ["Kept", "The app updates itself within a minute or two."],
     undone: ["Undone", "Nothing was changed."]
   };
+  let lastThreadKey = null;
   function render() {
     renderConvSelect();
     const th = $("thread"), sb = $("statusbar");
@@ -211,8 +212,14 @@
       parts.push(`<div class="bubble${m.mine ? " mine" : ""}"><span class="who">${m.mine ? "You" : "Claude"}</span>${md(m.body)}</div>`);
     }
     if (design) parts.push(designCard());
+    // Keep the reading position: only follow to the bottom if you were already
+    // at the bottom, or you just opened a different conversation.
+    const key = chat.current + "|" + (design ? "d" : "");
+    const atBottom = th.scrollHeight - th.scrollTop - th.clientHeight < 40;
+    const prevTop = th.scrollTop, sameConv = key === lastThreadKey;
     th.innerHTML = parts.join("");
-    th.scrollTop = th.scrollHeight;
+    th.scrollTop = (!sameConv || atBottom) ? th.scrollHeight : prevTop;
+    lastThreadKey = key;
     bindCards();
     // status and actions
     const s = status && STATUS[status];
