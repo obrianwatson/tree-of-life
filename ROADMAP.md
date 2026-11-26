@@ -88,6 +88,11 @@ Instead of Firebase, sync goes through the GitHub project you already have, lock
 - ✅ Marked Instant / Add-on / Deep; big app changes hand off to Claude Code
 - ✅ Offline and no-key messages; never counts on the writing clock
 
+## A · Add-ons (fast tier) ✅ built
+- ✅ Claude builds small abilities that work in seconds (buttons, panels, hint styles), sealed: no keys, no storage, no internet, can only add words
+- ✅ Versions kept; Settings → Add-ons: turn on/off, view code, remove, turn all off; problems shown in plain words
+- ✅ Safe mode (`?safe`); synced between devices; undo of a just-made add-on
+
 ## M · Memory palace (folds as pegs) ✅ (built and tested in a browser; waiting for you to try)
 - ✅ M1 Practice: hide what's inside a fold with hints (first letters, word shapes, every other word, blank lines); press and hold to peek
 - ✅ M2 Test me: on any fold or page (it and everything inside), walked in order room by room or shuffled. Prompt = the fold's words with what's inside hidden (default), or the other way round (per fold), or your own questions, or questions the AI suggested and you kept

@@ -10,7 +10,7 @@ from playwright.async_api import async_playwright
 
 C = Checks()
 SHOTS = os.environ.get("SHOTS", tempfile.gettempdir())
-KEY = "if(!localStorage.getItem('tol-ai'))localStorage.setItem('tol-ai', JSON.stringify({key:'sk-ant-test', model:'claude-haiku-5-5', cap: 5}));"
+KEY = "try{if(!localStorage.getItem('tol-ai'))localStorage.setItem('tol-ai', JSON.stringify({key:'sk-ant-test', model:'claude-haiku-5-5', cap: 5}));}catch(e){}"
 
 
 def sse(blocks, stop):

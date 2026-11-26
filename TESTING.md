@@ -2,6 +2,17 @@
 
 ---
 
+## A · Add-ons
+
+- [ ] Ask Claude: "add a word count button" — within seconds a **Words** button appears in the header; tapping it shows the count
+- [ ] Settings → **Add-ons** lists it; **View code** shows it; **Turn off** removes its button at once
+- [ ] Ask Claude to change it ("call the button Count") — the new version runs; Settings shows v2
+- [ ] Right after Claude makes one, **Undo Claude's changes** removes it
+- [ ] With sync on, the add-on appears on your other device too
+- [ ] If something goes wrong: Settings → Add-ons → **Restart in safe mode** (or add `?safe` to the address) — the book opens with no add-ons
+
+---
+
 ## C · Claude in the book
 
 **Switch it on (once per device)**

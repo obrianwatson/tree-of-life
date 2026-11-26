@@ -107,7 +107,7 @@ async def new_device(browser, url, fake=None, token=True, **ctx_kw):
         await ctx.route("https://api.github.com/**", fake.handle)
     await ctx.route(re.compile(r"https://fonts\.(googleapis|gstatic)\.com/.*"), lambda r: r.abort())
     if token:
-        await ctx.add_init_script("if(!localStorage.getItem('tol-gh-token'))localStorage.setItem('tol-gh-token', JSON.stringify('github_pat_test'));")
+        await ctx.add_init_script("try{if(!localStorage.getItem('tol-gh-token'))localStorage.setItem('tol-gh-token', JSON.stringify('github_pat_test'));}catch(e){}")
     pg = await ctx.new_page()
     pg.errs = []
     pg.on("pageerror", lambda e: pg.errs.append(str(e)))
