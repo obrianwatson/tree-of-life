@@ -220,6 +220,8 @@ TV + IR touch frame + cheap mini PC running the Board in a full-screen web brows
 ---
 
 ## ⏸ Back pocket
+- **One living screen.** Use the whole book through a single surface, like a terminal, canvas or pad that is also the page: you write, ask, fold, test, drill and change the book all in one place, with no separate menus or panels. Every existing ability stays; only the way in changes.
+- **Real-device test walkthrough.** Round 1 (pages + clock) passed on the iPhone on Nov 26. Rounds 2–7 still to do: sync, folds, memory, Claude in the book (needs a workspace-scoped key), drills, fold anywhere/add-ons/versions.
 - MIDI controller / sequencer mode: piano roll + channel rack (MIDI channels, in and out), to the iPad itself or FL Studio over USB
 
 ## Dropped
