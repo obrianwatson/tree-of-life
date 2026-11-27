@@ -59,7 +59,7 @@ button:disabled{opacity:.4}
   .bar{position:static;border-top:1px solid var(--line);padding:4px 12px}
   .bar .in{min-height:36px}.bar button{height:32px;font-size:14px}.hold{width:auto!important;height:32px!important;border-radius:16px!important;padding:0 14px!important;font-size:13px!important}
 }
-.menu{position:fixed;z-index:22;min-width:230px;max-width:min(340px,calc(100vw - 16px));background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.menu{position:fixed;z-index:55;min-width:230px;max-width:min(340px,calc(100vw - 16px));background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.16)}
 .menu button{display:block;width:100%;text-align:left;border:none;height:42px;padding:0 12px;border-radius:8px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:none}
 .menu button:hover{background:var(--soft)}
 .menu hr{border:none;border-top:1px solid var(--line);margin:4px 6px}
