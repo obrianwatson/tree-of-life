@@ -11,9 +11,9 @@ const ALL = { notes: 1, fold: 1, deep: 1, overlap: 1, remove: 1, clock: 1 };
 const toList = async f => { if (f.view() !== "list") await f.notes(); };
 const P = {};
 P["1a"] = { title: "Writing in one note", flags: {}, seed: B => note(B, PSALM), tasks: [
-  { t: "Open and write", d: "Tap at the very end of the text and write a few lines of your own. Use Return for new lines.", n: "Notice: did the keyboard and caret come up the moment you tapped? Is the caret exactly where you tapped?",
+  { t: "Open and write", d: "Tap at the very end of the text and write a few lines of your own. Use Return for new lines.", n: "Notice: did the keyboard and the blinking cursor come up the moment you tapped? Is the cursor exactly where you tapped?",
     show: async f => { await f.caret(f.find("restoreth")); await f.type("\nMy own line, written at the end."); } },
-  { t: "The caret", d: "Tap in the middle of a word and add a few letters. Then tap between two words and add a word.", n: "Notice: does the caret land between the exact letters you aimed for? Is anything jumpy or slow?",
+  { t: "The cursor", d: "Tap in the middle of a word and add a few letters. Then tap between two words and add a word.", n: "Notice: does the cursor land between the exact letters you aimed for? Is anything jumpy or slow?",
     show: async f => { let s = f.find("shepherd"); await f.caret(s, f.B.D.lines[s.line].text.indexOf("shepherd") + 4); await f.type("-", 400); s = f.find("green"); await f.caret(s, f.B.D.lines[s.line].text.indexOf("green")); await f.type("soft "); } },
   { t: "Always in view", d: "Keep writing new lines at the end until your writing reaches the keyboard, and keep going.", n: "Notice: is the line you're typing always visible above the keyboard and the bar? Does the page move smoothly?",
     show: async f => { await f.caret(f.find("restoreth")); for (let i = 1; i <= 7; i++) await f.type("\nLine " + i + " of a long passage that keeps going", 22); } },
@@ -33,7 +33,7 @@ P["1b"] = { title: "The list of notes", flags: { notes: 1 }, startList: true, se
   { t: "Done", d: "That's piece 1b. Tell Claude what felt off. When it feels right, say “1b locked.”", n: "" }] };
 P["1c"] = { title: "Making a fold", flags: { notes: 1, fold: 1 }, seed: B => { three(B); }, tasks: [
   { t: "Fold a line", d: "Tap anywhere in a line. Tap Fold in the bar above the keyboard. Write inside the fold.", dLaptop: "Click anywhere in a line. Click Fold in the bar at the top (or press Tab). Write inside the fold.",
-    n: "Notice: no highlighting needed, so Apple's Copy/Paste menu never shows up. The fold opens right under the line, with the caret inside. The line gets a thin underline and a ▾ at its end.",
+    n: "Notice: no highlighting needed, so Apple's Copy/Paste menu never shows up. The fold opens right under the line, with the cursor inside. The line gets a thin underline and a ▾ at its end.",
     show: async f => { await f.caret(f.find("my shepherd")); await f.fold(); await f.type("A shepherd guides, feeds and guards his sheep."); } },
   { t: "Fold several lines", d: "Highlight from one line into the next (press and hold a word, then drag the handle down). The button says “Fold 2 lines”. Tap it.", dLaptop: "Drag a highlight across two or more lines. The button says “Fold 2 lines”. Click it (or press Tab).",
     n: "Notice: the fold takes every line the highlight touches, and opens under the last one. Is the button easy to reach while Apple's menu is showing?",
@@ -46,7 +46,7 @@ P["1d"] = { title: "The hinge", flags: { notes: 1, fold: 1 }, seed: B => { const
   { t: "The thread", d: "Open the fold. Tap the colored line running down its left side.", n: "Notice: the thread closes the fold too. Handy when the hinge has scrolled off the top.",
     show: async f => { const x = f.folds(f.B.D.current)[0]; if (!x.open) await f.hinge(x.id); await f.thread(x.id); } },
   { t: "Reading and writing", d: "With the keyboard down, tap the hinge: the keyboard should stay down. Then tap inside the open fold, write, and close it with the ▾.", dLaptop: "Click inside the open fold, write, then press Esc.",
-    n: "Notice: closing a fold you're writing in leaves the caret waiting at the end of its line, right by the hinge." },
+    n: "Notice: closing a fold you're writing in leaves the cursor waiting at the end of its line, right by the hinge." },
   { t: "From the ⌄ menu", d: "Tap in the underlined line, tap ⌄ in the bar, and choose Open or Close.", n: "Notice: the menu names the fold by its line's first words.",
     show: async f => { await f.caret(f.find("my shepherd")); await f.menu("Open"); await f.menu("Close"); } },
   { t: "Done", d: "That's piece 1d. Tell Claude what felt off. When it feels right, say “1d locked.”", n: "" }] };
