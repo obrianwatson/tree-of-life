@@ -45,7 +45,7 @@ async def device(br, p, phone, ai=None, gh=None, key=True):
     kw = dict(p.devices["iPhone 13"]) if phone else {"viewport": {"width": 1280, "height": 800}}
     kw.pop("default_browser_type", None)
     if BROWSER == "firefox": kw.pop("is_mobile", None)
-    ctx = await br.new_context(accept_downloads=True, **kw)
+    ctx = await br.new_context(accept_downloads=True, service_workers="block", **kw)      # (the offline helper is checked on its own in offline_start: with it running, Safari's engine sends requests around the stand-ins)
     await ctx.add_init_script("window.__bolwBoot = { ok: true };")
     if key: await ctx.add_init_script("try { if (!localStorage.getItem('tol-ai')) localStorage.setItem('tol-ai', JSON.stringify({ key: '%s' })); } catch (e) {}" % KEY)
     if ai: await ctx.route("https://api.anthropic.com/**", ai.handle)
@@ -350,12 +350,25 @@ async def guide(br, p, url, phone):
         b = await pg.locator(".brc").bounding_box(); C.ok(b["y"] + b["height"] <= pg.viewport_size["height"] + 1, who + " guide: and the box you type in is still on the screen")
     C.ok(pg.errs == [], who + " guide: no errors " + str(pg.errs[:2])); await ctx.close()
 
+async def offline_start(br, p, url):
+    """The app and safe mode open with no internet at all, once they've been opened once."""
+    ctx = await br.new_context(viewport={"width": 390, "height": 800}); await ctx.add_init_script("window.__bolwBoot = { ok: true };")
+    pg = await ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
+    await pg.goto(url + "bolw/"); await pg.wait_for_function("!!window.Settings")
+    await pg.click("#newNote"); await pg.keyboard.type("Offline test\nstill here"); await pg.evaluate("Book.flush()")
+    await pg.evaluate("navigator.serviceWorker.ready.then(() => true)"); await pg.reload(); await pg.wait_for_function("!!navigator.serviceWorker.controller", timeout=15000)
+    await pg.evaluate("caches.open('bolw-e2').then(c => c.keys()).then(k => k.length)")
+    await ctx.set_offline(True); await pg.reload(); await pg.wait_for_function("!!window.Settings", timeout=15000)
+    C.ok(await pg.evaluate("Book.textOf(Book.D.current)") == "Offline test\nstill here", "offline start: with no internet at all, the app opens on your note")
+    await pg.goto(url + "bolw/safe/"); C.ok("Offline test" in await pg.inner_text("body"), "offline start: and so does safe mode")
+    C.ok(errs == [], "offline start: no errors " + str(errs[:2])); await ctx.close()
+
 async def main():
     port = 8793; serve(port); url = "http://localhost:%d/" % port
     async with async_playwright() as p:
         br = await launch(p)
         for phone in (True, False): await run(br, p, url, phone)
-        await feel(br, p, url); await sync(br, p, url)
+        await feel(br, p, url); await sync(br, p, url); await offline_start(br, p, url)
         for phone in (True, False): await guide(br, p, url, phone)
         await br.close()
     print("\n%d passed, %d failed" % (C.passes, C.fails)); sys.exit(1 if C.fails else 0)
