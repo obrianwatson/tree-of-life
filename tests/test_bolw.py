@@ -238,6 +238,13 @@ async def run(br, p, url, phone):
     await pg.evaluate("[...document.querySelectorAll('[data-v]')].pop().click()")
     ok(await pg.evaluate("Book.notes().length") == n_notes + 1 and "(as it was" in await pg.evaluate("Book.title(Book.D.current)") and await pg.evaluate("Book.title('%s')" % psalm) == "Psalm 23", "bringing one back makes a NEW note; the one you have is untouched")
 
+    # ---- something's off: told from inside the app, never with writing ----
+    await pg.evaluate("Settings.open()"); await pg.fill("#sIssue", "the bar jumped @claude when I folded")
+    rep = await pg.evaluate("offReport ? 1 : 0") if False else None
+    await pg.evaluate("document.querySelector('#sIssueCopy').click()"); await pg.wait_for_timeout(100)
+    ok("Copy" in await pg.inner_text("#sIssueMsg") or "Select" in await pg.inner_text("#sIssueMsg") or "Copied" in await pg.inner_text("#sIssueMsg"), "Settings: Something's off can be copied (no GitHub key on this device)")
+    await pg.evaluate("Settings.close()")
+
     # ---- room for ; commands ----
     await pg.evaluate("Page.openNote('%s')" % song); await pg.evaluate("at('desert')"); await pg.keyboard.press("Enter"); await pg.keyboard.type(";hello"); await pg.keyboard.press("Enter")
     ok(await pg.evaluate("lines()") == ["Song idea", "rivers in the desert", ";hello", ""], "a line starting with ; is just a line for now")
@@ -299,6 +306,17 @@ async def sync(br, p, url):
     C.ok("Hello from the laptop chat." in await b.evaluate("localStorage.getItem(Keep.K.shelf)") or True, "sync: chats are part of the book and arrive on the other device")
     C.ok(all("remember this" not in v[0].decode() for k, v in gh.files.items()), "sync: and they too leave only as scrambled text")
     C.ok(gh.files["sync/aaaaaaaaaaaaaaaa.json"][1] == old and len([k for k in gh.files if k.startswith("sync/")]) == 2, "sync: the old book's folder holds only its own file and the shared vault")
+    issues = []
+    async def issue(route):
+        if route.request.method == "POST": issues.append(json.loads(route.request.post_data)); return await route.fulfill(status=201, headers={"access-control-allow-origin": "*"}, content_type="application/json", body="{}")
+        return await gh.handle(route)
+    await A.route("https://api.github.com/repos/obrianwatson/tree-of-life/issues", issue)      # (added last, so it answers first)
+    await a.evaluate("Breath.close(); Settings.open()"); await a.fill("#sIssue", "the bar jumped @claude when I folded"); await a.click("#sIssueSend")
+    C.ok(issues == [] and "public" in await a.inner_text("#sIssueMsg"), "something's off: the first tap only warns that the project is public")
+    await a.click("#sIssueSend"); await a.wait_for_function("document.querySelector('#sIssueMsg').textContent.indexOf('Sent') === 0")
+    body = json.dumps(issues[0]) if issues else ""
+    C.ok(len(issues) == 1 and issues[0]["title"].startswith("Essentials: the bar jumped") and "@" not in body and "river" not in body and "Morning" not in body, "something's off: the second tap posts it, with no writing and no @ " + body[:400])
+    await a.evaluate("Settings.close()")
     C.ok(a.errs == [] and b.errs == [], "sync: no errors " + str((a.errs + b.errs)[:2]))
     # safe mode: its own address, none of the app's files, reads the same book
     s = await A.new_page(); reqs = []; s.on("request", lambda r: reqs.append(r.url)); await s.goto(url + "bolw/safe/"); await s.wait_for_selector("#notes")
