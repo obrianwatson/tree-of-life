@@ -27,25 +27,26 @@ locked ones.
 - Always kept: no save button; nothing you write ever disappears.
 - A list of notes, newest on top; a new note in one tap; the first line is the title; coming back is instant.
 
-**Fractal folding (kept simple)**
-- Fold any highlight: a letter, a word, a phrase, several lines, across lines.
-- The hinge sits right after the highlighted words; the fold opens right there and the text continues below it.
-  Tap the hinge to swing it shut and the text closes back up.
-- Infinite folding: folds inside folds inside folds, no limit.
-- Overlapping folds: the same words can belong to several folds, each shown distinctly with its own hinge.
-- Trace a fold back to its parent: lines, a family tree or branches (design chosen in piece 1e).
-- Remove a fold, with Undo; its writing goes to Recently deleted.
-- Not in this phase: folding several separate selections into one fold, and other complex folding tech.
+**Fractal folding (kept simple)** — as the Six-Action Card says (BOLW project: `claude/six-action-card.md`; as built: `SIX-ACTIONS-AS-BUILT.md`)
+- Fold this line: a whole line, or every line your highlight touches. No highlighting needed for one line.
+- The hinge (▸ / ▾) sits at the end of the fold's last line; the fold opens right under it.
+- Infinite folding; overlapping folds (each with its own underline and hinge).
+- Tracing back: threads always (one color per depth; tap a thread to close); the path when you choose Trace back.
+  On the iPhone the indent stops growing after 4 levels and the colors carry on.
+- Remove a fold, with Undo; a removed fold with writing waits under Recently removed folds.
+- Later, not now: folding just some words of a line; several selections into one fold; the branches map.
 
 **The controls**
-- iPhone: Fold and Remove fold in the bar on the keyboard (no clash with the caret, handles or Apple's menu).
-- Laptop: a small ⌄ right after the highlight, right-click, Tab to fold, Esc to step out; a menu bar along the top.
-- The writing clock and the Hold button (Option on the laptop).
+- iPhone: Fold, ⌄ (this line's menu) and Undo in the bar on the keyboard; Hold at its right end.
+- Laptop: the same bar along the top; Tab folds, Esc closes the fold you're in, ⌘Z undoes, right-click a line for its
+  menu, ⌘/Ctrl-click traces back.
 
 **Done when:** the owner would happily use it for a week without working around anything.
 
-**The pieces, in order:** 1a writing in one note · 1b the list of notes · 1c making a fold · 1d the hinge ·
-1e infinite folds and tracing back to the parent · 1f overlapping folds · 1g remove and Undo · 1h the clock and Hold.
+**Built (docs/trial/, one body, one action layer):** ✅ 1a writing · ✅ 1b the list of notes · ✅ 1c making a fold ·
+✅ 1d the hinge · ✅ 1e infinite folds and tracing back · ✅ 1f overlapping folds · ✅ 1g remove and Undo ·
+✅ 1h the clock and Hold · ✅ all together (/trial/book/). Each has a Show me / try-it test page; the robots run
+`tests/test_trial.py` in three engines. **Waiting on: the owner's test on the iPhone, piece by piece ("locked").**
 
 ### Trial #01 · Living Waters Phase: the AI (after the Book Phase)
 The book feels completely integrated with whatever AI model it's connected to: an AI app when online, and still a
