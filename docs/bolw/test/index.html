@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="BOLW test">
+<title>The guided test · Book of Living Waters</title>
+<!-- The guided test: the REAL app (the same files as ../) on its own sample book, with the 11 checks in a strip at the top.
+     Its drawer is "bolw-test": never your real book, never synced. guide.js holds the checks. -->
+<link rel="stylesheet" href="../bolw.css?v=1"><link rel="stylesheet" href="guide.css?v=1"></head>
+<body>
+<script>window.BOLW_NS = "bolw-test";
+try { if (sessionStorage.getItem("bolw-test-reset")) { sessionStorage.removeItem("bolw-test-reset"); ["book", "book-at", "ui", "clock", "shelf"].forEach(function (k) { localStorage.removeItem("bolw-test-" + k); }); } } catch (e) {}</script>
+<script src="../keep.js?v=1"></script><script src="../joints.js?v=1"></script><script src="../shelf.js?v=1"></script><script src="../page.js?v=1"></script><script src="../commands.js?v=1"></script>
+<script src="../socket.js?v=1"></script><script src="../banks.js?v=1"></script><script src="../breath.js?v=1"></script><script src="../lock.js?v=1"></script><script src="../settings.js?v=1"></script>
+<script src="guide.js?v=1"></script>
+</body></html>

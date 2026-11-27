@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Safe mode · Book of Living Waters</title>
+<!-- SAFE MODE: the way back. Its own address, its own few lines of code right here in this one file.
+     It uses NONE of the app's pieces, no AI, no sync, and ignores every change made to the app.
+     It only READS the book kept on this device: read your notes, export them, see earlier versions.
+     It never writes to your book. Keep this file plain and never make it depend on the app. -->
+<style>
+:root{--paper:#fbfaf6;--soft:#f1efe8;--ink:#1c1d1b;--ink2:#5f5e5a;--line:rgba(0,0,0,.14);--acc:#2f6fb5}
+@media (prefers-color-scheme:dark){:root{--paper:#161615;--soft:#262624;--ink:#ecebe6;--ink2:#aeada7;--line:rgba(255,255,255,.18);--acc:#7fb0e8}}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;padding:calc(14px + env(safe-area-inset-top)) 16px 60px}
+main{max-width:680px;margin:0 auto}h1{font-size:24px;margin:0 0 4px}h2{font-size:15px;color:var(--ink2);margin:22px 0 6px}p{color:var(--ink2);font-size:14px;margin:4px 0}
+button,a.b{font:inherit;font-size:15px;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;text-decoration:none;display:inline-block;margin:3px 6px 3px 0}
+#notes button,#vers button{display:block;width:100%;text-align:left;margin:0 0 6px}
+#notes small,#vers small{display:block;color:var(--ink2);font-size:13px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:18px/1.6 "Iowan Old Style",Palatino,Georgia,serif;background:var(--soft);border-radius:10px;padding:12px 14px;margin:8px 0}
+</style></head>
+<body><main>
+<h1>Safe mode</h1>
+<p>This plain page can always read the book kept on this device, even if the app itself won't open. It changes nothing.</p>
+<p><a class="b" href="../">Open the app</a><button id="exTxt">Export to read (.txt)</button><button id="exJson">Export everything (.json)</button></p>
+<p id="msg"></p>
+<h2>Your notes</h2><div id="notes"></div>
+<div id="read"></div>
+<h2>Earlier versions kept on this device</h2><div id="vers"><p>Looking…</p></div>
+</main>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  function get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+  var D = get("bolw-book"), S = get("bolw-shelf"), CL = get("bolw-clock");
+  function textOf(D, box, pad) { pad = pad || ""; var bx = D.boxes[box], out = []; if (!bx) return "";
+    bx.lines.forEach(function (l) { out.push(pad + ((D.lines[l] || {}).text || ""));
+      Object.keys(D.folds).map(function (k) { return D.folds[k]; }).filter(function (f) { return f.host === box && f.to === l; }).sort(function (a, b) { return a.at - b.at; }).forEach(function (f) { out.push(textOf(D, f.id, pad + "    ")); }); });
+    return out.join("\n"); }
+  function title(D, id) { var bx = D.boxes[id]; if (!bx) return "Note"; for (var i = 0; i < bx.lines.length; i++) { var t = ((D.lines[bx.lines[i]] || {}).text || "").trim(); if (t) return t; } return "New note"; }
+  function when(t) { return new Date(t).toLocaleString(); }
+  function show(text) { $("read").innerHTML = ""; var p = document.createElement("pre"); p.textContent = text; $("read").appendChild(p); p.scrollIntoView({ block: "nearest" }); }
+  function download(name, text, type) { var a = document.createElement("a"), url = URL.createObjectURL(new Blob([text], { type: type || "text/plain;charset=utf-8" })); a.href = url; a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); URL.revokeObjectURL(url); }, 4000); }
+  var notes = D && D.notes ? Object.keys(D.notes).map(function (k) { return D.notes[k]; }).sort(function (a, b) { return b.updatedAt - a.updatedAt; }) : [];
+  if (!notes.length) $("notes").innerHTML = "<p>There is no book on this device yet (or this browser's storage was cleared).</p>";
+  notes.forEach(function (n) { var b = document.createElement("button"); b.textContent = title(D, n.id); var s = document.createElement("small"); s.textContent = when(n.updatedAt); b.appendChild(s); b.onclick = function () { show(textOf(D, n.id)); }; $("notes").appendChild(b); });
+  function allText() { var out = ["THE BOOK OF LIVING WATERS", "Taken out " + new Date().toLocaleString() + " (safe mode)", ""]; notes.forEach(function (n) { out.push("============================================================", textOf(D, n.id), ""); });
+    (D && D.removed || []).forEach(function (r) { if (D.boxes[r.fold.id]) out.push("--- a fold you removed, from “" + r.name + "”:", textOf(D, r.fold.id, "    "), ""); });
+    if (S && S.chats) Object.keys(S.chats).forEach(function (k) { var c = S.chats[k]; if (!c.msgs || !c.msgs.length) return; out.push("--- chat: " + (c.title || ""), c.msgs.map(function (m) { return m.role === "user" ? "You: " + m.text : "AI: " + (m.parts || []).filter(function (p) { return p.t === "text"; }).map(function (p) { return p.text; }).join(""); }).join("\n"), ""); });
+    return out.join("\n"); }
+  var day = new Date().toISOString().slice(0, 10);
+  $("exTxt").onclick = function () { if (!notes.length) return; download("book-of-living-waters-" + day + ".txt", allText()); };
+  $("exJson").onclick = function () { if (!D) return; download("book-of-living-waters-" + day + ".json", JSON.stringify({ format: "bolw-book", v: 1, takenOut: new Date().toISOString(), book: D, shelf: S, clock: CL }, null, 1), "application/json"); };
+  /* earlier versions (this device's database). Only read here; in the app, "Bring back" makes a new note from one. */
+  try { var r = indexedDB.open("bolw-keep", 1);
+    r.onupgradeneeded = function () { r.transaction.abort(); };
+    r.onerror = function () { $("vers").innerHTML = "<p>None kept yet.</p>"; };
+    r.onsuccess = function () { var q = r.result.transaction("versions", "readonly").objectStore("versions").getAll();
+      q.onsuccess = function () { var list = (q.result || []).sort(function (a, b) { return b.at - a.at; }); $("vers").innerHTML = list.length ? "" : "<p>None kept yet.</p>";
+        list.forEach(function (v) { var b = document.createElement("button"); b.textContent = v.title || "Note"; var s = document.createElement("small"); s.textContent = when(v.at) + " · " + (v.why || ""); b.appendChild(s);
+          b.onclick = function () { show(textOf(v.piece, v.piece.note.id)); }; $("vers").appendChild(b); }); }; };
+  } catch (e) { $("vers").innerHTML = "<p>This browser won't open the database here.</p>"; }
+})();
+</script>
+</body></html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Living Waters">
+<meta name="theme-color" content="#fbfaf6" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#161615" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png"><link rel="manifest" href="manifest.webmanifest">
+<title>Book of Living Waters</title>
+<!-- BOLW Essentials: notes like Apple Notes + fractal folds + the AI window. Each part is one small named piece:
+     keep.js storage and the way back · joints.js the six actions and Undo · shelf.js projects, chats, settings ·
+     page.js drawing · commands.js room for ; commands · socket.js where an AI plugs in (and its key) ·
+     banks.js the riverbanks · breath.js the AI window · lock.js the lock and sync · settings.js settings.
+     Safe mode is a separate page at ./safe/ that uses none of these. -->
+<link rel="stylesheet" href="bolw.css?v=1"></head>
+<body>
+<script src="keep.js?v=1"></script><script src="joints.js?v=1"></script><script src="shelf.js?v=1"></script><script src="page.js?v=1"></script><script src="commands.js?v=1"></script>
+<script src="socket.js?v=1"></script><script src="banks.js?v=1"></script><script src="breath.js?v=1"></script><script src="lock.js?v=1"></script><script src="settings.js?v=1"></script>
+<script>if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});</script>
+</body></html>

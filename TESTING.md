@@ -443,3 +443,7 @@ After every build: install it, go down that build's list on the iPad, and tick e
 **On the real touch frame (later)**
 - [ ] A finger or stylus draws; a second hand on the board doesn't draw
 - [ ] Holding the thumb button with one hand while writing with the other works
+
+## BOLW Essentials (/bolw/)
+Use the guided test page: https://obrianwatson.github.io/tree-of-life/bolw/test/ (the real app on a sample book). It walks through the 11 checks with Show me, then you try it, answer Works / Something's off, and send.
+The real app is https://obrianwatson.github.io/tree-of-life/bolw/ . First time there: Notes → Settings → paste the AI key (and, for sync, the GitHub key and your passphrase).

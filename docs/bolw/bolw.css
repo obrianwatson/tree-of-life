@@ -1,0 +1,141 @@
+/* bolw.css · THE LOOK of the Book of Living Waters (Essentials). Motion is short (0.2 s) and calm, and off with Reduce Motion. */
+:root{--paper:#fbfaf6;--soft:#f1efe8;--card:#fff;--ink:#1c1d1b;--ink2:#5f5e5a;--ink3:#8b8a84;--line:rgba(0,0,0,.09);--line2:rgba(0,0,0,.18);
+--acc:#2f6fb5;--accbg:rgba(47,111,181,.12);--ai:#8a55b5;--bad:#a3271b;
+--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+@media (prefers-color-scheme:dark){:root{--paper:#161615;--soft:#262624;--card:#1f1f1e;--ink:#ecebe6;--ink2:#aeada7;--ink3:#7d7c77;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.18);--acc:#7fb0e8;--accbg:rgba(127,176,232,.16);--ai:#c39be0;--bad:#ff8a7a}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-text-size-adjust:100%}
+body{padding-bottom:42vh}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line2);border-radius:16px;height:32px;padding:0 12px;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button:disabled{opacity:.4}
+.hide{display:none!important}
+/* the head stays at the top: the test task, (laptop) the menu bar, and the path when you trace */
+.head{position:sticky;top:0;z-index:15;background:var(--soft);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.path{max-width:680px;margin:0 auto;padding:6px 12px;font-size:14px;border-top:1px solid var(--line);white-space:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.path::-webkit-scrollbar{display:none}
+.path button{height:30px;border-radius:15px;padding:0 10px;max-width:38vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+.path .here{border-color:var(--acc);color:var(--acc)}
+.path i{font-style:normal;color:var(--ink3);margin:0 3px}
+/* the page column, with room kept for the breath: a ✦ corner (phone) and a side window (laptop). Nothing is built there yet. */
+.app{display:block}
+.col{flex:1;min-width:0;max-width:680px;margin:0 auto}
+.top{display:flex;align-items:center;gap:8px;padding:8px 12px 0;font-size:13px;color:var(--ink3);min-height:44px}
+.top .mid{flex:1;text-align:center;font-variant-numeric:tabular-nums}
+.top .notesBtn{border:none;background:none;color:var(--acc);font-size:16px;padding:0 6px;height:36px}
+.top .kept.bad{color:var(--bad);font-weight:600}
+/* the writing */
+.pg{padding:2px 18px 24px;font-family:var(--serif);font-size:19px;line-height:1.7}
+.pc{outline:none;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;min-height:1.7em}
+.l.ttl{font-size:23px;font-weight:600}
+.l.by-ai{color:var(--ai)}
+.l.act{background:var(--accbg);border-radius:3px}
+.cv{text-decoration-line:underline;text-decoration-thickness:1.5px;text-decoration-skip-ink:none}
+.cv0{text-underline-offset:4px}.cv1{text-underline-offset:9px;text-decoration-style:dotted;text-decoration-thickness:2px}.cv2{text-underline-offset:11px;text-decoration-style:dashed}.cv3{text-underline-offset:11px;text-decoration-style:wavy}
+/* the hinge: small to the eye, big to the thumb */
+.hg{display:inline-block;position:relative;padding:0 3px;margin-left:3px;line-height:1;font-size:15px;font-family:var(--sans);vertical-align:1px;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.hg::after{content:"";position:absolute;inset:-11px -9px}
+.hg.lane1{text-decoration:underline dotted}.hg.lane2{text-decoration:underline dashed}
+/* a fold's body hangs from its thread; one color per depth */
+.fb{position:relative;margin:1px 0 4px 4px;padding-left:14px;font-size:.97em}
+.fb .fb{font-size:1em}
+.fb.flat{margin-left:-14px}
+.th{position:absolute;left:-7px;top:0;bottom:0;width:18px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.th::before{content:"";position:absolute;left:7px;top:3px;bottom:3px;width:2px;border-radius:1px;background:var(--c)}
+
+.flash{animation:flash 1.6s ease 1;border-radius:3px}
+@keyframes flash{0%,60%{background:var(--accbg)}100%{background:transparent}}
+.msg{font-size:14px;color:var(--ink2);padding:0 18px 10px;min-height:20px}
+/* the bar: rests on the keyboard (phone); a menu bar along the top (laptop) */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--soft);border-top:1px solid var(--line);padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
+.bar.kb{padding-bottom:6px}
+.bar.up{top:0;bottom:auto;will-change:transform}
+.bar .in{display:flex;align-items:center;gap:8px;max-width:680px;margin:0 auto;min-height:44px}
+.bar button{height:40px;border-radius:20px;padding:0 16px;font-size:16px}
+.bar .main{font-weight:600;border-color:var(--acc);color:var(--acc)}
+.bar .more{padding:0 14px}
+.hold{margin-left:auto;width:46px;height:46px!important;border-radius:50%!important;font-size:12px!important;padding:0!important;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.hold.on{background:var(--accbg);color:var(--acc);border-color:var(--acc)}
+@media (pointer:fine) and (min-width:700px){
+  .bar{position:static;border-top:1px solid var(--line);padding:4px 12px}
+  .bar .in{min-height:36px}.bar button{height:32px;font-size:14px}.hold{width:auto!important;height:32px!important;border-radius:16px!important;padding:0 14px!important;font-size:13px!important}
+}
+.menu{position:fixed;z-index:22;min-width:230px;max-width:min(340px,calc(100vw - 16px));background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.menu button{display:block;width:100%;text-align:left;border:none;height:42px;padding:0 12px;border-radius:8px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:none}
+.menu button:hover{background:var(--soft)}
+.menu hr{border:none;border-top:1px solid var(--line);margin:4px 6px}
+/* the list of notes */
+.listv{padding:6px 16px 90px}
+.listv h1{font-size:28px;font-weight:700;margin:6px 2px 10px}
+.listv input{width:100%;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font:inherit;font-size:16px;padding:0 12px;margin-bottom:10px;outline:none}
+.rows{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.rowi{display:block;width:100%;height:auto;text-align:left;border:none;border-radius:0;border-bottom:1px solid var(--line);padding:10px 14px;background:none;font-size:16px}
+.rowi:last-child{border-bottom:none}
+.rowi b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rowi small{display:block;color:var(--ink2);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.none{color:var(--ink2);padding:14px;font-size:15px}
+.rm{margin-top:18px}.rm h2{font-size:14px;font-weight:600;color:var(--ink2);margin:0 2px 6px}
+.rm .rowi{display:flex;align-items:center;gap:10px}.rm .rowi span{flex:1;min-width:0}.rm .put{color:var(--acc);white-space:nowrap}
+.newNote{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:19;height:48px;border-radius:24px;padding:0 20px;font-size:16px;font-weight:600;border-color:var(--acc);color:var(--acc);box-shadow:0 4px 14px rgba(0,0,0,.12)}
+/* Show me: the finger */
+.cur{position:fixed;z-index:30;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;border:2px solid var(--acc);background:rgba(47,111,181,.2);pointer-events:none;transition:left .9s ease,top .9s ease,transform .2s}
+.cur.down{transform:scale(.7);background:rgba(47,111,181,.45)}
+.shield{position:fixed;inset:0;z-index:25}
+.fade.out{opacity:0}
+/* the top of a note: back to Notes, its project, the clock, and the ✦ that opens the AI window */
+.spark{flex:none;width:44px;height:36px;border:none;background:none;color:var(--ai);font-size:20px;padding:0}
+.projBtn{border:none;background:none;color:var(--ink3);font-size:13px;height:28px;padding:0 8px;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lh{display:flex;align-items:center}.lh h1{flex:1}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:30px;border-radius:15px;font-size:13px;padding:0 12px;white-space:nowrap}.chip.on{background:var(--accbg);border-color:var(--acc);color:var(--acc)}
+.foot{display:flex;gap:8px;margin-top:22px}.foot button{color:var(--ink2)}
+.nt{color:var(--ink2);font-size:14px;line-height:1.45;margin:6px 2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+a.btn{display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid var(--line2);border-radius:16px;font-size:13px;color:var(--ink);text-decoration:none;background:var(--card)}
+.rowi .go{flex:1;min-width:0;display:block;text-align:left;border:none;background:none;height:auto;padding:0;font-size:16px;border-radius:0}
+.rows .rowi{display:flex;align-items:center;gap:8px}
+.rows button.rowi{display:block}
+.mini{flex:none;height:30px;font-size:13px}.mini.put{color:var(--acc)}
+/* ---------- the AI window ---------- */
+.br{position:fixed;z-index:40;top:0;left:0;right:0;height:100%;background:var(--paper);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);animation:brin .2s ease}
+@keyframes brin{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.brh{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--soft);min-height:48px}
+.brh .sp{flex:1;min-width:0;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brh button{border:none;background:none;color:var(--acc);font-size:15px;height:36px;padding:0 6px;white-space:nowrap}
+.brh select{font:inherit;font-size:13px;max-width:34vw;height:32px;border:1px solid var(--line2);border-radius:16px;background:var(--card);color:var(--ink);padding:0 8px}
+.brv{flex:1;min-height:0;display:flex;flex-direction:column}
+.brv.scroll{display:block;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px calc(30px + env(safe-area-inset-bottom))}
+.brv.scroll h2{font-size:14px;font-weight:600;color:var(--ink2);margin:18px 2px 6px}
+.brv.scroll input,.brv.scroll textarea,.sb input[type=text],.sb input[type=password]{display:block;width:100%;border:1px solid var(--line2);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;font-size:16px;line-height:1.45;padding:8px 10px;margin:6px 0;outline:none}
+.brv.scroll label{display:block;font-size:13px;color:var(--ink2);margin:10px 2px 0}
+.brctx{display:flex;gap:6px;overflow-x:auto;padding:8px 10px 6px;scrollbar-width:none}.brctx::-webkit-scrollbar{display:none}
+.brm{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px 14px 10px;font-size:16px;line-height:1.5}
+.brm .empty{color:var(--ink2);font-size:15px;margin-top:20px}
+.m{margin:10px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.m.me{margin-left:14%;background:var(--soft);border-radius:16px;padding:8px 12px;width:fit-content;max-width:86%;margin-left:auto}
+.m.ai .tx{margin:4px 0}
+.m.live .tx:last-of-type::after{content:" ▍";color:var(--ai)}
+.act{display:block;text-align:left;height:auto;min-height:30px;white-space:normal;border:none;border-left:2px solid var(--ai);border-radius:0;background:none;color:var(--ai);font-size:14px;padding:3px 0 3px 10px;margin:3px 0}
+.act.eye{color:var(--ink2);border-left-color:var(--line2)}.act.no{color:var(--bad);border-left-color:var(--bad)}.act:disabled{opacity:1}
+.ask{border:1px solid var(--line2);border-radius:12px;padding:10px 12px;margin:8px 0;background:var(--card);font-size:15px;white-space:normal}
+.ask .ba{margin-top:6px}.ask .ba span{font-size:12px;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em}.ask .ba div{white-space:pre-wrap;font-family:var(--serif)}
+.ask .allow{border-color:var(--acc);color:var(--acc);font-weight:600}.ask .ans{color:var(--ink2);font-size:14px;margin-top:6px}
+.tail .undo{color:var(--ai);border-color:var(--ai);margin-top:4px}.tail .err{color:var(--bad);font-size:15px}
+.brnote{padding:8px 14px;font-size:14px;color:var(--ink2);background:var(--soft);border-top:1px solid var(--line)}
+.brc{display:flex;align-items:flex-end;gap:8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--soft)}
+.brc textarea{flex:1;min-width:0;resize:none;border:1px solid var(--line2);border-radius:18px;background:var(--card);color:var(--ink);font:inherit;font-size:16px;line-height:1.4;padding:8px 12px;outline:none;max-height:160px}
+.send{height:38px;border-radius:19px;padding:0 16px;font-size:15px;font-weight:600;border-color:var(--acc);color:var(--acc)}.send.stop{border-color:var(--bad);color:var(--bad)}
+body.br-open .bar,body.br-open .newNote,body.sheet-open .bar,body.sheet-open .newNote{display:none}
+@media (pointer:fine) and (min-width:900px){
+  .br{left:auto;width:400px;border-left:1px solid var(--line);animation:none;z-index:14}
+  body.br-open .app,body.br-open .head{margin-right:400px}
+  body.br-open .bar{display:block}body.br-open .newNote{display:block;right:416px}
+  .brh select{max-width:150px}
+}
+/* ---------- settings ---------- */
+.sheet{position:fixed;inset:0;z-index:45;background:var(--paper);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+.sh{display:flex;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--soft)}.sh b{flex:1;font-size:17px}.sh button{border:none;background:none;color:var(--acc);font-size:16px;font-weight:600}
+.sb{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px calc(40px + env(safe-area-inset-bottom));max-width:680px;width:100%;margin:0 auto}
+.sb h2{font-size:15px;font-weight:600;margin:22px 2px 4px}
+.ck{display:flex;gap:10px;align-items:flex-start;font-size:15px;line-height:1.4;margin:8px 2px}.ck input{margin-top:3px;width:18px;height:18px;flex:none}
+button,.pc,.m,.rowi{transition:background-color .2s ease,opacity .2s ease}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

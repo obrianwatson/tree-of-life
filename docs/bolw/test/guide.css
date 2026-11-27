@@ -1,0 +1,12 @@
+/* the guided test's strip: one line at the top; its details float OVER the page so opening them never moves your text */
+.gt{position:relative;background:var(--soft);border-bottom:1px solid var(--line);padding:6px 12px;flex:none;z-index:2}
+.tl{display:flex;align-items:center;gap:6px;font-size:14px;max-width:680px;margin:0 auto}
+.tl b{font-weight:600;white-space:nowrap}.tl .sp{flex:1;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td{position:absolute;left:0;right:0;top:100%;background:var(--soft);border-bottom:1px solid var(--line);box-shadow:0 10px 18px rgba(0,0,0,.10);font-size:14px;line-height:1.5;padding:4px 14px 10px;max-height:calc(100vh - 140px);overflow-y:auto;z-index:50}
+.td p{margin:0 0 6px}.td .row{margin:6px 0 2px}
+.td .show{border-color:var(--acc);color:var(--acc);font-weight:600}
+.td .lnk{align-self:center;font-size:13px;color:var(--acc);margin-left:6px}
+.ans{margin:8px 0 4px;padding-top:8px;border-top:1px solid var(--line)}
+.ans textarea,.td>textarea{display:block;width:100%;margin-top:6px;border:1px solid var(--line2);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;font-size:16px;line-height:1.4;padding:8px 10px;outline:none;resize:vertical}
+.ans .av{height:36px;font-size:14px}.ans .av.on{background:var(--accbg);border-color:var(--acc);color:var(--acc);font-weight:600}.ans .av.on.off{background:rgba(163,39,27,.10);border-color:var(--bad);color:var(--bad)}
+.shield{z-index:60}.cur{z-index:70}

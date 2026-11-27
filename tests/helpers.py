@@ -135,8 +135,8 @@ class FakeGitHub:
             if req.method == "GET":
                 if "tol-data" not in self.refs:
                     return await j(404, {"message": "No commit found for the ref"})
-                if p == "sync":
-                    items = [{"name": k.split("/")[1], "path": k, "sha": self.lag.get(k, v[1]), "type": "file"} for k, v in self.files.items() if k.startswith("sync/")]
+                if p in ("sync", "book"):
+                    items = [{"name": k.split("/")[1], "path": k, "sha": self.lag.get(k, v[1]), "type": "file"} for k, v in self.files.items() if k.startswith(p + "/")]
                     return await (j(200, items) if items else j(404, {"message": "Not Found"}))
                 if p not in self.files:
                     return await j(404, {"message": "Not Found"})

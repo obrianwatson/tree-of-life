@@ -283,3 +283,15 @@ TV + IR touch frame + cheap mini PC running the Board in a full-screen web brows
 
 ## Dropped
 - AI sketching beside the writing
+
+## M · BOLW Essentials (one real app, at /bolw/)
+Plan: `claude/essentials.md` in the BOLW project. Replaces the separate Book Phase test pages (they stay up, unchanged).
+- [x] Notes like Apple Notes: list, new, saves itself, reopens on the exact spot, search, offline
+- [x] Fractal folds through the six joints; threads, the path, one Undo each; the clock and Hold
+- [x] The AI window: side window (⌘K) / full screen (✦, ← Book); history (new, rename, delete, bring back, search); model picker (every model the key can use) and one socket; "How BOLW works" + per-project instructions; projects (Songs, Journal, Scripture); the open note goes along, attach others; streaming with Stop; offline draft
+- [x] The AI acts through the same six joints: action lines that jump, one reply = one Undo, its own color until edited, riverbanks (only when asked, only the open note, asks first)
+- [x] Unchangeables: earlier versions kept, export (.txt/.json), safe mode at /bolw/safe/, sync sealed with the same lock in its own files, the key read in one place only, nothing sent unless Send is pressed, who-wrote-what stamped inside the joints
+- [x] Room for `;` commands (none built)
+- [x] One guided test page (/bolw/test/) for the 11 checks
+- [ ] The owner's own pass through the 11 checks on the iPhone and the 2011 MacBook
+- [ ] Later: a monthly spending limit for the AI (the old book has one), bringing the old book's pages over, import
