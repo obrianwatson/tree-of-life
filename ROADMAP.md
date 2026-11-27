@@ -14,40 +14,43 @@ Status key: ✅ done · 🔨 in progress · ⬜ not started · ⏸ on hold
 Build one use case at a time; each is tried by the owner before the next goes on top. Order: write and see
 your time → fold → practice and test → Claude in the page → drills → sync and safety → changing the book.
 
-### Trial #01: Apple Notes + folds (the finished picture we're building toward)
-Built and tried ONE piece at a time (test page: /trial/). Each piece is revised until the owner says "locked";
-later pieces stack on locked ones.
+### Trial #01 · Book Phase: Apple Notes + fractal folding
+**Aim: a good resting place, not perfection.** The book stays endlessly revisable; at the resting place the owner
+decides whether to live in it for a while or keep developing.
+Built and tried ONE piece at a time (test page: /trial/). Each piece gets an interactive test that first SHOWS how it
+works, then lets the owner TRY it, with what to notice. Revised until the owner says "locked"; later pieces stack on
+locked ones.
 
 **Writing, like Apple Notes**
-- The book opens straight into writing: typing within a second, the caret right where you tap.
+- Opens straight into writing: typing within a second, the caret right where you tap.
 - The line you're typing is always in view, never under the keyboard or the bar.
-- Always kept: no save button, and nothing you write ever disappears.
+- Always kept: no save button; nothing you write ever disappears.
 - A list of notes, newest on top; a new note in one tap; the first line is the title; coming back is instant.
 
-**Folds**
+**Fractal folding (kept simple)**
 - Fold any highlight: a letter, a word, a phrase, several lines, across lines.
-- The hinge sits right after the highlighted words; the fold opens right there and the rest of the text continues
-  below it. Tap the hinge to swing it shut and the text closes back up.
-- Infinite depth: folds inside folds inside folds, and you always know where you are.
-- Overlapping folds: the same words can belong to several folds; each is shown distinctly and has its own hinge
-  at its own end.
-- Several separate selections make one fold (iPhone: highlight, "Add", highlight more, then Fold; laptop: the same,
-  or Cmd/Ctrl-drag where the browser allows).
-- Remove a fold, and Undo; a removed fold's writing goes to Recently deleted.
+- The hinge sits right after the highlighted words; the fold opens right there and the text continues below it.
+  Tap the hinge to swing it shut and the text closes back up.
+- Infinite folding: folds inside folds inside folds, no limit.
+- Overlapping folds: the same words can belong to several folds, each shown distinctly with its own hinge.
+- Trace a fold back to its parent: lines, a family tree or branches (design chosen in piece 1e).
+- Remove a fold, with Undo; its writing goes to Recently deleted.
+- Not in this phase: folding several separate selections into one fold, and other complex folding tech.
 
 **The controls**
-- iPhone: Fold, Add and Remove fold sit in the bar on the keyboard, never clashing with the caret, the selection
-  handles or Apple's Copy/Paste menu.
+- iPhone: Fold and Remove fold in the bar on the keyboard (no clash with the caret, handles or Apple's menu).
 - Laptop: a small ⌄ right after the highlight, right-click, Tab to fold, Esc to step out; a menu bar along the top.
 - The writing clock and the Hold button (Option on the laptop).
 
 **Done when:** the owner would happily use it for a week without working around anything.
 
 **The pieces, in order:** 1a writing in one note · 1b the list of notes · 1c making a fold · 1d the hinge ·
-1e folds inside folds, endlessly · 1f overlapping folds · 1g several selections into one fold · 1h remove and
-Undo · 1i the clock and Hold.
+1e infinite folds and tracing back to the parent · 1f overlapping folds · 1g remove and Undo · 1h the clock and Hold.
 
-(Superseded earlier drafts of this trial: whole-line folds and a two-fold limit were testing shortcuts only.)
+### Trial #01 · Living Waters Phase: the AI (after the Book Phase)
+The book feels completely integrated with whatever AI model it's connected to: an AI app when online, and still a
+practically just-as-powerful app when offline. To be planned once the Book Phase reaches its resting place
+(first outline: LIVING-WATERS.md).
 
 ## H · Hardening: nothing lost, sync that lasts, tests that run themselves ✅ built (versions 1.2–1.5)
 - [x] A save that fails shows a red "Not saved" bar; the book is kept in a rescue copy and comes back at the next open
