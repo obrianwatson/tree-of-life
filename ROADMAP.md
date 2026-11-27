@@ -14,39 +14,40 @@ Status key: ✅ done · 🔨 in progress · ⬜ not started · ⏸ on hold
 Build one use case at a time; each is tried by the owner before the next goes on top. Order: write and see
 your time → fold → practice and test → Claude in the page → drills → sync and safety → changing the book.
 
-### Trial #01: writing, folding, and the selection menu
-**Goal:** the Apple Notes feel. Open, jot, come back. Nothing clunky.
-- **Writing:** opens straight into a blank line with the cursor (and phone keyboard) ready; the first line is
-  the title, with no naming or saving step; one list, newest on top, with search; the header fades while
-  typing; the clock is a small dot plus the time.
-- **Folds look quiet:** one thin underline (colors only where folds overlap); tap to open/close; it opens
-  under the line, indented, with a soft line on the left, and no buttons inside.
-- **The selection menu (iPhone): a bar that sits on top of the keyboard.** The main problem today is the fight
-  for space with Apple's Copy/Paste menu, so ours never goes near the words: it slides up and rests on the
-  keyboard, full width, in the same spot every time (at the bottom of the screen when the keyboard is down).
-  On it: **Fold** (one tap, then you type inside), **⋯** for everything else (fold into an existing page,
-  wrap, move out, place here too, Ask Claude, Write deeper), and the **round hold button** at the right end,
-  so there's one strip instead of two floating things. A web app can't add buttons to Apple's own menu.
-- **The selection menu (laptop):** on right-click, the book's own menu with the same choices (a web page can't
-  add to the browser's right-click menu, but it can show its own in its place); Tab = Fold, Esc = step out.
-  **Plus a menu bar** along the top of the laptop screen with everything the book can do.
-- **Less clunk:** no messages for things that worked; one way to do each thing; Undo appears in the bar
-  right after a fold action.
-- **Scope of folding in Trial #01: the simplest single case, made perfect first.** No overlapping folds and
-  no folds made from several selections. A page holds at most TWO folds: the first fold, and a second fold
-  inside it (page → fold → fold). Everything richer comes back later, one step at a time.
-  - **A staircase.** The first fold drops open under the line its words are on, one step in. The second fold
-    is made from words inside the first, and drops open under its line, one more step in.
-  - **Chunks, clearly by line.** Any chunk of text can be highlighted and folded. Where it opens is always
-    the line right under the chunk, so it reads line by line.
-  - **Whole lines (chosen for testing, as the simplest).** A fold snaps to the whole line or lines your
-    highlight touches: one fold per line, hard to tap wrong. Later, choose what best fits the nonlinear
-    book (exact words, overlaps, many places) and add it back step by step.
-  - **No overlaps.** A chunk can't overlap a chunk that's already folded. To fold an overlapping chunk, first
-    remove the fold that's there (its writing is kept in Recently deleted). The book says so in one line instead
-    of making the fold. This is for the first tests only.
-- **To decide during the trial:** whether Ask Claude sits next to Fold or behind ⋯.
-- **Not in this trial:** a bar that learns your habits.
+### Trial #01: Apple Notes + folds (the finished picture we're building toward)
+Built and tried ONE piece at a time (test page: /trial/). Each piece is revised until the owner says "locked";
+later pieces stack on locked ones.
+
+**Writing, like Apple Notes**
+- The book opens straight into writing: typing within a second, the caret right where you tap.
+- The line you're typing is always in view, never under the keyboard or the bar.
+- Always kept: no save button, and nothing you write ever disappears.
+- A list of notes, newest on top; a new note in one tap; the first line is the title; coming back is instant.
+
+**Folds**
+- Fold any highlight: a letter, a word, a phrase, several lines, across lines.
+- The hinge sits right after the highlighted words; the fold opens right there and the rest of the text continues
+  below it. Tap the hinge to swing it shut and the text closes back up.
+- Infinite depth: folds inside folds inside folds, and you always know where you are.
+- Overlapping folds: the same words can belong to several folds; each is shown distinctly and has its own hinge
+  at its own end.
+- Several separate selections make one fold (iPhone: highlight, "Add", highlight more, then Fold; laptop: the same,
+  or Cmd/Ctrl-drag where the browser allows).
+- Remove a fold, and Undo; a removed fold's writing goes to Recently deleted.
+
+**The controls**
+- iPhone: Fold, Add and Remove fold sit in the bar on the keyboard, never clashing with the caret, the selection
+  handles or Apple's Copy/Paste menu.
+- Laptop: a small ⌄ right after the highlight, right-click, Tab to fold, Esc to step out; a menu bar along the top.
+- The writing clock and the Hold button (Option on the laptop).
+
+**Done when:** the owner would happily use it for a week without working around anything.
+
+**The pieces, in order:** 1a writing in one note · 1b the list of notes · 1c making a fold · 1d the hinge ·
+1e folds inside folds, endlessly · 1f overlapping folds · 1g several selections into one fold · 1h remove and
+Undo · 1i the clock and Hold.
+
+(Superseded earlier drafts of this trial: whole-line folds and a two-fold limit were testing shortcuts only.)
 
 ## H · Hardening: nothing lost, sync that lasts, tests that run themselves ✅ built (versions 1.2–1.5)
 - [x] A save that fails shows a red "Not saved" bar; the book is kept in a rescue copy and comes back at the next open
