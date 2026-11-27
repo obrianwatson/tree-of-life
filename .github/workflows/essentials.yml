@@ -1,0 +1,40 @@
+name: Essentials (quick)
+
+# A quick check of BOLW Essentials (docs/bolw/) in Safari's engine and in Firefox, so changes can be tried
+# in minutes. The full Tests workflow still runs everything in all three engines.
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/bolw/**', 'tests/test_bolw.py', 'tests/helpers.py', '.github/workflows/essentials.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: essentials-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [webkit, firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright and the browser
+        run: |
+          pip install --quiet playwright
+          python -m playwright install --with-deps ${{ matrix.browser }}
+      - name: Run the Essentials test
+        env:
+          BROWSER: ${{ matrix.browser }}
+          CHROME: ''
+        run: timeout 1000 python tests/test_bolw.py
