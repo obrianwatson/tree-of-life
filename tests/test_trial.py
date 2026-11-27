@@ -72,6 +72,27 @@ async def run(br, p, url, phone):
     C.ok(box and box["width"] >= 40 and await pg.evaluate("document.querySelector('.side-slot') !== null"), f"{who}: room is kept for the ✦ corner and the side window; neither is built")
     C.ok(not pg.errs, f"{who} 1a: no page errors {pg.errs}"); await pg.close()
 
+    # ---------- answers: Works / Something's off + a note for every task, sent only when you tap Send ----------
+    posted = []
+    async def gh(route):
+        posted.append(json.loads(route.request.post_data)); await route.fulfill(status=201, headers={"access-control-allow-origin": "*"}, content_type="application/json", body='{"number": 9}')
+    await ctx.route("https://api.github.com/**", gh)
+    pg = await page(ctx, url, "1a"); await pg.evaluate("localStorage.setItem('tol-gh-token', JSON.stringify('github_pat_test'))")
+    await pg.evaluate("at('restoreth')"); await pg.keyboard.type(" PRIVATE WORDS"); await pg.wait_for_timeout(200)
+    await pg.click("#tMore"); await pg.click(".av[data-v=ok]"); await pg.click("#tNext"); await pg.click(".av[data-v=off]"); await pg.fill("#aNote", "the cursor lands one letter late"); await pg.wait_for_timeout(100)
+    await pg.reload(); await inject(pg); await pg.click("#tMore"); await pg.click("#tNext")
+    C.ok(await pg.input_value("#aNote") == "the cursor lands one letter late" and await pg.locator(".av.on.off").count() == 1, f"{who}: each task has Works / Something's off and a note, kept as you go")
+    for _ in range(4): await pg.click("#tNext")
+    C.ok("2 of 5 tasks answered" in await pg.text_content("#tD"), f"{who}: the last step shows how many tasks you answered")
+    await pg.click("#aSend"); await pg.wait_for_timeout(100)
+    C.ok(not posted and "public" in await pg.text_content("#aMsg"), f"{who}: Send first says the project is public and asks again")
+    await pg.click("#aSend"); await pg.wait_for_timeout(400)
+    body = json.dumps(posted[0]) if posted else ""
+    C.ok(len(posted) == 1 and posted[0]["title"].startswith("Trial feedback: piece 1a") and "1 off" in posted[0]["title"] and "WORKS" in body and "one letter late" in body and "PRIVATE WORDS" not in body and "@claude" not in body.lower() and "github_pat" not in body,
+         f"{who}: Send posts your answers for Claude to read: no writing in it, no key, and it doesn't start Claude Code")
+    C.ok("Sent" in await pg.text_content("#aMsg"), f"{who}: it says Sent, and to tell Claude “done”")
+    await pg.evaluate("localStorage.removeItem('tol-gh-token')"); await pg.close(); await ctx.unroute("https://api.github.com/**")
+
     # ---------- 1b: the list of notes ----------
     pg = await page(ctx, url, "1b")
     C.ok(await pg.locator("#listv").is_visible() and await pg.locator(".rowi b").first.text_content() == "Psalm 23", f"{who} 1b: opens on the list, newest on top, first line as the title")

@@ -352,13 +352,46 @@ B.on(ev => { if (ev.type === "kept") paintBar(); });
 
 /* ================= the test: short tasks. Show me, then you try it and judge it ================= */
 let task = 0; const TASKS = P.tasks, LASTT = TASKS.length - 1;
-function paintTask() { const T = TASKS[task]; $("#tN").textContent = "Piece " + P.id + (LASTT ? " · " + (task + 1) + " of " + (LASTT + 1) : ""); $("#tT").textContent = T.t;
-  $("#tD").innerHTML = "<p>" + (TOUCH || !T.dLaptop ? T.d : T.dLaptop) + "</p>" + (T.n ? '<p class="nt">' + T.n + "</p>" : "") + '<div class="row">' + (T.show ? '<button class="show" id="tShow">Show me</button>' : "") + (task ? '<button id="tBack">Back</button>' : "") + '<button id="tReset">Start over</button><a href="../" style="align-self:center;font-size:13px;color:var(--acc);margin-left:6px">All pieces</a></div>';
-  $("#tNext").classList.toggle("hide", task >= LASTT); if (T.show) $("#tShow").onclick = () => demo(T.show); if (task) $("#tBack").onclick = () => { task--; paintTask(); };
-  $("#tReset").onclick = () => { if (confirm("Put this test page back to the start? What you wrote on THIS test page will be cleared.")) { [KEY, KEY + "-ui", KEY + "-clock"].forEach(k => localStorage.removeItem(k)); B.flush = () => {}; saveSpot = () => {}; location.reload(); } }; }
+/* Your answers: for each task, Works or Something's off, and a note. Kept on this page; sent only when you tap Send. */
+const AK = KEY + "-answers"; let answers = lsGet(AK) || {};
+const saveAnswers = () => lsSet(AK, answers);
+const realTasks = () => LASTT ? TASKS.slice(0, LASTT) : TASKS;
+function report() {
+  const out = ["Trial feedback · piece " + P.id + " (" + P.title + ")", new Date().toLocaleString() + " · " + (TOUCH ? "touch" : "mouse") + " · " + innerWidth + "×" + innerHeight + " · " + navigator.userAgent.replace(/\s+/g, " ").slice(0, 140), ""];
+  realTasks().forEach((T, i) => { const a = answers[i] || {}; out.push((i + 1) + ". " + T.t + ": " + (a.v === "ok" ? "WORKS" : a.v === "off" ? "SOMETHING'S OFF" : "(no answer)") + (a.note && a.note.trim() ? "\n   " + a.note.trim().replace(/\n/g, "\n   ") : "")); });
+  if (answers.all && answers.all.trim()) out.push("", "Anything else: " + answers.all.trim());
+  return out.join("\n");
+}
+function answerBox(i) { const a = answers[i] || {};
+  return '<div class="ans"><div class="row"><button class="av' + (a.v === "ok" ? " on" : "") + '" data-v="ok">✓ Works</button><button class="av' + (a.v === "off" ? " on off" : "") + '" data-v="off">Something’s off</button></div>'
+    + '<textarea id="aNote" rows="2" placeholder="What did you notice? (optional)">' + esc(a.note || "") + "</textarea></div>"; }
+function wireAnswer(i) { $("#tD").querySelectorAll(".av").forEach(b => { b.onclick = () => { answers[i] = Object.assign({}, answers[i], { v: b.dataset.v }); saveAnswers(); paintTask(); }; });
+  const n = $("#aNote"); if (n) n.oninput = () => { answers[i] = Object.assign({}, answers[i], { note: n.value }); saveAnswers(); }; }
+function sendBox() { const key = lsGet("tol-gh-token"), n = realTasks().filter((T, i) => answers[i] && answers[i].v).length;
+  return '<div class="ans"><p class="nt">' + n + " of " + realTasks().length + ' tasks answered.</p><textarea id="aAll" rows="2" placeholder="Anything else about this piece? (optional)">' + esc(answers.all || "") + "</textarea>"
+    + '<div class="row">' + (key ? '<button class="show" id="aSend">Send to Claude</button>' : "") + '<button id="aCopy">Copy my answers</button></div><p class="nt" id="aMsg">' + (answers.sent ? "Sent " + new Date(answers.sent).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + ". Tell Claude “done” and it will read them." : key ? "Send posts your answers (never your writing) to your project on GitHub, where Claude reads them." : "This device has no GitHub key, so tap Copy and paste your answers to Claude.") + "</p></div>"; }
+function wireSend() { const all = $("#aAll"); if (all) all.oninput = () => { answers.all = all.value; saveAnswers(); };
+  const msg = t => { $("#aMsg").textContent = t; };
+  const c = $("#aCopy"); if (c) c.onclick = async () => { const text = report(); try { await navigator.clipboard.writeText(text); msg("Copied. Paste it to Claude."); } catch (e) { const ta = el("textarea"); ta.value = text; ta.rows = 6; ta.readOnly = true; $("#tD").appendChild(ta); ta.select(); msg("Select all of this and copy it:"); } };
+  const sd = $("#aSend"); if (sd) sd.onclick = async () => {
+    if (sd.dataset.sure !== "1") { sd.dataset.sure = "1"; sd.textContent = "Yes, post it"; return msg("Your project on GitHub is public, so these answers can be seen there. Your writing is not included. Tap again to post."); }
+    sd.disabled = true; msg("Sending…");
+    try { const offs = realTasks().filter((T, i) => answers[i] && answers[i].v === "off").length;
+      const r = await fetch("https://api.github.com/repos/obrianwatson/tree-of-life/issues", { method: "POST", headers: { "Accept": "application/vnd.github+json", "Authorization": "Bearer " + lsGet("tol-gh-token"), "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Trial feedback: piece " + P.id + (offs ? " · " + offs + " off" : " · all works"), body: "```\n" + report() + "\n```\n_Sent from the trial page. No writing is included._" }) });
+      if (!r.ok) throw new Error("GitHub answered " + r.status);
+      answers.sent = Date.now(); saveAnswers(); paintTask();
+    } catch (e) { sd.disabled = false; msg("Couldn't send (" + (e.message || e) + "). Tap Copy and paste your answers to Claude instead."); } };
+}
+function paintTask() { const T = TASKS[task], last = task >= LASTT; $("#tN").textContent = "Piece " + P.id + (LASTT ? " · " + (task + 1) + " of " + (LASTT + 1) : ""); $("#tT").textContent = T.t;
+  $("#tD").innerHTML = "<p>" + (TOUCH || !T.dLaptop ? T.d : T.dLaptop) + "</p>" + (T.n ? '<p class="nt">' + T.n + "</p>" : "") + (!last || !LASTT ? answerBox(task) : "") + (last ? sendBox() : "")
+    + '<div class="row">' + (T.show ? '<button class="show" id="tShow">Show me</button>' : "") + (task ? '<button id="tBack">Back</button>' : "") + '<button id="tReset">Start over</button><a href="../" style="align-self:center;font-size:13px;color:var(--acc);margin-left:6px">All pieces</a></div>';
+  $("#tNext").classList.toggle("hide", last); if (T.show) $("#tShow").onclick = () => demo(T.show); if (task) $("#tBack").onclick = () => { task--; paintTask(); };
+  if (!last || !LASTT) wireAnswer(task); if (last) wireSend();
+  $("#tReset").onclick = () => { if (confirm("Put this test page back to the start? What you wrote on THIS test page will be cleared. Your answers are kept.")) { [KEY, KEY + "-ui", KEY + "-clock"].forEach(k => localStorage.removeItem(k)); B.flush = () => {}; saveSpot = () => {}; location.reload(); } }; }
 function openTask(v) { $("#tD").classList.toggle("hide", !v); $("#tMore").textContent = v ? "Hide" : "Details"; }
 $("#tMore").onclick = () => openTask($("#tD").classList.contains("hide"));
-$("#tD").addEventListener("click", e => { if (!e.target.closest("button,a")) openTask(false); });      // tap the instructions themselves to put them away
+$("#tD").addEventListener("click", e => { if (!e.target.closest("button,a,textarea")) openTask(false); });      // tap the instructions themselves to put them away
 document.addEventListener("pointerdown", e => { if (!head.contains(e.target) && !DEMO) openTask(false); });
 $("#tNext").onclick = () => { task = Math.min(LASTT, task + 1); paintTask(); openTask(true); };
 
@@ -410,5 +443,5 @@ function comeBack() { const spot = ui.view !== "list" && ui.spots[B.D.current]; 
   else scrollTo(0, spot.y || 0);
   if (!TOUCH && spot.line) setCaret(spot, false); }
 comeBack(); addEventListener("load", () => setTimeout(comeBack, 50)); addEventListener("pageshow", e => { if (e.persisted) comeBack(); });
-window.TrialView = { find, demo, tasks: TASKS, render, setCaret, cmdFold, cmdOpen, cmdRemove, cmdTrace, doUndo, openNote, showList, get pos() { return pos; }, get sel() { return sel; } };
+window.TrialView = { report, find, demo, tasks: TASKS, render, setCaret, cmdFold, cmdOpen, cmdRemove, cmdTrace, doUndo, openNote, showList, get pos() { return pos; }, get sel() { return sel; } };
 })();

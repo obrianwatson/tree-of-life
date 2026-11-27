@@ -21,7 +21,7 @@ P["1a"] = { title: "Writing in one note", flags: {}, seed: B => note(B, PSALM), 
     show: async f => { await f.caret(f.find("restoreth")); await f.type("\nA line I regret."); await f.undo(); } },
   { t: "Always kept", d: "Close this page completely (swipe it away, or close the tab), then open the link again.", n: "Notice: is every word still there? You should land on the line you left off on, and it glows for a moment. (The iPhone only raises the keyboard when you tap.) There is no save button anywhere.",
     show: async f => { await f.away(); } },
-  { t: "Done", d: "That's piece 1a. Tell Claude, in your own words, anything that felt off, and in which task. When writing feels right, say “1a locked.”", n: "" }] };
+  { t: "Send your answers", d: "That's piece 1a. Check your answers below, then send them. Then just tell Claude “done.”", n: "" }] };
 P["1b"] = { title: "The list of notes", flags: { notes: 1 }, startList: true, seed: three, tasks: [
   { t: "The list", d: "Tap a note to open it. Tap ‹ Notes (top left) to come back.", n: "Notice: newest on top; the first line is the title. When you come back to a note, are you where you left off?",
     show: async f => { await toList(f); const n = f.B.notes(); await f.open(n[1].id); await f.sleep(700); await f.notes(); } },
@@ -30,7 +30,7 @@ P["1b"] = { title: "The list of notes", flags: { notes: 1 }, startList: true, se
   { t: "Empty notes vanish, edited notes rise", d: "Tap New note, write nothing, go back: it's gone. Then open the oldest note, add a word, and go back.", n: "Notice: the note you just touched is now on top.",
     show: async f => { await toList(f); await f.newNote(); await f.sleep(500); await f.notes(); const n = f.B.notes(); await f.open(n[n.length - 1].id); await f.caret(f.find("Coffee")); await f.type("\nBread"); await f.notes(); } },
   { t: "Search", d: "In the list, type a word into Search.", n: "Notice: only notes with that word stay. One more thing: Undo right after opening a note takes you back to the note before." },
-  { t: "Done", d: "That's piece 1b. Tell Claude what felt off. When it feels right, say “1b locked.”", n: "" }] };
+  { t: "Send your answers", d: "That's piece 1b. Check your answers below, then send them. Then just tell Claude “done.”", n: "" }] };
 P["1c"] = { title: "Making a fold", flags: { notes: 1, fold: 1 }, seed: B => { three(B); }, tasks: [
   { t: "Fold a line", d: "Tap anywhere in a line. Tap Fold in the bar above the keyboard. Write inside the fold.", dLaptop: "Click anywhere in a line. Click Fold in the bar at the top (or press Tab). Write inside the fold.",
     n: "Notice: no highlighting needed, so Apple's Copy/Paste menu never shows up. The fold opens right under the line, with the cursor inside. The line gets a thin underline and a ▾ at its end.",
@@ -39,7 +39,7 @@ P["1c"] = { title: "Making a fold", flags: { notes: 1, fold: 1 }, seed: B => { t
     n: "Notice: the fold takes every line the highlight touches, and opens under the last one. Is the button easy to reach while Apple's menu is showing?",
     show: async f => { await f.select(f.find("green pastures"), f.find("still waters")); await f.fold(); await f.type("Rest, and quiet water."); } },
   { t: "What's held back for now", d: "Try to fold a line that already has a fold. Try to fold a line inside a fold.", n: "Notice: both are refused with one plain sentence. They arrive in pieces 1f and 1e. Is the sentence clear?" },
-  { t: "Done", d: "That's piece 1c. Tell Claude what felt off. When it feels right, say “1c locked.”", n: "" }] };
+  { t: "Send your answers", d: "That's piece 1c. Check your answers below, then send them. Then just tell Claude “done.”", n: "" }] };
 P["1d"] = { title: "The hinge", flags: { notes: 1, fold: 1 }, seed: B => { const n = three(B); fold(B, n.c, 1, 1, "A shepherd guides, feeds and guards his sheep.\nHe walks ahead of them.", false); }, tasks: [
   { t: "Open and close", d: "Tap the ▸ at the end of the underlined line. Tap the ▾ to close it again.", n: "Notice: is the hinge easy to hit with your thumb? Does the fold open right under its line, and close without anything jumping?",
     show: async f => { const x = f.folds(f.B.D.current)[0]; await f.hinge(x.id); await f.hinge(x.id); } },
@@ -49,7 +49,7 @@ P["1d"] = { title: "The hinge", flags: { notes: 1, fold: 1 }, seed: B => { const
     n: "Notice: closing a fold you're writing in leaves the cursor waiting at the end of its line, right by the hinge." },
   { t: "From the ⌄ menu", d: "Tap in the underlined line, tap ⌄ in the bar, and choose Open or Close.", n: "Notice: the menu names the fold by its line's first words.",
     show: async f => { await f.caret(f.find("my shepherd")); await f.menu("Open"); await f.menu("Close"); } },
-  { t: "Done", d: "That's piece 1d. Tell Claude what felt off. When it feels right, say “1d locked.”", n: "" }] };
+  { t: "Send your answers", d: "That's piece 1d. Check your answers below, then send them. Then just tell Claude “done.”", n: "" }] };
 P["1e"] = { title: "Infinite folds, and tracing back", flags: { notes: 1, fold: 1, deep: 1 }, seed: B => { const n = three(B), a = fold(B, n.c, 1, 1, "A shepherd guides, feeds and guards his sheep.\nHe walks ahead of them."); fold(B, a, 0, 0, "He knows each one by name."); }, tasks: [
   { t: "Fold inside a fold, and keep going", d: "Tap the innermost line and tap Fold. Write a few words. Fold that line too. Go at least six folds deep.", n: "Notice: is it always clear which fold is inside which?",
     show: async f => { await f.caret(f.find("by name")); await f.fold(); await f.type("Each name is a story."); await f.fold(); await f.type("Each story has a root."); await f.fold(); await f.type("And the root drinks."); } },
@@ -58,14 +58,14 @@ P["1e"] = { title: "Infinite folds, and tracing back", flags: { notes: 1, fold: 
   { t: "Trace back", d: "Tap a line deep inside. Tap ⌄ in the bar, then Trace back. Tap a name in the path. Then keep writing.", dLaptop: "Click a line deep inside, then ⌄ → Trace back (or ⌘-click / Ctrl-click the line). Click a name in the path. Then keep writing.",
     n: "Notice: the path reads Note › fold › fold. Tapping a name jumps to it and flashes it. The path disappears as soon as you write.",
     show: async f => { await f.caret(f.find("by name")); await f.menu("Trace back"); await f.sleep(900); await f.crumb(1); } },
-  { t: "Done", d: "That's piece 1e. Tell Claude what felt off. When it feels right, say “1e locked.”", n: "" }] };
+  { t: "Send your answers", d: "That's piece 1e. Check your answers below, then send them. Then just tell Claude “done.”", n: "" }] };
 P["1f"] = { title: "Overlapping folds", flags: { notes: 1, fold: 1, deep: 1, overlap: 1 }, seed: B => { const n = three(B); fold(B, n.c, 1, 2, "Trust, and rest.", false); }, tasks: [
   { t: "Overlap", d: "Lines 2 and 3 already share a fold. Now highlight from line 3 into line 4 and tap Fold.", n: "Notice: line 3 now belongs to both folds. Each fold has its own underline (solid, then dotted) and its own hinge at the end of its own last line.",
     show: async f => { await f.select(f.find("green pastures"), f.find("still waters")); await f.fold(); await f.type("Rest, and quiet water."); } },
   { t: "Two folds on one line", d: "Tap in line 2 (“The Lord is my shepherd…”) and tap Fold.", n: "Notice: a line can carry more than one fold. Each has its own hinge.",
     show: async f => { await f.caret(f.find("my shepherd")); await f.fold(); await f.type("Mine, not only everyone's."); } },
   { t: "Telling them apart", d: "Open and close each fold. Then tap a shared line and tap ⌄: every fold on that line is listed by name.", n: "Notice: can you always tell which hinge opens what? One limit: to highlight across a line that has an open fold under it, close that fold first." },
-  { t: "Done", d: "That's piece 1f. Tell Claude what felt off. When it feels right, say “1f locked.”", n: "" }] };
+  { t: "Send your answers", d: "That's piece 1f. Check your answers below, then send them. Then just tell Claude “done.”", n: "" }] };
 P["1g"] = { title: "Remove a fold, and Undo", flags: { notes: 1, fold: 1, deep: 1, overlap: 1, remove: 1 }, seed: B => { const n = three(B), a = fold(B, n.c, 1, 1, "A shepherd guides, feeds and guards his sheep."); fold(B, a, 0, 0, "He knows each one by name."); }, tasks: [
   { t: "Remove a fold, then Undo", d: "Tap the underlined line. Tap ⌄, then Remove fold. Then tap Undo.", n: "Notice: the fold leaves, and Undo brings it back with everything inside it, folds and all.",
     show: async f => { await f.caret(f.find("my shepherd")); await f.menu("Remove fold"); await f.undo(); } },
@@ -73,13 +73,13 @@ P["1g"] = { title: "Remove a fold, and Undo", flags: { notes: 1, fold: 1, deep: 
     show: async f => { await f.caret(f.find("restoreth")); await f.type("\nA new line."); await f.fold(); await f.type("Inside."); await f.undo(); await f.undo(); await f.undo(); } },
   { t: "Never lost", d: "Remove the fold again. Close this page completely and open it again. Tap ‹ Notes: under “Recently removed folds”, tap Put back.", n: "Notice: a removed fold that holds writing is always kept, even after the page was closed.",
     show: async f => { await f.caret(f.find("my shepherd")); const id = f.folds(f.B.D.current)[0].id; await f.menu("Remove fold"); await f.notes(); await f.putBack(id); } },
-  { t: "Done", d: "That's piece 1g. Tell Claude what felt off. When it feels right, say “1g locked.”", n: "" }] };
+  { t: "Send your answers", d: "That's piece 1g. Check your answers below, then send them. Then just tell Claude “done.”", n: "" }] };
 P["1h"] = { title: "The clock and Hold", flags: ALL, seed: B => { three(B); }, tasks: [
   { t: "Typing counts", d: "Write for a little while and watch the clock at the top. Then stop.", n: "Notice: ● while you write. A pause of up to 5 seconds still counts; after that it stops (○) at your last key." },
   { t: "Hold", d: "Stop typing. Press and hold the round Hold button at the right of the bar while you think.", dLaptop: "Stop typing. Hold the Option key (or press and hold the Hold button) while you think.", n: "Notice: the clock counts for as long as you hold, and stops when you let go. Each second counts once." },
   { t: "Yours alone", d: "Tap Show me and watch the clock while the finger types.", n: "Notice: the clock doesn't move. Only your own typing and your own Hold add time.",
     show: async f => { await f.caret(f.find("restoreth")); await f.type("\nThese words are typed by the demo, not by you."); await f.fold(); await f.type("So the clock stays still."); } },
-  { t: "Done", d: "That's piece 1h, the last one. Tell Claude what felt off. When it feels right, say “1h locked.”", n: "" }] };
+  { t: "Send your answers", d: "That's piece 1h, the last one. Check your answers below, then send them. Then just tell Claude “done.”", n: "" }] };
 P["book"] = { title: "The whole Book Phase", flags: ALL, startList: true, seed: B => { three(B); }, tasks: [
   { t: "The full test", d: "Everything from pieces 1a to 1h together. Use it for real: write your own notes, fold them as deep as you like, close it, come back.", n: "Tell Claude anything you had to work around. This page keeps what you write (on this device only, apart from your real book)." }] };
 Object.keys(P).forEach(k => { P[k].id = k; });
