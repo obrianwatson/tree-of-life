@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Trial 01">
+<title>Trial #01 · Book of Living Waters</title>
+<!-- A test page for Trial #01 of the One Living Page interface. It is separate from the book: nothing here is saved, and it never touches your pages or sync. -->
+<style>
+:root{--paper:#fbfaf6;--card:#ffffff;--soft:#f1efe8;--ink:#1c1d1b;--ink2:#5f5e5a;--ink3:#8b8a84;--line:rgba(0,0,0,.09);--line2:rgba(0,0,0,.18);--line3:rgba(0,0,0,.30);
+--acc:#2f6fb5;--accbg:rgba(47,111,181,.12);--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+@media (prefers-color-scheme:dark){:root{--paper:#161615;--card:#1f1f1e;--soft:#262624;--ink:#ecebe6;--ink2:#aeada7;--ink3:#7d7c77;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.18);--line3:rgba(255,255,255,.30);--acc:#7fb0e8;--accbg:rgba(127,176,232,.16)}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-text-size-adjust:100%}
+body{padding-bottom:45vh}
+button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line2);border-radius:8px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.wrap{max-width:640px;margin:0 auto}
+/* the task strip: one slim line; tap it for the details */
+.task{position:sticky;top:0;z-index:15;background:var(--soft);border-bottom:1px solid var(--line);padding:calc(6px + env(safe-area-inset-top)) 12px 6px}
+.tl{display:flex;align-items:center;gap:8px;font-size:14px}
+.tl b{font-weight:600}
+.tl .sp{flex:1;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl button{height:32px;padding:0 10px;font-size:13px;border-radius:16px;background:var(--card)}
+.td{font-size:14px;line-height:1.5;color:var(--ink);padding:6px 2px 4px}
+.td p{margin:0 0 6px}.td .nt{color:var(--ink2)}
+.td .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.td .row button{height:34px;padding:0 12px;font-size:14px}
+.top{display:flex;justify-content:space-between;padding:12px 18px 2px;font-size:13px;color:var(--ink2);transition:opacity .4s}
+.pg{padding:6px 18px 24px;font-family:var(--serif);font-size:19px;line-height:1.7}
+.pc{outline:none;white-space:pre-wrap;word-break:break-word;min-height:1.7em;caret-color:var(--acc)}
+.pc.first::first-line{font-size:23px;font-weight:600}
+.pc:empty::before{content:attr(data-ph);color:var(--ink3)}
+u.fw{text-decoration:none;border-bottom:1.5px solid var(--acc)}
+/* the hinge: small to the eye, big to the thumb */
+.hg{display:inline-block;position:relative;border:none;padding:0 2px;margin:0 1px;line-height:1;font-size:15px;color:var(--acc);vertical-align:1px;font-family:var(--sans);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;border-radius:4px}
+.hg::after{content:"";position:absolute;inset:-12px -10px}
+.fold{margin:2px 0 6px 8px;padding:1px 0 1px 12px;border-left:2px solid var(--line3);font-size:18px}
+.msg{font-size:14px;color:var(--ink2);padding:0 18px 10px;min-height:20px}
+/* laptop only: the little ⌄ right after a highlight */
+.sh{position:absolute;z-index:21;width:24px;height:24px;padding:0;border-radius:12px;background:var(--acc);color:#fff;border:none;font-size:13px;line-height:24px;font-family:var(--sans)}
+.menu{position:absolute;z-index:22;width:230px;background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+.menu button{display:block;width:100%;text-align:left;border:none;height:40px;padding:0 12px;border-radius:8px;font-size:15px}
+.menu button:hover{background:var(--soft)}
+/* the bar: rests on the keyboard (iPhone) or the bottom of the screen */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--soft);border-top:1px solid var(--line);padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
+.bar.kb{padding-bottom:6px}
+.bar .in{display:flex;align-items:center;gap:8px;max-width:640px;margin:0 auto;min-height:44px}
+.bar button{height:40px;border-radius:20px;background:var(--card);padding:0 18px;font-size:16px}
+.bar .main{font-weight:600;border-color:var(--acc);color:var(--acc)}
+.hold{margin-left:auto;width:44px;height:44px!important;border-radius:50%!important;font-size:12px!important;padding:0!important;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.hold.on{background:var(--accbg)!important;color:var(--acc);border-color:var(--acc)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="task" id="task">
+<div class="tl"><b id="tN"></b><span class="sp" id="tT"></span><button id="tMore" aria-expanded="true">Hide</button><button id="tNext">Next</button></div>
+<div class="td" id="tD"></div>
+</div>
+<div class="wrap">
+<div class="top" id="top"><span>Trial #01 · nothing is saved</span><span id="clock">○ 0:00:00</span></div>
+<div class="pg" id="pg"></div>
+<div class="msg" id="msg"></div>
+</div>
+<button class="sh hide" id="sh" aria-label="Menu for the highlighted words">⌄</button>
+<div class="menu hide" id="menu" role="menu"></div>
+<div class="bar" id="bar"><div class="in">
+<button class="main hide" id="bFold">Fold</button><button class="hide" id="bRemove">Remove fold</button><button class="hide" id="bUndo">Undo</button>
+<button class="hold" id="hold">Hold</button>
+</div></div>
+<script>
+"use strict";
+const $=id=>document.getElementById(id),pg=$('pg'),menu=$('menu'),sh=$('sh'),bar=$('bar');
+const TOUCH=matchMedia('(pointer:coarse)').matches;   // iPhone: the bar carries Fold. Laptop: a ⌄ right after the highlight, right-click, Tab.
+let nid=0,root,nodes={},total=0,last=0,holdAt=null,undoFn=null,pending=null,inFold=null,ut,mt,ft;
+const N=t=>({id:'n'+(++nid),text:t,folds:[]});
+const START='Psalm 23\nThe Lord is my shepherd; I shall not want.\nHe maketh me to lie down in green pastures:\nhe leadeth me beside the still waters.';
+/* ---------------- short tasks: you do them and judge them; nothing grades you ---------------- */
+const TASKS=[
+{t:'Write',d:'Tap anywhere in the text and write a few lines of your own. Use Return for a new line. Try the end of the page and the middle of a line.',
+ n:'Notice: does the caret go where you tap? Can you always see the line you are typing above the keyboard and the bar? Does the top line fading feel calm or distracting?'},
+{t:'Fold',d:(TOUCH?'Highlight a few words (press and hold a word, then drag the handles). Tap Fold in the bar above the keyboard.':'Highlight a few words. Tap the small ⌄ right after them (or right-click, or press Tab), then Fold these words.')+' Write inside the fold. Then tap the ▾ right after your words to close it, and ▸ to open it again.',
+ n:'Notice: does the fold open in the right place, right after your words, with the rest of the line continuing below? Is the ▾ easy to hit with your thumb? Does Apple\'s Copy/Paste menu get in your way?'},
+{t:'Staircase',d:'Inside your fold, highlight a word and fold it. Write in the second fold. Then try to fold something inside the second fold.',
+ n:'Notice: is it clear which fold is inside which? The third fold is refused on purpose in this trial: is the message clear?'},
+{t:'Undo and hold',d:(TOUCH?'Tap inside the words of a fold you made; the bar shows Remove fold. Tap it, then Undo.':'Right-click a ▾ hinge and choose Remove fold, then Undo.')+' Last, press and hold the round Hold button for a few seconds.',
+ n:'Notice: did anything you wrote get lost? Did the clock count while you held?'},
+{t:'Done',d:'That\'s Trial #01. Tell Claude, in your own words, what felt wrong or clumsy, and in which task.',n:'Start over resets the page for another round.'}];
+let task=0;
+function paintTask(){const T=TASKS[task];$('tN').textContent=task<4?'Task '+(task+1)+' of 4':'Done';$('tT').textContent=T.t;
+$('tD').innerHTML='<p>'+T.d+'</p><p class="nt">'+T.n+'</p><div class="row"><button id="tBack">Back</button><button id="tReset">Start over</button></div>';
+$('tNext').classList.toggle('hide',task>=4);$('tBack').onclick=()=>{if(task>0){task--;paintTask()}};$('tReset').onclick=()=>{task=0;init();paintTask();openTask(true)}}
+function openTask(v){$('tD').classList.toggle('hide',!v);$('tMore').textContent=v?'Hide':'Details';$('tMore').setAttribute('aria-expanded',v)}
+$('tMore').onclick=()=>openTask($('tD').classList.contains('hide'));
+pg.addEventListener('focusin',()=>openTask(false));   // the task folds up to one slim line as soon as you start, so the page and keyboard get the room
+$('tNext').onclick=()=>{task=Math.min(4,task+1);paintTask();openTask(true)};
+/* ---------------- the bar rests on the keyboard ---------------- */
+function placeBar(){const v=window.visualViewport;if(!v)return;const gap=Math.max(0,window.innerHeight-(v.height+v.offsetTop));bar.style.bottom=gap+'px';bar.classList.toggle('kb',gap>40)}
+if(window.visualViewport){visualViewport.addEventListener('resize',placeBar);visualViewport.addEventListener('scroll',placeBar)}
+addEventListener('resize',placeBar);
+function keepCaretVisible(){const s=getSelection();if(!s.rangeCount)return;const r=s.getRangeAt(0).cloneRange();r.collapse(false);const rc=r.getClientRects()[0];if(!rc)return;
+const v=window.visualViewport,bottom=(v?v.height+v.offsetTop:innerHeight)-bar.offsetHeight-12,topLimit=$('task').offsetHeight+8;
+if(rc.bottom>bottom)scrollBy(0,rc.bottom-bottom);else if(rc.top<topLimit)scrollBy(0,rc.top-topLimit)}
+/* ---------------- the page: the text is cut at every open hinge, and the fold drops in right there ---------------- */
+function init(){nid=0;root=N(START);total=0;last=0;holdAt=null;undoFn=null;pending=null;inFold=null;closeMenu();sh.classList.add('hide');say('');render();paintBar()}
+function count(n){let c=0;for(const f of n.folds)c+=1+count(f.node);return c}
+function render(){nodes={};pg.innerHTML='';pg.appendChild(drawNode(root,0))}
+function drawNode(node,depth){nodes[node.id]={node,depth};const box=document.createElement('div'),fs=[...node.folds].sort((x,y)=>x.s-y.s);let a=0;
+for(const f of fs)if(f.open){box.appendChild(piece(node,a,f.e,depth,fs));const fb=document.createElement('div');fb.className='fold';fb.appendChild(drawNode(f.node,depth+1));box.appendChild(fb);a=f.e}
+box.appendChild(piece(node,a,node.text.length,depth,fs));return box}
+function piece(node,a,b,depth,fs){const pc=document.createElement('div');pc.className='pc';pc.contentEditable='true';pc.spellcheck=true;pc.dataset.n=node.id;pc.dataset.a=a;pc.dataset.b=b;
+if(depth===0&&a===0)pc.classList.add('first');if(depth>0&&!node.text)pc.dataset.ph='Write inside the fold';
+let i=a;for(const f of fs)if(f.s>=a&&f.e<=b){pc.appendChild(document.createTextNode(node.text.slice(i,f.s)));const u=document.createElement('u');u.className='fw';u.dataset.f=f.id;u.textContent=node.text.slice(f.s,f.e);pc.appendChild(u);pc.appendChild(hinge(f,node,depth));i=f.e}
+if(b>i)pc.appendChild(document.createTextNode(node.text.slice(i,b)));
+pc.addEventListener('input',()=>onInput(pc));
+pc.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.execCommand('insertText',false,'\n')}else if(e.key==='Tab'){e.preventDefault();const r=selRange();if(r)foldSel(r)}else if(e.key==='Escape')closeMenu()});
+return pc}
+function hinge(f,node,depth){const h=document.createElement('button');h.className='hg';h.contentEditable='false';h.tabIndex=-1;h.textContent=f.open?'▾':'▸';h.dataset.f=f.id;h.setAttribute('aria-label',f.open?'Close fold':'Open fold');
+h.addEventListener('pointerdown',e=>e.preventDefault());h.addEventListener('mousedown',e=>e.preventDefault());
+h.addEventListener('click',e=>{e.preventDefault();toggle(f)});
+h.addEventListener('contextmenu',e=>{e.preventDefault();hingeMenu(f,node,depth,h)});return h}
+/* ---------------- text positions (the hinges are not text) ---------------- */
+function readPiece(pc){const c=pc.cloneNode(true);c.querySelectorAll('.hg').forEach(x=>x.remove());c.querySelectorAll('br').forEach(x=>x.remove());return c.textContent}
+function offsetIn(pc,cont,off){const r=document.createRange();r.setStart(pc,0);try{r.setEnd(cont,off)}catch(e){return readPiece(pc).length}const fr=r.cloneContents();fr.querySelectorAll('.hg').forEach(x=>x.remove());return fr.textContent.length}
+function posIn(pc,off){const w=document.createTreeWalker(pc,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement.closest('.hg')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});let n,lastN=null;
+while((n=w.nextNode())){if(off<=n.length)return[n,off];off-=n.length;lastN=n}return lastN?[lastN,lastN.length]:[pc,0]}
+function pieceFor(id,off){const ps=[...pg.querySelectorAll('.pc[data-n="'+id+'"]')];return ps.find(p=>off>=+p.dataset.a&&off<+p.dataset.b)||ps.filter(p=>off>=+p.dataset.a&&off<=+p.dataset.b).pop()||ps[ps.length-1]}
+function setCaret(id,off){const pc=pieceFor(id,off);if(!pc)return;pc.focus({preventScroll:true});const[n,o]=posIn(pc,off-(+pc.dataset.a)),r=document.createRange();r.setStart(n,o);r.collapse(true);const s=getSelection();s.removeAllRanges();s.addRange(r);requestAnimationFrame(keepCaretVisible)}
+/* ---------------- typing keeps every fold on its own words ---------------- */
+function applyChange(node,pos,rem,ins){node.text=node.text.slice(0,pos)+ins+node.text.slice(pos+rem);const d=ins.length-rem,end=pos+rem;
+node.folds=node.folds.filter(f=>{if(f.e<=pos)return true;if(f.s>=end){f.s+=d;f.e+=d;return true}
+if(f.s<=pos&&f.e>=end){f.e+=d}else{f.s=Math.min(f.s,pos);f.e=Math.max(pos+ins.length,f.e+d)}return f.e>f.s})}
+function onInput(pc){const id=pc.dataset.n;if(!nodes[id])return;const node=nodes[id].node,a=+pc.dataset.a,b=+pc.dataset.b;
+const nt=readPiece(pc),old=node.text.slice(a,b);let p=0;while(p<nt.length&&p<old.length&&nt[p]===old[p])p++;let q=0;while(q<nt.length-p&&q<old.length-p&&nt[nt.length-1-q]===old[old.length-1-q])q++;
+const s=getSelection(),caret=a+(s.rangeCount?offsetIn(pc,s.focusNode,s.focusOffset):nt.length);
+applyChange(node,a+p,old.length-p-q,nt.slice(p,nt.length-q));render();setCaret(node.id,caret);typed()}
+/* ---------------- what is selected, and what the bar offers ---------------- */
+function selRange(){const s=getSelection();if(!s.rangeCount||s.isCollapsed)return null;const r=s.getRangeAt(0),el=c=>c.nodeType===1?c:c.parentElement;const pa=el(r.startContainer).closest('.pc'),pb=el(r.endContainer).closest('.pc');
+if(!pa||pa!==pb)return null;const a=+pa.dataset.a;return{nid:pa.dataset.n,s:a+offsetIn(pa,r.startContainer,r.startOffset),e:a+offsetIn(pa,r.endContainer,r.endOffset),range:r}}
+function foldAtCaret(){const s=getSelection();if(!s.rangeCount)return null;const c=s.anchorNode,e=c&&(c.nodeType===1?c:c.parentElement);const u=e&&e.closest('u.fw');if(!u)return null;
+const pc=u.closest('.pc'),info=nodes[pc.dataset.n];return info?{f:info.node.folds.find(x=>x.id===u.dataset.f),node:info.node,depth:info.depth}:null}
+function paintBar(){const showFold=TOUCH&&!!pending;$('bFold').classList.toggle('hide',!showFold);$('bRemove').classList.toggle('hide',showFold||!TOUCH||!inFold);$('bUndo').classList.toggle('hide',!undoFn)}
+document.addEventListener('selectionchange',()=>{pending=selRange();inFold=pending?null:foldAtCaret();
+if(!TOUCH){if(pending){if(menu.dataset.kind!=='sel')placeSh(pending.range)}else if(menu.dataset.kind!=='sel')sh.classList.add('hide')}paintBar()});
+function placeSh(r){const e=r.cloneRange();e.collapse(false);let rc=e.getClientRects()[0];if(!rc){const all=r.getClientRects();rc=all[all.length-1]}if(!rc)return;
+sh.style.left=Math.min(innerWidth-30,rc.right+scrollX+3)+'px';sh.style.top=(rc.top+scrollY+rc.height/2-12)+'px';sh.classList.remove('hide')}
+for(const b of [sh,$('bFold'),$('bRemove'),$('bUndo')]){b.addEventListener('pointerdown',e=>e.preventDefault());b.addEventListener('mousedown',e=>e.preventDefault())}
+sh.onclick=()=>{const p=pending;if(p)openMenu([['Fold these words',()=>foldSel(p)]],sh.getBoundingClientRect(),'sel')};
+$('bFold').onclick=()=>{if(pending)foldSel(pending)};
+$('bRemove').onclick=()=>{if(inFold&&inFold.f)removeFold(inFold.f,inFold.node)};
+$('bUndo').onclick=()=>{if(undoFn){const f=undoFn;undoFn=null;f();render()}paintBar()};
+function hingeMenu(f,node,depth,h){openMenu([[f.open?'Close fold':'Open fold',()=>toggle(f)],['Remove fold',()=>removeFold(f,node)]],h.getBoundingClientRect(),'hinge')}
+function openMenu(items,rc,kind){menu.innerHTML='';menu.dataset.kind=kind;for(const it of items){const b=document.createElement('button');b.textContent=it[0];b.setAttribute('role','menuitem');
+b.addEventListener('pointerdown',e=>e.preventDefault());b.addEventListener('mousedown',e=>e.preventDefault());b.onclick=()=>{closeMenu();it[1]()};menu.appendChild(b)}
+menu.classList.remove('hide');menu.style.left=Math.max(8,Math.min(rc.left+scrollX-8,innerWidth-menu.offsetWidth-8))+'px';menu.style.top=(rc.bottom+scrollY+6)+'px'}
+function closeMenu(){menu.classList.add('hide');menu.dataset.kind=''}
+document.addEventListener('pointerdown',e=>{if(!menu.contains(e.target)&&e.target!==sh&&!e.target.closest('.hg'))closeMenu()});
+/* ---------------- folding ---------------- */
+function foldSel(p){closeMenu();sh.classList.add('hide');const info=nodes[p.nid];if(!info)return;const{node,depth}=info;let s=p.s,e=p.e;
+while(s<e&&/\s/.test(node.text[s]))s++;while(e>s&&/\s/.test(node.text[e-1]))e--;
+if(e<=s)return say('Highlight some words first.');
+if(node.folds.some(f=>s<f.e&&e>f.s))return say('These words overlap a fold. In this trial, remove that fold first.');
+if(depth>=2)return say('This trial goes two folds deep: the page, a fold, and one fold inside it.');
+const n=count(root);if(depth===0&&n>=1)return say('This trial allows one fold on the page (and one inside it).');
+if(depth===1&&n>=2)return say('This trial allows one fold inside the fold.');
+const f={id:'f'+(++nid),s,e,open:true,node:N('')};node.folds.push(f);getSelection().removeAllRanges();render();setCaret(f.node.id,0);
+setUndo(()=>{node.folds=node.folds.filter(x=>x!==f)})}
+function toggle(f){f.open=!f.open;closeMenu();render();if(f.open&&!f.node.text)setCaret(f.node.id,0)}
+function removeFold(f,node){node.folds=node.folds.filter(x=>x!==f);render();say('Fold removed. (In the real book its writing goes to Recently deleted.)');setUndo(()=>{node.folds.push(f)})}
+function setUndo(fn){undoFn=fn;paintBar();clearTimeout(ut);ut=setTimeout(()=>{undoFn=null;paintBar()},8000)}
+/* ---------------- the writing clock ---------------- */
+function say(t){$('msg').textContent=t;clearTimeout(mt);if(t)mt=setTimeout(()=>$('msg').textContent='',5000)}
+function typed(){closeMenu();const n=Date.now();if(!holdAt&&last&&n-last<=5000)total+=n-last;last=n;$('top').style.opacity='0.15';clearTimeout(ft);ft=setTimeout(()=>$('top').style.opacity='1',1500)}
+const fmt=ms=>{const s=Math.floor(ms/1000);return Math.floor(s/3600)+':'+String(Math.floor(s/60)%60).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+setInterval(()=>{const n=Date.now(),on=holdAt||(last&&n-last<=5000);$('clock').textContent=(on?'● ':'○ ')+fmt(total+(holdAt?n-holdAt:0))},300);
+const hold=$('hold');hold.addEventListener('pointerdown',e=>{e.preventDefault();holdAt=Date.now();hold.classList.add('on')});
+const up=()=>{if(holdAt){total+=Date.now()-holdAt;holdAt=null;last=0;hold.classList.remove('on')}};
+['pointerup','pointerleave','pointercancel'].forEach(t=>hold.addEventListener(t,up));hold.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('keydown',e=>{if(e.key==='Alt'&&!e.repeat&&!holdAt){holdAt=Date.now();hold.classList.add('on')}});document.addEventListener('keyup',e=>{if(e.key==='Alt')up()});
+init();paintTask();openTask(true);placeBar();
+</script>
+</body>
+</html>
