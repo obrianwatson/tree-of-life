@@ -24,7 +24,7 @@ async def page(ctx, url, piece, quick=False):
 
 async def inject(pg):
     await pg.wait_for_function("!!window.TrialView")
-    await pg.evaluate("""() => { window.__gate = []; const c = Book.checkpoint; Book.checkpoint = (n, needs, by) => { window.__gate.push(n + ':' + by); return c(n, needs, by); };
+    await pg.evaluate("""() => { document.querySelector('#tD').classList.add('hide'); window.__gate = []; const c = Book.checkpoint; Book.checkpoint = (n, needs, by) => { window.__gate.push(n + ':' + by); return c(n, needs, by); };
         window.at = (txt, off) => { const s = TrialView.find(txt), L = Book.D.lines[s.line]; return TrialView.setCaret({ where: s.where, line: s.line, at: off == null ? L.text.length : off }); };
         window.snap = () => { const sort = o => Array.isArray(o) ? o.map(sort) : o && typeof o === 'object' ? Object.keys(o).sort().reduce((a, k) => (a[k] = sort(o[k]), a), {}) : o; return JSON.stringify(sort([Book.D.folds, Book.D.boxes, Book.D.lines])); };
         window.lines = box => Book.D.boxes[box || Book.D.current].lines.map(l => Book.D.lines[l].text);
@@ -61,6 +61,12 @@ async def run(br, p, url, phone):
     C.ok((await pg.evaluate("lines()"))[-1] == "My own line", f"{who} 1a: Undo puts the line back as it read before (steady typing is one step)")
     await pg.evaluate("at('My own line')"); await pg.keyboard.type("!"); await pg.wait_for_timeout(400); await pg.reload(); await inject(pg)
     C.ok((await pg.evaluate("Book.D.boxes[Book.D.current].lines.map(l => Book.D.lines[l].text)"))[-1] == "My own line!", f"{who} 1a: everything is kept with no save button (closed and opened again)")
+    C.ok(await pg.locator(".l.flash").count() == 1 and "My own line!" in await pg.locator(".l.flash").text_content(), f"{who} 1a: coming back, you land on the line you left off on (it glows)")
+    y0 = await pg.evaluate("document.querySelector('#pg').getBoundingClientRect().top"); await pg.click("#tMore"); y1 = await pg.evaluate("document.querySelector('#pg').getBoundingClientRect().top"); await pg.click("#tMore")
+    C.ok(y0 == y1, f"{who} 1a: showing or hiding the task never moves your text ({y0} = {y1})")
+    if phone:
+        gap = await pg.evaluate("(() => { const r = document.querySelector('#bar').getBoundingClientRect(), v = visualViewport; return [Math.round(v.offsetTop + v.height - r.bottom), document.querySelector('#bar').classList.contains('up')]; })()")
+        C.ok(gap == [0, True], f"iPhone 1a: the bar is pinned to the bottom edge of what you can see, measured from the top (so it rides on the keyboard) {gap}")
     C.ok(await pg.locator("#bFold").is_hidden() and await pg.locator("#notesBtn").is_hidden(), f"{who} 1a: only writing is on the page (no Fold, no Notes yet)")
     box = await pg.locator(".spark-slot").bounding_box()
     C.ok(box and box["width"] >= 40 and await pg.evaluate("document.querySelector('.side-slot') !== null"), f"{who}: room is kept for the ✦ corner and the side window; neither is built")

@@ -52,7 +52,7 @@ function fill(pc, fs) {        // one stretch of lines, as editable text
   fs = fs || lanes(box); pc.textContent = "";
   let lastHinge = false;
   for (let i = i0; i < i0 + n; i++) {
-    const L = B.D.lines[bx.lines[i]], sp = el("span", "l" + (L.by !== "me" ? " by-ai" : "")); sp.dataset.id = L.id;
+    const L = B.D.lines[bx.lines[i]], sp = el("span", "l" + (L.by !== "me" ? " by-ai" : "") + (d === 0 && i === 0 ? " ttl" : "")); sp.dataset.id = L.id;
     let inner = sp;
     fs.filter(x => x.a <= i && i <= x.b).sort((x, y) => x.lane - y.lane).forEach(x => { const c = el("span", "cv cv" + Math.min(x.lane, 3)); c.style.textDecorationColor = color(d + 1); inner.appendChild(c); inner = c; });
     if (L.text) inner.appendChild(document.createTextNode(L.text));
@@ -92,6 +92,7 @@ function render() {
   $("#listv").classList.toggle("hide", !list); $("#notev").classList.toggle("hide", list); $("#newNote").classList.toggle("hide", !list);
   bar.classList.toggle("hide", list); $("#notesBtn").classList.toggle("hide", !F.notes);
   if (list) { hidePath(); renderList(); } else renderNote();
+  placeBar();
 }
 
 /* ================= where the caret is ================= */
@@ -136,13 +137,14 @@ document.addEventListener("selectionchange", () => {
   sel = { where: A.where, a: A.idx, b }; const fc = pcOf(s.focusNode) === pc ? locate(pc, absLen(pc, s.focusNode, s.focusOffset)) : A; pos = { where: fc.where, line: fc.line, at: fc.at };
   paintBar(); clearTimeout(spotT); spotT = setTimeout(saveSpot, 300);
 });
-function saveSpot() { if (ui.view !== "list" && B.D.current) ui.spots[B.D.current] = Object.assign({}, pos, { y: scrollY }); lsSet(KEY + "-ui", ui); }
+function saveSpot() { if (ui.view !== "list" && B.D.current) ui.spots[B.D.current] = Object.assign({}, ui.spots[B.D.current], pos, { y: scrollY }); lsSet(KEY + "-ui", ui); }
 addEventListener("scroll", () => { clearTimeout(spotT); spotT = setTimeout(saveSpot, 300); }, { passive: true });
 function keepInView() { const s = getSelection(); if (!s.rangeCount || !pg.contains(s.anchorNode)) return; const r = s.getRangeAt(0).cloneRange(); r.collapse(false);
   let rc = r.getClientRects()[0]; if (!rc) { const e = pcOf(s.anchorNode); rc = e && e.getBoundingClientRect(); } if (!rc) return;
   const v = window.visualViewport, fixedBar = getComputedStyle(bar).position === "fixed" && !bar.classList.contains("hide");
-  const bottom = (v ? v.height + v.offsetTop : innerHeight) - (fixedBar ? bar.offsetHeight : 0) - 14, topLimit = head.getBoundingClientRect().bottom + 8;
-  if (rc.bottom > bottom) scrollBy(0, rc.bottom - bottom + 6); else if (rc.top < topLimit) scrollBy(0, rc.top - topLimit - 6); }
+  const bottom = (fixedBar ? bar.getBoundingClientRect().top : (v ? v.height + v.offsetTop : innerHeight)) - 12, topLimit = Math.max(head.getBoundingClientRect().bottom, v ? v.offsetTop : 0) + 8;
+  const by = rc.bottom > bottom ? rc.bottom - bottom + 4 : rc.top < topLimit ? rc.top - topLimit - 4 : 0;
+  if (by) scrollBy({ top: by, behavior: Math.abs(by) < 160 ? "smooth" : "auto" }); }      // a line at a time glides; a long way jumps
 
 /* ================= writing: the page tells the layer what was typed ================= */
 function canonical(pc) {
@@ -289,9 +291,14 @@ function openMenu(at) {
 }
 function closeMenu() { menu.classList.add("hide"); }
 document.addEventListener("pointerdown", e => { if (!menu.contains(e.target) && !e.target.closest("#bMore")) closeMenu(); });
-function placeBar() { const v = window.visualViewport; if (!v || getComputedStyle(bar).position !== "fixed") { bar.style.bottom = ""; return; } const gap = Math.max(0, innerHeight - (v.height + v.offsetTop)); bar.style.bottom = gap + "px"; bar.classList.toggle("kb", gap > 40); closeMenu(); }
-if (window.visualViewport) { visualViewport.addEventListener("resize", () => { placeBar(); requestAnimationFrame(keepInView); }); visualViewport.addEventListener("scroll", placeBar); }
-addEventListener("resize", placeBar);
+/* The bar sits on the bottom edge of what you can SEE (the keyboard's top edge when it's up). It's measured from the top,
+   because on the iPhone the "bottom" of the page stays behind the keyboard. */
+function placeBar() { const v = window.visualViewport;
+  if (!v || getComputedStyle(bar).position !== "fixed") { bar.classList.remove("up"); bar.style.transform = ""; return; }
+  bar.classList.add("up"); const kb = document.documentElement.clientHeight - v.height > 120; bar.classList.toggle("kb", kb);
+  bar.style.transform = "translateY(" + Math.round(v.offsetTop + v.height - bar.offsetHeight) + "px)"; }
+if (window.visualViewport) { visualViewport.addEventListener("resize", () => { placeBar(); closeMenu(); setTimeout(keepInView, 60); }); visualViewport.addEventListener("scroll", placeBar); }
+addEventListener("resize", placeBar); addEventListener("scroll", placeBar, { passive: true });
 
 /* ================= the list of notes ================= */
 let filter = "";
@@ -315,7 +322,7 @@ function openNote(id, showFold) {
   const spot = ui.spots[r.note];
   if (r.isNew) { scrollTo(0, 0); setCaret({ where: r.where, line: r.line, at: 0 }); }
   else if (showFold && B.D.folds[showFold]) jump({ fold: showFold });
-  else { scrollTo(0, spot ? spot.y || 0 : 0); if (!TOUCH && spot && spot.line) setCaret(spot, false); }
+  else { scrollTo(0, 0); comeBack(); }
   return r;
 }
 function showList() { closeMenu(); saveSpot(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); ui.view = "list"; render(); lsSet(KEY + "-ui", ui); scrollTo(0, 0); }
@@ -351,6 +358,8 @@ function paintTask() { const T = TASKS[task]; $("#tN").textContent = "Piece " + 
   $("#tReset").onclick = () => { if (confirm("Put this test page back to the start? What you wrote on THIS test page will be cleared.")) { [KEY, KEY + "-ui", KEY + "-clock"].forEach(k => localStorage.removeItem(k)); B.flush = () => {}; saveSpot = () => {}; location.reload(); } }; }
 function openTask(v) { $("#tD").classList.toggle("hide", !v); $("#tMore").textContent = v ? "Hide" : "Details"; }
 $("#tMore").onclick = () => openTask($("#tD").classList.contains("hide"));
+$("#tD").addEventListener("click", e => { if (!e.target.closest("button,a")) openTask(false); });      // tap the instructions themselves to put them away
+document.addEventListener("pointerdown", e => { if (!head.contains(e.target) && !DEMO) openTask(false); });
 $("#tNext").onclick = () => { task = Math.min(LASTT, task + 1); paintTask(); openTask(true); };
 
 /* Show me: a finger does it slowly through the SAME commands and the SAME layer, then the page is put back as it was */
@@ -381,7 +390,7 @@ async function demo(fn) {
     async open(id) { await f.tap($('#listv [data-note="' + id + '"]')); openNote(id); await sleep(900, r); },
     async newNote() { await f.tap($("#newNote")); const x = openNote("new"); await sleep(700, r); return x; },
     async crumb(i) { const b = $("#path").querySelectorAll("button")[i]; await f.tap(b); const s = b.dataset.go; jump(s ? { fold: s } : { note: 1 }); await sleep(1200, r); },
-    async away() { $("#app").classList.add("out"); await sleep(1400, r); $("#app").classList.remove("out"); await sleep(900, r); },
+    async away() { const a = $("#app"); a.style.transition = "opacity .6s"; a.classList.add("out"); await sleep(1400, r); a.classList.remove("out"); await sleep(900, r); a.style.transition = ""; },
     async putBack(fid) { const b = $('#listv [data-put="' + fid + '"]'); await f.tap(b); const x = B.putBack(fid); if (x.ok && x.note) openNote(x.note, x.fold); await sleep(1200, r); },
     view: () => ui.view, folds: where => B.foldsIn(where), B
   };
@@ -393,6 +402,13 @@ $("#shield").addEventListener("click", () => { run++; });
 
 /* ================= start ================= */
 B.tidy(ui.view === "list" ? null : B.D.current); paintTask(); openTask(true); render(); placeBar();
-{ const spot = ui.view !== "list" && ui.spots[B.D.current]; if (spot) { requestAnimationFrame(() => scrollTo(0, spot.y || 0)); if (!TOUCH && spot.line) setCaret(spot, false); } }
+/* Coming back: you're taken to the line you left off on, and it glows for a moment (on a phone the keyboard waits for your tap). */
+try { history.scrollRestoration = "manual"; } catch (e) {}
+function comeBack() { const spot = ui.view !== "list" && ui.spots[B.D.current]; if (!spot) return;
+  const e = spot.line && pg.querySelector('.l[data-id="' + spot.line + '"]');
+  if (e) { const rc = e.getBoundingClientRect(), v = window.visualViewport, h = v ? v.height : innerHeight; if (rc.top < head.getBoundingClientRect().bottom + 20 || rc.bottom > h - 90) scrollTo(0, Math.max(0, scrollY + rc.top - h * 0.4)); e.classList.add("flash"); }
+  else scrollTo(0, spot.y || 0);
+  if (!TOUCH && spot.line) setCaret(spot, false); }
+comeBack(); addEventListener("load", () => setTimeout(comeBack, 50)); addEventListener("pageshow", e => { if (e.persisted) comeBack(); });
 window.TrialView = { find, demo, tasks: TASKS, render, setCaret, cmdFold, cmdOpen, cmdRemove, cmdTrace, doUndo, openNote, showList, get pos() { return pos; }, get sel() { return sel; } };
 })();

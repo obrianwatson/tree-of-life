@@ -14,7 +14,8 @@ button:disabled{opacity:.4}
 .task{padding:6px 12px}
 .tl{display:flex;align-items:center;gap:6px;font-size:14px;max-width:680px;margin:0 auto}
 .tl b{font-weight:600;white-space:nowrap}.tl .sp{flex:1;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.td{font-size:14px;line-height:1.5;max-width:680px;margin:0 auto;padding:6px 2px 2px}
+/* the task's details float OVER the page, so opening or hiding them never moves your text */
+.td{position:absolute;left:0;right:0;top:100%;background:var(--soft);border-bottom:1px solid var(--line);box-shadow:0 10px 18px rgba(0,0,0,.10);font-size:14px;line-height:1.5;padding:4px 14px 10px}
 .td p{margin:0 0 6px}.td .nt{color:var(--ink2)}
 .td .row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px}
 .td .show{border-color:var(--acc);color:var(--acc);font-weight:600}
@@ -24,9 +25,9 @@ button:disabled{opacity:.4}
 .path .here{border-color:var(--acc);color:var(--acc)}
 .path i{font-style:normal;color:var(--ink3);margin:0 3px}
 /* the page column, with room kept for the breath: a ✦ corner (phone) and a side window (laptop). Nothing is built there yet. */
-.app{display:flex;align-items:flex-start}
+.app{display:block}
 .col{flex:1;min-width:0;max-width:680px;margin:0 auto}
-.side-slot{flex:none;width:0}
+.side-slot{display:none}
 .top{display:flex;align-items:center;gap:8px;padding:8px 12px 0;font-size:13px;color:var(--ink3);min-height:44px}
 .top .mid{flex:1;text-align:center;font-variant-numeric:tabular-nums}
 .top .notesBtn{border:none;background:none;color:var(--acc);font-size:16px;padding:0 6px;height:36px}
@@ -34,8 +35,8 @@ button:disabled{opacity:.4}
 .spark-slot{flex:none;width:44px;height:36px}
 /* the writing */
 .pg{padding:2px 18px 24px;font-family:var(--serif);font-size:19px;line-height:1.7}
-.pc{outline:none;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;min-height:1.7em;caret-color:var(--acc)}
-.pg>.bx>.pc:first-child::first-line{font-size:23px;font-weight:600}
+.pc{outline:none;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;min-height:1.7em}
+.l.ttl{font-size:23px;font-weight:600}
 .l.by-ai{color:var(--ai)}
 .l.act{background:var(--accbg);border-radius:3px}
 .cv{text-decoration-line:underline;text-decoration-thickness:1.5px;text-decoration-skip-ink:none}
@@ -51,12 +52,13 @@ button:disabled{opacity:.4}
 .th{position:absolute;left:-7px;top:0;bottom:0;width:18px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .th::before{content:"";position:absolute;left:7px;top:3px;bottom:3px;width:2px;border-radius:1px;background:var(--c)}
 
-.flash{animation:flash 1.2s ease 1}
+.flash{animation:flash 1.6s ease 1;border-radius:3px}
 @keyframes flash{0%,60%{background:var(--accbg)}100%{background:transparent}}
 .msg{font-size:14px;color:var(--ink2);padding:0 18px 10px;min-height:20px}
 /* the bar: rests on the keyboard (phone); a menu bar along the top (laptop) */
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--soft);border-top:1px solid var(--line);padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
 .bar.kb{padding-bottom:6px}
+.bar.up{top:0;bottom:auto;will-change:transform}
 .bar .in{display:flex;align-items:center;gap:8px;max-width:680px;margin:0 auto;min-height:44px}
 .bar button{height:40px;border-radius:20px;padding:0 16px;font-size:16px}
 .bar .main{font-weight:600;border-color:var(--acc);color:var(--acc)}
@@ -88,4 +90,4 @@ button:disabled{opacity:.4}
 .cur{position:fixed;z-index:30;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;border:2px solid var(--acc);background:rgba(47,111,181,.2);pointer-events:none;transition:left .9s ease,top .9s ease,transform .2s}
 .cur.down{transform:scale(.7);background:rgba(47,111,181,.45)}
 .shield{position:fixed;inset:0;z-index:25}
-.fade{transition:opacity .6s}.fade.out{opacity:0}
+.fade.out{opacity:0}

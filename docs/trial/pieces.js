@@ -19,7 +19,7 @@ P["1a"] = { title: "Writing in one note", flags: {}, seed: B => note(B, PSALM), 
     show: async f => { await f.caret(f.find("restoreth")); for (let i = 1; i <= 7; i++) await f.type("\nLine " + i + " of a long passage that keeps going", 22); } },
   { t: "Undo", d: "Write a line you don't want. Tap Undo in the bar.", dLaptop: "Write a line you don't want. Click Undo in the bar at the top, or press ⌘Z / Ctrl+Z.", n: "Notice: does the line go back to how it read before? Steady typing is undone as one step.",
     show: async f => { await f.caret(f.find("restoreth")); await f.type("\nA line I regret."); await f.undo(); } },
-  { t: "Always kept", d: "Close this page completely (swipe it away, or close the tab), then open the link again.", n: "Notice: is every word still there, and are you back at the same spot? There is no save button anywhere.",
+  { t: "Always kept", d: "Close this page completely (swipe it away, or close the tab), then open the link again.", n: "Notice: is every word still there? You should land on the line you left off on, and it glows for a moment. (The iPhone only raises the keyboard when you tap.) There is no save button anywhere.",
     show: async f => { await f.away(); } },
   { t: "Done", d: "That's piece 1a. Tell Claude, in your own words, anything that felt off, and in which task. When writing feels right, say “1a locked.”", n: "" }] };
 P["1b"] = { title: "The list of notes", flags: { notes: 1 }, startList: true, seed: three, tasks: [
