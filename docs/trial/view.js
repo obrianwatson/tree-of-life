@@ -63,7 +63,6 @@ function fill(pc, fs) {        // one stretch of lines, as editable text
     if (i < i0 + n - 1) pc.appendChild(document.createTextNode("\n"));
   }
   if (needsBr(pc, lastHinge)) pc.appendChild(el("br"));
-  if (d > 0 && n === 1 && bx.lines.length === 1 && !B.D.lines[bx.lines[0]].text) pc.dataset.ph = "Write inside the fold"; else delete pc.dataset.ph;
 }
 function needsBr(pc, lastHinge) { const bx = B.D.boxes[pc.dataset.box], n = +pc.dataset.n, last = B.D.lines[bx.lines[+pc.dataset.i0 + n - 1]]; return n > 1 && !last.text && !lastHinge; }
 function drawBox(box, d) {
