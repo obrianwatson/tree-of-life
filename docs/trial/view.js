@@ -36,10 +36,9 @@ const maxIndent = () => innerWidth < 520 ? 4 : innerWidth < 900 ? 7 : 10;      /
 let pos = null, sel = null, DEMO = false, demoSel = null, composing = false, mt = null;
 const say = t => { $("#msg").textContent = t || ""; clearTimeout(mt); if (t) mt = setTimeout(() => { $("#msg").textContent = ""; }, 5000); };
 /* a button that never takes the caret or the keyboard away */
-function press(b, fn) { let t = 0;
-  b.addEventListener("touchend", e => { const p = e.changedTouches[0], at = document.elementFromPoint(p.clientX, p.clientY); e.preventDefault(); if (at && (at === b || b.contains(at))) { t = Date.now(); fn(e); } });
-  b.addEventListener("mousedown", e => e.preventDefault());
-  b.addEventListener("click", e => { if (Date.now() - t > 600) fn(e); }); }
+function press(b, fn) {          // (the press never lands as a focus change: the caret stays in the text, and the action runs on the click)
+  b.addEventListener("pointerdown", e => e.preventDefault()); b.addEventListener("mousedown", e => e.preventDefault());
+  b.addEventListener("click", e => { e.preventDefault(); fn(e); }); }
 
 /* ================= drawing ================= */
 function lanes(box) {          // which folds sit on which lines; folds that overlap get their own lane so each shows distinctly
@@ -119,8 +118,10 @@ function setCaret(c, quiet) {
   if (!(DEMO && demoSel)) sel = { where: c.where, a: idx, b: idx };
   if (DEMO) { marks(); paintBar(); return true; }
   const pt = pointIn(pc, c.line, pos.at); if (!pt) return false;
+  const put = () => { const r = document.createRange(); r.setStart(pt[0], pt[1]); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
   if (!quiet) pc.focus({ preventScroll: true });
-  const r = document.createRange(); r.setStart(pt[0], pt[1]); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  put();
+  if (!quiet && document.activeElement !== pc) setTimeout(() => { if (pc.isConnected && document.activeElement !== pc) { pc.focus({ preventScroll: true }); put(); } }, 0);     // some browsers settle focus a beat later
   requestAnimationFrame(keepInView); paintBar(); return true;
 }
 function selAbs(pc) { const s = getSelection(); if (!s.rangeCount) return null; const r = s.getRangeAt(0); if (!pc.contains(r.startContainer) || !pc.contains(r.endContainer)) return null;

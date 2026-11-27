@@ -1,0 +1,36 @@
+name: Trial (quick)
+
+# A quick check of the Trial #01 pages (docs/trial/) in Safari's engine, so changes to the trial
+# can be tried in minutes. The full Tests workflow still runs everything in all three engines.
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/trial/**', 'tests/test_trial.py', '.github/workflows/trial.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trial-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright and WebKit
+        run: |
+          pip install --quiet playwright
+          python -m playwright install --with-deps webkit
+      - name: Run the trial test in Safari's engine
+        env:
+          BROWSER: webkit
+          CHROME: ''
+        run: timeout 800 python tests/test_trial.py
