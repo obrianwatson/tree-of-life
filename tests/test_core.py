@@ -262,6 +262,7 @@ async def sync(br, p, url):
     await b.evaluate("Lock.turnOn('Willow  Bridge candle-seven')"); await b.wait_for_function("!!T.leafNamed('Morning pages')")
     tr = await b.evaluate("T.lines(Book.D.trunk)")
     C.ok(await b.evaluate("Book.D.trunk") == await a.evaluate("Book.D.trunk") and "Morning pages" in tr and "a line from the phone" in tr, "sync: the second device joins the first one's trunk, and what it had written moves onto it " + json.dumps(tr))
+    C.ok(tr.count("Seeds") == 1 and await b.evaluate("Object.values(Book.D.leaves).filter(l => Book.title(l.id) === 'Seeds').length") == 1, "sync: a device that joins brings no second Seeds (its own was never written in) " + json.dumps(tr))
     C.ok(await b.evaluate("Object.keys(localStorage).every(k => (localStorage.getItem(k) || '').toLowerCase().indexOf('willow') < 0)"), "sync: the passphrase is never stored")
     mp = await b.evaluate("T.leafNamed('Morning pages')"); await b.evaluate("Page.go('%s')" % mp); await b.evaluate("T.at('the river is high today')"); await b.keyboard.type(" and loud"); await b.keyboard.press("Enter"); await b.keyboard.type("from the phone"); await b.evaluate("Fold.foldIn(1)")
     await push(b); await pull(a, "Book.textOf('%s').indexOf('    from the phone') > 0" % mp)

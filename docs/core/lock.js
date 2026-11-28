@@ -72,7 +72,12 @@ async function mergeBook(R) {
     if (iWin) return false;                                     // (that device will move onto this trunk itself; until then its book isn't read)
     await Keep.keepRing(B, D.trunk, "before joining another device's book", true);
     B.graft(pieceFrom(R, R.trunk)); const old = D.leaves[D.trunk], now = Date.now(), tr = D.leaves[R.trunk];
-    const carry = old.lines.filter(l => D.lines[l] && (D.lines[l].text.trim() || D.lines[l].leaf));
+    /* a starter Seeds leaf that was never written in stays behind when the joined book already has its own Seeds (no second Seeds) */
+    const isSeeds = (lines, l) => lines[l] && lines[l].leaf && (lines[l].text || "").trim().toLowerCase() === "seeds";
+    const hasSeeds = tr.lines.some(l => isSeeds(D.lines, l));
+    const untouched = l => { const s = D.leaves[D.lines[l].leaf]; return s && !(s.folds || []).length && s.lines.every(x => D.lines[x] && !D.lines[x].text.trim() && !D.lines[x].leaf); };
+    const carry = old.lines.filter(l => D.lines[l] && (D.lines[l].text.trim() || D.lines[l].leaf) && !(hasSeeds && isSeeds(D.lines, l) && untouched(l)));
+    old.lines.forEach(l => { if (carry.indexOf(l) < 0 && D.lines[l] && D.lines[l].leaf && D.leaves[D.lines[l].leaf]) { const s = D.leaves[D.lines[l].leaf]; s.lines.forEach(x => delete D.lines[x]); delete D.leaves[s.id]; } });
     carry.forEach(l => { D.lines[l].in = tr.id; tr.lines.push(l); }); (old.folds || []).forEach(f => delete D.folds[f]); old.lines.forEach(l => { if (carry.indexOf(l) < 0) delete D.lines[l]; });
     delete D.leaves[old.id]; D.trunk = R.trunk; if (carry.length) tr.updatedAt = now; changed = true;
   }
