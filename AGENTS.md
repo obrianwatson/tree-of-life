@@ -110,8 +110,16 @@ copies that list to the guided test page and the offline list in `sw.js`.
 | `commands` | `commands.js` | `;` commands | (it runs the others' actions through its own hand) |
 | `autos` | `autos.js` | Automations | (same) |
 | `harvest` | `harvest.js` | The harvest; lessons into "Ways of mine" | `harvest`, `lesson` |
+| `outside` | `outside.js` | **Claude, outside the app** (off until he switches it on): a sealed copy of the book only Claude's key opens, and Claude's deliveries added with its own hand | (it runs command steps through its own hand) |
 
 Not built yet: Views (table, board, calendar) and Seeds as a module (a Seeds leaf is simply put on a new trunk).
+
+### Claude, outside the app (`outside.js` + `tools/outside.mjs`)
+The writer can work with Claude in a separate coding chat as if it were the onboard AI. With the module on (Settings → Modules; **off by default**, because nothing goes to an AI unless he asked):
+- **Reading:** each device seals its book for Claude: `core/outside/books/<device>.json` on `tol-data` (a fresh AES-GCM-256 key wrapped with RSA-OAEP-256 for Claude's public key `docs/core/outside-key.json`). Claude reads it with `node tools/outside.mjs read`.
+- **Writing:** Claude writes a delivery (`{ title, steps: [...], line?, leaf? }`, the steps are the same as a `;command`'s) and runs `node tools/outside.mjs send file.json`. It is sealed for every device's public key (`core/outside/keys/<device>.json`; each private key stays on its device) and pushed to `core/outside/inbox/<id>.json`. A device claims it by creating `core/outside/done/<id>.json` (create-only, so it's added once), then runs it with the `outside` hand: adds and arranges, never deletes or rewrites, one Undo, colored like the AI's, recorded as "Claude (outside the app)". A delivery that doesn't fit is taken back whole and the reason goes into the next sealed book.
+- **Claude's private key never goes in the repository** (default `~/.bolw-outside/claude-private.jwk`). If it's lost: `node tools/outside.mjs keygen`, commit the new `outside-key.json`, and devices start using it.
+- This is the one place tools write to `tol-data` from outside the app: only sealed files under `core/outside/inbox/`. The GitHub key is still read only in `lock.js` (`Lock.outside` is a narrow door to `core/outside/` while sync is on and unlocked).
 
 ## 5. The rules of the book (`book.js`)
 

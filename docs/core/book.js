@@ -150,7 +150,7 @@ g.makeBook = function (store) {
     return out;
   }
   B.act = (name, needs) => act(name, needs, "me");                         // the writer's hand
-  const HANDS = { ai: 0, cmd: 0, auto: 0, book: 0 };
+  const HANDS = { ai: 0, cmd: 0, auto: 0, book: 0, outside: 0 };
   B.hand = function (kind) {                                                // one hand each for the fast AI, commands, automations, and the book itself (the harvest's facts)
     if (!(kind in HANDS) || HANDS[kind]) throw new Error("That hand was already given out."); HANDS[kind] = 1;
     return (name, needs, o) => act(name, needs, kind + (o && o.as ? ":" + String(o.as).replace(/[^\w;.-]/g, "").slice(0, 30) : ""), o && o.grant);

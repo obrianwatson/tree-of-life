@@ -69,8 +69,8 @@ function render() {
     const L = B.D.lines[id]; let e = els.get(id);
     if (!e) { e = el("div", "l"); e.dataset.id = id; e._t = null; els.set(id, e); }
     if (e._t !== L.text) setText(e, L.text);
-    const m = marksOf(L), dk = lay ? lay.decor(i) : "", w = lay && lay.twist ? lay.twist[i] || "" : "", k = L.d + "|" + (L.by === "ai" ? 1 : L.by === "book" ? 2 : 0) + "|" + m + "|" + dk + "|" + w;
-    if (e._k !== k) { e._k = k; e.className = "l" + (L.by === "ai" ? " by-ai" : L.by === "book" ? " by-book" : "") + (L.leaf ? " lf" : "") + (m ? " mk" : "") + (w ? " wi" + (w === "▸" ? " shut" : "") : ""); e.style.cssText = "--d:" + L.d + (m ? ";--m:" + m.length : "") + (dk ? ";" + dk : ""); if (m) e.dataset.m = m; else delete e.dataset.m; if (w) e.dataset.w = w; else delete e.dataset.w; }
+    const m = marksOf(L), dk = lay ? lay.decor(i) : "", w = lay && lay.twist ? lay.twist[i] || "" : "", k = L.d + "|" + (L.by === "ai" || /^outside/.test(L.by || "") ? 1 : L.by === "book" ? 2 : 0) + "|" + m + "|" + dk + "|" + w;
+    if (e._k !== k) { e._k = k; e.className = "l" + (L.by === "ai" || /^outside/.test(L.by || "") ? " by-ai" : L.by === "book" ? " by-book" : "") + (L.leaf ? " lf" : "") + (m ? " mk" : "") + (w ? " wi" + (w === "▸" ? " shut" : "") : ""); e.style.cssText = "--d:" + L.d + (m ? ";--m:" + m.length : "") + (dk ? ";" + dk : ""); if (m) e.dataset.m = m; else delete e.dataset.m; if (w) e.dataset.w = w; else delete e.dataset.w; }
     used.add(id); put(e);
   }; leaf.lines.forEach((id, i) => { drawLine(id, i);
     if (lay && lay.after && lay.after[i]) lay.after[i].forEach(F => { const key = "s:" + F.id; let e = els.get(key); if (!e) { e = el("div", "gate share"); e.contentEditable = "false"; e.dataset.f = F.id; els.set(key, e); if (lay.wireShare) lay.wireShare(e); } lay.paintShare(e, F); used.add(key); put(e); });

@@ -228,7 +228,7 @@ function paintShare(e, F) {
   if (e._sig !== sig) { e._sig = sig; e.textContent = ""; e._ls = new Map();
     const h = el("div", "sh"); h.innerHTML = `<span class="gl"><i>↻</i> ${esc(clip(src.text.trim() || "fold", 34))}</span><span class="gn">shared · lives in ${esc(clip(B.title(src.in), 22))}</span><span class="gm" role="button" aria-label="More for this shared fold">⋯</span>`; e.appendChild(h);
     if (!ls.length) e.appendChild(el("div", "nt", "Nothing is within it now."));
-    ls.forEach(x => { const s = el("div", "sl"); s.contentEditable = "true"; s.spellcheck = true; s.dataset.id = x.id; s.style.paddingLeft = (6 + x.d * 18) + "px"; if (D().lines[x.id].by === "ai") s.classList.add("by-ai"); e.appendChild(s); e._ls.set(x.id, s); }); }
+    ls.forEach(x => { const s = el("div", "sl"); s.contentEditable = "true"; s.spellcheck = true; s.dataset.id = x.id; s.style.paddingLeft = (6 + x.d * 18) + "px"; if (D().lines[x.id].by === "ai" || /^outside/.test(D().lines[x.id].by || "")) s.classList.add("by-ai"); e.appendChild(s); e._ls.set(x.id, s); }); }
   ls.forEach(x => { const s = e._ls.get(x.id), t = D().lines[x.id].text; if (s && document.activeElement !== s && s.textContent !== t) s.textContent = t; });
 }
 function caretIn(s) { const sel = getSelection(); if (!sel.rangeCount) return 0; const r = sel.getRangeAt(0), pre = document.createRange(); pre.selectNodeContents(s); try { pre.setEnd(r.startContainer, r.startOffset); } catch (x) { return 0; } return pre.toString().length; }

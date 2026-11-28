@@ -158,6 +158,19 @@ const Lock = { turnOn, turnOff, useOtherLock, hasOtherLock: () => otherKey().the
   get isOn() { return L.on; }, get unlocked() { return !!key; }, get busy() { return running; }, get runs() { return runs; }, get off() { return OFF; }, hasToken: () => !!token(), setToken: t => Keep.lsSet("tol-gh-token", String(t).trim()), deviceId: L.deviceId };
 g.Lock = Lock;
 
+/* ---------- a narrow door for "Claude, outside the app" (outside.js): files under core/outside/ only.
+   The GitHub key is still read only here; outside.js never sees it. Only while sync is on and unlocked by you. */
+const OUT = "core/outside/";
+const outPath = p => { p = String(p || ""); if (p.indexOf(OUT) !== 0 || /\.\.|[^\w\/.-]/.test(p)) throw new Error("Not an outside file."); return p; };
+Lock.outside = {
+  get ready() { return canSync(); },
+  async list(dir) { if (!canSync()) return []; return ((await gh(repo(`/contents/${outPath(dir)}${q}`), { allow404: true })) || []).filter(f => f && f.type !== "dir"); },
+  async read(f) { if (!canSync()) return null; outPath(f.path); return getListed(f); },
+  async readPath(p) { if (!canSync()) return null; return gh(repo(`/contents/${outPath(p)}${q}`), { raw: true, allow404: true }); },
+  async write(p, text) { if (!canSync()) return false; outPath(p); const cur = await gh(repo(`/contents/${p}${q}`), { allow404: true }); await putFile(p, text, cur && cur.sha); return true; },
+  async claim(p, text) { if (!canSync()) return false; outPath(p); try { await putFile(p, text, null); return true; } catch (e) { if (e.status === 422 || e.status === 409) return false; throw e; } }      // create only: a second device's claim fails
+};
+
 /* ---------- its part of Settings ---------- */
 if (g.Settings) g.Settings.add({ order: 20, title: "Sync between your devices", id: "sync", build(box) {
   const draw = async () => {

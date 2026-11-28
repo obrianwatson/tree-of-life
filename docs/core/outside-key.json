@@ -1,0 +1,13 @@
+{
+ "format": "bolw-outside-key",
+ "v": 1,
+ "who": "Claude, outside the app",
+ "made": "2026-11-28T09:41:32.660Z",
+ "key": {
+  "kty": "RSA",
+  "n": "v4OcvOr_UXdBZ3x6a6mdvVafwXn6hQXWb8oQHvb5pZkZVHG8SKOGdDbvWCbKd3lP1o2jtph2t7Kue_4IKFrZo8UuGfaUdLyB2rD7Xd009Ed7nLSJJsCkas1p9ATx1jlpOdyMWQ9NBBp3SOMqCPA9OrAShG8xzkGTFJ2kOtT9qJmC-88ScIlmjvYn1hLZmTS3F6OTcFh8DeCYL75-Il-2RUBw8769eRWJK8asGM0-HBQUvKM57P3i0_HR0wvY26vjaxL57EdvN8b1IPFfsuJygw2Gz9wazEgrnQmlDbop0YOl6tZFmrYRlg4u_K6JtYt4VBktc1osF4Km8AdsBINDbG886CCaK3eyTxHDHWlbKy_oDhp74Dhkvz2L7oeJgZcjA3_elANXwAN1cRlz8qYY9purgmMfVZMYhOZ2lO1irQRM5-PPMKHnhY8IGVuHiQwoNhQzJGiMciuGGxajKgc8yxpL4_DG9Joedp50Xw7-QVv-4mQpw7T8-DP6sveYGgkl",
+  "e": "AQAB",
+  "alg": "RSA-OAEP-256",
+  "ext": true
+ }
+}

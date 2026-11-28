@@ -981,7 +981,7 @@ async def stage7(br, p, url, phone):
     await ev("Page.go(Book.D.trunk)"); await ev("Harvest.open()"); ok("Harvests so far" in await pg.inner_text("#sheet") and "Album" in await pg.inner_text("#sheet .rows"), "from the trunk, ☰ → Harvest lists the harvests so far"); await ev("document.querySelector('#sheet [data-h]').click()"); ok(await ev("Page.leaf") == hv, "and opens one")
     # ---- modules: each a switch; off never deletes; none needs another ----
     await ev("Settings.open()"); mods = await ev("[...document.querySelectorAll('#sheet [data-mod]')].map(c => c.dataset.mod)"); await ev("Page.closeSheet(true)")
-    ok(mods == ["clock", "search", "fold", "link", "map", "marks", "ai", "requests", "commands", "autos", "harvest"], "Settings lists every module with its switch: " + ",".join(mods))
+    ok(mods == ["clock", "search", "fold", "link", "map", "marks", "ai", "requests", "commands", "autos", "harvest", "outside"], "Settings lists every module with its switch: " + ",".join(mods))
     await ev("Mods.set('harvest', false)"); await tap(pg, "#tMenu", phone); items = await ev("[...document.querySelectorAll('#menu button')].map(b => b.textContent)"); await ev("Page.closeMenu()"); await ev("Page.setCaret({ line: '%s' })" % mine)
     ok(not any(i.startswith("Harvest") for i in items) and "switched off" in (await ev("Book.act('lesson', { text: 'x' })"))["why"] and not await ev("Page.menuItems().some(i => i && i[0].indexOf('Keep in Ways') === 0)") and await ev("T.lines().length") == len(lines2) and await ev("T.lines('%s').length" % ways) == 2, "Harvest switched off: it leaves the menus and its moves are refused, and the Harvest leaf and Ways of mine are all still there")
     await ev("Mods.set('harvest', true)"); await ev("Mods.set('fold', false)"); await ev("Mods.set('ai', false)"); await ev("Mods.set('commands', false)")
@@ -1012,10 +1012,66 @@ async def _s7(br, p, url):
     await sync3(br, p, url)
     for phone in (True, False): await guide(br, p, url, 7, phone)
 
+# ====================================================================== stage 8: Claude, outside the app
+import subprocess, tempfile
+TOOL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools", "outside.mjs")
+def node(*a): return subprocess.run(["node", TOOL] + list(a), capture_output=True, text=True)
+async def outside(br, p, url):
+    """Claude, outside the app: off until switched on; a sealed copy only Claude's key opens; deliveries sealed for the device, claimed once, added with Claude's own hand, one Undo."""
+    tmp = tempfile.mkdtemp(); pub, priv = os.path.join(tmp, "pub.json"), os.path.join(tmp, "priv.jwk")
+    r = node("keygen", pub, priv); C.ok(r.returncode == 0, "outside: the tool makes a key pair " + r.stderr[:80])
+    gh = FakeGitHub(); gh.refs["tol-data"] = "d" * 40
+    A = await device(br, p, True, gh)
+    await A.add_init_script("try { localStorage.setItem('tol-gh-token', JSON.stringify('ghp_test')); } catch (e) {}")
+    await A.route("**/core/outside-key.json*", lambda rt: rt.fulfill(status=200, content_type="application/json", body=open(pub).read()))
+    a = await page(A, url)
+    C.ok(not await a.evaluate("Mods.on('outside')"), "outside: it is off until you switch it on")
+    await a.evaluate("Book.act('write', { line: Book.D.leaves[Book.D.trunk].lines[0], at: 0, words: 'the river is high ' })")
+    await a.evaluate("Lock.turnOn('willow bridge candle seven')"); await a.wait_for_function("Lock.label().indexOf('Synced') === 0")
+    await a.evaluate("Outside.tick(true)"); await a.wait_for_timeout(300)
+    C.ok(not [k for k in gh.files if k.startswith("core/outside/")], "outside: switched off, nothing is sent to Claude")
+    await a.evaluate("Mods.set('outside', true)")
+    dev = await a.evaluate("Lock.deviceId")
+    for _ in range(60):
+        if ("core/outside/books/%s.json" % dev) in gh.files and ("core/outside/keys/%s.json" % dev) in gh.files: break
+        await a.wait_for_timeout(100)
+    book = gh.files.get("core/outside/books/%s.json" % dev, (b"", ""))[0].decode()
+    C.ok(book and "river" not in book and json.loads(book)["format"] == "bolw-outside-book", "outside: switched on, a sealed copy of the book is sent, and it can't be read on the public project")
+    bf = os.path.join(tmp, "book.json"); open(bf, "w").write(book); r = node("open", bf, priv)
+    st = json.loads(r.stdout) if r.returncode == 0 else {}
+    C.ok(st.get("deviceId") == dev and "the river is high" in json.dumps(st.get("book", {})), "outside: Claude's private key opens it and reads the book " + r.stderr[:80])
+    wrong = os.path.join(tmp, "wrong.jwk"); node("keygen", os.path.join(tmp, "p2.json"), wrong)
+    C.ok(node("open", bf, wrong).returncode != 0, "outside: any other key opens nothing")
+    kf = os.path.join(tmp, "key.json"); open(kf, "w").write(gh.files["core/outside/keys/%s.json" % dev][0].decode())
+    dfile = os.path.join(tmp, "d.json"); json.dump({"id": "dtest0001", "title": "Psalm 91 to start", "steps": ["write below Psalm 91", "write within KJV", "write within 1 He that dwelleth in the secret place", "write below 2 I will say of the LORD", "go up", "go up", "fold as KJV Fold", "go up", "lift"]}, open(dfile, "w"))
+    r = node("seal", dfile, kf); sealed = r.stdout
+    C.ok(r.returncode == 0 and "dwelleth" not in sealed, "outside: a delivery is sealed for the device's key, unreadable on the public project " + r.stderr[:80])
+    gh.plant("core/outside/inbox/dtest0001.json", sealed.encode())
+    await a.evaluate("Outside.tick()"); await a.wait_for_function("!!Object.values(Book.D.lines).find(l => l.text.indexOf('He that dwelleth') >= 0)", timeout=15000)
+    pl = await a.evaluate("(() => { const L = Object.values(Book.D.lines).find(l => l.text === 'Psalm 91'); return { leaf: !!L.leaf, title: L.leaf ? Book.title(L.leaf) : '', by: L.by, fold: Object.values(Book.D.folds).filter(f => f.name === 'KJV Fold').length }; })()")
+    C.ok(pl == {"leaf": True, "title": "Psalm 91", "by": "outside:Claude", "fold": 1}, "outside: the delivery arrives by itself: a Psalm 91 leaf with the verses in the KJV Fold, written by Claude's own hand " + json.dumps(pl))
+    C.ok("core/outside/done/dtest0001.json" in gh.files and "dwelleth" not in gh.files["core/outside/done/dtest0001.json"][0].decode(), "outside: the device claims the delivery (so no other device adds it twice), and the claim has no writing in it")
+    rec = await a.evaluate("T.log()")
+    C.ok(any(x.startswith("Claude (outside the app)") for x in rec), "outside: the record of every move says Claude (outside the app) made the moves")
+    await a.evaluate("Outside.tick()"); await a.wait_for_timeout(500)
+    C.ok(await a.evaluate("Object.values(Book.D.lines).filter(l => l.text === 'Psalm 91').length") == 1, "outside: a delivery is added once, never twice")
+    await a.evaluate("Book.undo(); Page.redraw()")
+    C.ok(await a.evaluate("!Object.values(Book.D.lines).some(l => l.text === 'Psalm 91' && Book.alive(l.in))"), "outside: one Undo takes the whole delivery back")
+    await a.evaluate("Book.act('write', { line: Book.D.leaves[Book.D.trunk].lines[0], at: 0, words: 'mine ' })")
+    json.dump({"id": "dtest0002", "title": "too far", "steps": ["write below fine", "go to Nowhere at all"]}, open(dfile, "w"))
+    gh.plant("core/outside/inbox/dtest0002.json", node("seal", dfile, kf).stdout.encode())
+    await a.evaluate("Outside.tick()"); await a.wait_for_function("Outside.state.log.some(e => e.id === 'dtest0002')", timeout=15000)
+    C.ok(await a.evaluate("!Object.values(Book.D.lines).some(l => l.text === 'fine' && Book.alive(l.in)) && Outside.state.log.find(e => e.id === 'dtest0002').ok === false"), "outside: a delivery that doesn't fit is taken back whole, and Claude is told why")
+    C.ok(await a.evaluate("(() => { try { Book.hand('outside'); return false; } catch (e) { return true; } })()"), "outside: Claude's hand can't be taken by anything else")
+    C.ok(a.errs == [], "outside: no errors " + str(a.errs[:2])); await A.close()
+
+@stage("8")
+async def _s8(br, p, url): await outside(br, p, url)
+
 #STAGES-BELOW
 
 async def main():
-    port = 8811; serve(port); url = "http://localhost:%d/" % port
+    port = int(os.environ.get("PORT", 8811)); serve(port); url = "http://localhost:%d/" % port
     async with async_playwright() as p:
         br = await launch(p)
         for n in sorted(STAGES):

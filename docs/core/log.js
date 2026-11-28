@@ -48,7 +48,7 @@ function forget(since) { const n = tail.length; tail = tail.filter(e => e.t < si
 const mine = since => all().then(a => a.filter(e => e.dev === dev() && (e.t2 || e.t) >= (since || 0)));
 
 /* ---------- saying an entry in plain words ---------- */
-const WHO = w => w === "me" ? "You" : w === "ai" ? "The AI" : w === "book" ? "The book" : w.indexOf("cmd:") === 0 ? "Command " + w.slice(4) : w.indexOf("auto:") === 0 ? "Automation “" + w.slice(5) + "”" : w;
+const WHO = w => w === "me" ? "You" : w === "ai" ? "The AI" : w.indexOf("outside") === 0 ? "Claude (outside the app)" : w === "book" ? "The book" : w.indexOf("cmd:") === 0 ? "Command " + w.slice(4) : w.indexOf("auto:") === 0 ? "Automation “" + w.slice(5) + "”" : w;
 const mins = ms => ms < 60000 ? Math.max(1, Math.round(ms / 1000)) + " sec" : Math.round(ms / 60000) + " min";
 const q = s => "“" + String(s == null ? "" : s).slice(0, 50) + "”";
 const inn = e => q(e.lt) + (e.wt ? " › " + q(e.wt) : "");      // where: the page, and the fold it happened within
@@ -81,7 +81,7 @@ function openRecord(scope) {
       body.querySelectorAll("[data-m]").forEach(b => { b.onclick = () => { mode = b.dataset.m; draw(); }; });
       (mode === "leaf" ? forBranch(Page.leaf) : all()).then(list => { const box = body.querySelector("#tlBox"); if (!box) return; list = list.slice().reverse(); let day = "", h = "";
         list.slice(0, shown).forEach(e => { const d = new Date(e.t), ds = d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }); if (ds !== day) { day = ds; h += `<h2>${Page.esc(ds)}</h2>`; }
-          h += `<div class="tl${e.who === "ai" ? " by-ai" : e.who === "book" ? " by-book" : ""}"><small>${Page.esc(d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</small>${Page.esc(say(e))}</div>`; });
+          h += `<div class="tl${e.who === "ai" || String(e.who || "").indexOf("outside") === 0 ? " by-ai" : e.who === "book" ? " by-book" : ""}"><small>${Page.esc(d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</small>${Page.esc(say(e))}</div>`; });
         box.innerHTML = h || `<div class="none">Nothing here yet. The record starts with your first move.</div>`;
         if (list.length > shown) { const b = Page.el("button", "", "Show earlier"); b.onclick = () => { shown += 300; draw(); }; box.appendChild(b); } }); };
     draw(); });
