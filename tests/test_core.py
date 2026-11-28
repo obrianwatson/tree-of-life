@@ -551,6 +551,172 @@ async def _s4(br, p, url):
     await sync2(br, p, url)
     for phone in (True, False): await guide(br, p, url, 4, phone)
 
+# ====================================================================== stage 5: the fast AI and requests
+KEY = "sk-ant-test-SECRETKEY1234"; OKEY = "sk-other-SECRETKEY9876"
+class FakeAI:
+    """A stand-in for Claude (api.anthropic.com) and for an OpenAI-compatible AI (api.openai.com): both stream scripted replies."""
+    def __init__(self): self.script = []; self.seen = []; self.hold = None; self.headers = []; self.urls = []
+    def say(self, *blocks): self.script.append(blocks[0] if len(blocks) == 1 and callable(blocks[0]) else list(blocks))
+    async def attach(self, ctx):
+        await ctx.route("https://api.anthropic.com/**", self.claude); await ctx.route("https://api.openai.com/**", self.openai)
+        await ctx.add_init_script("try { if (!localStorage.getItem('tol-ai')) localStorage.setItem('tol-ai', JSON.stringify({ key: '%s' })); } catch (e) {}" % KEY)
+    async def next(self, req):
+        body = json.loads(req.post_data); self.seen.append(body); self.headers.append(dict(req.headers)); self.urls.append(req.url)
+        if self.hold is not None: await self.hold.wait()
+        blocks = self.script.pop(0) if self.script else [("text", "(nothing scripted)")]
+        return blocks(body) if callable(blocks) else blocks
+    async def claude(self, route):
+        req = route.request; cors = {"access-control-allow-origin": "*", "access-control-allow-headers": "*"}
+        if req.method == "OPTIONS": return await route.fulfill(status=204, headers=cors)
+        if "/v1/models" in req.url: return await route.fulfill(status=200, headers=cors, content_type="application/json", body=json.dumps({"data": [{"id": m, "display_name": m.replace("-", " ").title()} for m in ("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2")]}))
+        blocks = await self.next(req); ev = [{"type": "message_start", "message": {"usage": {"input_tokens": 1000}}}]; tool = False
+        for i, b in enumerate(blocks):
+            if b[0] == "text":
+                ev.append({"type": "content_block_start", "index": i, "content_block": {"type": "text", "text": ""}})
+                for w in b[1].split(" "): ev.append({"type": "content_block_delta", "index": i, "delta": {"type": "text_delta", "text": w + " "}})
+            else:
+                tool = True; ev.append({"type": "content_block_start", "index": i, "content_block": {"type": "tool_use", "id": "tu%d_%d" % (len(self.seen), i), "name": b[0], "input": {}}})
+                js = json.dumps(b[1]); h = len(js) // 2
+                for part in (js[:h], js[h:]): ev.append({"type": "content_block_delta", "index": i, "delta": {"type": "input_json_delta", "partial_json": part}})
+            ev.append({"type": "content_block_stop", "index": i})
+        ev.append({"type": "message_delta", "delta": {"stop_reason": "tool_use" if tool else "end_turn"}, "usage": {"output_tokens": 500}}); ev.append({"type": "message_stop"})
+        try: await route.fulfill(status=200, headers=cors, content_type="text/event-stream", body="".join("event: %s\ndata: %s\n\n" % (e["type"], json.dumps(e)) for e in ev))
+        except Exception: pass
+    async def openai(self, route):
+        req = route.request; cors = {"access-control-allow-origin": "*", "access-control-allow-headers": "*"}
+        if req.method == "OPTIONS": return await route.fulfill(status=204, headers=cors)
+        if req.url.endswith("/models"): self.headers.append(dict(req.headers)); return await route.fulfill(status=200, headers=cors, content_type="application/json", body=json.dumps({"data": [{"id": "gpt-big"}, {"id": "gpt-small"}]}))
+        blocks = await self.next(req); ev = [{"choices": [{"delta": {"role": "assistant", "content": ""}}]}]; n = 0
+        for b in blocks:
+            if b[0] == "text":
+                for w in b[1].split(" "): ev.append({"choices": [{"delta": {"content": w + " "}}]})
+            else:
+                js = json.dumps(b[1]); h = len(js) // 2
+                ev.append({"choices": [{"delta": {"tool_calls": [{"index": n, "id": "call_%d_%d" % (len(self.seen), n), "type": "function", "function": {"name": b[0], "arguments": ""}}]}}]})
+                for part in (js[:h], js[h:]): ev.append({"choices": [{"delta": {"tool_calls": [{"index": n, "function": {"arguments": part}}]}}]})
+                n += 1
+        ev.append({"choices": [{"delta": {}, "finish_reason": "tool_calls" if n else "stop"}]})
+        try: await route.fulfill(status=200, headers=cors, content_type="text/event-stream", body="".join("data: %s\n\n" % json.dumps(e) for e in ev) + "data: [DONE]\n\n")
+        except Exception: pass
+
+async def ask(pg, text, phone, wait=True):
+    await pg.fill("#aiIn", text); await tap(pg, "#aiSend", phone)
+    if wait: await pg.wait_for_function("!AI.busy")
+LAST = "[...document.querySelectorAll('.m.it')].pop()"
+async def answer(pg, allow):
+    await pg.wait_for_selector(".m.it:last-child .ask .row button"); await pg.evaluate("[...%s.querySelectorAll('.ask .row button')].find(b => (b.textContent.indexOf('Don') === 0) === %s).click()" % (LAST, "false" if allow else "true")); await pg.wait_for_function("!AI.busy")
+
+async def stage5(br, p, url, phone):
+    who = ("iPhone" if phone else "laptop") + " 5: "; ok = lambda c, m: C.ok(c, who + m)
+    ai = FakeAI(); ctx = await device(br, p, phone, ai=ai); pg = await page(ctx, url); ev = pg.evaluate
+    await new_leaf(pg, "Ways of mine", "Always keep lines under ten words."); psalm = await new_leaf(pg, "Psalm 23", "he leadeth me beside the still waters"); song = await new_leaf(pg, "River song", SONG)
+    L = lambda t, leaf=None: ev("T.find(%s%s)" % (json.dumps(t), (", '%s'" % leaf) if leaf else ""))
+    await ev("T.at('carry me home')")
+    # ---- the window ----
+    await tap(pg, "#tAI", phone); box = await pg.locator("#ai").bounding_box(); vw = pg.viewport_size["width"]
+    ok((box["width"] >= vw - 1) if phone else (box["width"] == 400 and box["x"] == vw - 400), "✦ opens the AI: " + ("full screen" if phone else "a side window beside the page"))
+    ok(await pg.inner_text("#aiBack") == ("← Book" if phone else "Hide") and "Claude" in await pg.inner_text("#aiModel"), "its way back, and which AI is in use, are at the top")
+    await ev("document.querySelector('#aiModel').click()"); await pg.wait_for_selector('#sheet [data-m="claude-fable-5-2"]')
+    provs = await ev("[...document.querySelectorAll('#sheet [data-p]')].map(b => b.dataset.p)")
+    ok(provs[:4] == ["claude", "openai", "venice", "openrouter"], "Which AI? lists Claude and the OpenAI-compatible ones (ChatGPT, Venice, OpenRouter), and every model the key can use")
+    await ev("document.querySelector('#sheet [data-m=\"claude-haiku-5-5\"]').click()"); ok("haiku-5-5" in await pg.inner_text("#aiModel"), "picking a model")
+    # ---- a reply streams; what the AI is given ----
+    ai.say(("text", "It is about being carried over."))
+    await ask(pg, "What is this about?", phone); b = ai.seen[-1]; cur = await L("carry me home")
+    ok(await pg.inner_text(".m.it .tx") == "It is about being carried over. " and b["model"] == "claude-haiku-5-5" and b["stream"] is True, "a reply streams into the chat, from the model you chose")
+    ok("LEAF “River song”" in b["system"] and (cur + " |   carry me home") in b["system"] and ("THE CURSOR IS ON: " + cur) in b["system"], "it sees the leaf you're on, line by line, and where your cursor is")
+    ok("Always keep lines under ten words." in b["system"], "your “Ways of mine” leaf goes along as standing instructions")
+    ok(KEY not in json.dumps(b) and ai.headers[-1].get("x-api-key") == KEY and "he leadeth me" not in b["system"], "the key travels only in the request's own header; leaves you didn't attach aren't sent")
+    names = [t["name"] for t in b["tools"]]
+    ok(all(n in names for n in ["write", "grow", "lift", "move", "fold", "name_fold", "detail", "link", "bookmark", "search", "read_leaf", "read_map", "write_request"]), "its tools are the book's own actions: " + ",".join(names))
+    # ---- it acts through the same actions ----
+    c0 = await ev("Clock.data.ms"); ch = await L("Chorus"); v2 = await L("Verse two"); sw = await L("still waters", psalm)
+    ai.say(("read_leaf", {})); ai.say(("fold", {"from": ch, "name": "Chorus"}), ("write", {"line": ch, "how": "after", "words": "Bridge\n\tand if the water rises\n\tI will rise with it"}))
+    ai.say(("link", {"from": cur, "to": sw, "label": "echoes"}), ("write", {"line": v2, "how": "inside", "words": "the bridge held"}), ("bookmark", {"line": v2, "waiting": "a last line"})); ai.say(("text", "Done: folded, wrote a bridge, linked and bookmarked."))
+    await ask(pg, "Fold the chorus as Chorus, add a bridge after it, link carry me home to the psalm, add a line under verse two", phone)
+    t = await ev("T.text()"); acts = await ev("[...%s.querySelectorAll('.act')].map(a => a.textContent)" % LAST)
+    ok(t == "Verse one\n    the river is high\n    and the banks are low\nChorus\n    carry me over\n    carry me home\nBridge\n    and if the water rises\n    I will rise with it\nVerse two\n    the bridge held\n    the rain came down", "it wrote a branch after the chorus and a line under verse two, right where asked")
+    ok(len(acts) == 6 and acts[0].startswith("· Read") and acts[1] == "✓ Folded 3 lines as “Chorus”" and acts[2].startswith("✓ Wrote 3 lines after “Chorus”") and acts[3].startswith("✓ Linked “carry me home” ↔ “he leadeth me beside the") and acts[3].endswith("(echoes)") and acts[5].startswith("✓ Left a bookmark"), "every action is a line in the chat: " + " | ".join(acts))
+    br_ = await L("Bridge"); ok(await ev("Book.D.lines['%s'].by" % br_) == "ai" and await ev("Fold.pieces('Chorus')[0].by") == "ai" and await ev("Link.of('%s')[0].label" % cur) == "echoes" and await ev("Marks.waiting().length") == 1, "the book knows the AI made them")
+    ok(await ev("Clock.data.ms") == c0, "the AI's writing adds no writing time")
+    await ev("%s.querySelectorAll('.act')[2].click()" % LAST); await settle(pg)
+    ok(await ev("document.querySelector('#pg .l.flash').textContent") == "Bridge" and await ev("document.querySelector('#pg .l.flash').classList.contains('by-ai')") and (not phone or not await ev("AI.isOpen")), "tapping an action line jumps to it; the AI's writing has its own color")
+    await ev("T.at('Bridge')"); await pg.keyboard.type(" (mine now)"); ok(await ev("Book.D.lines['%s'].by" % br_) == "me", "editing its line makes it yours"); await ev("Page.doUndo()")
+    if phone: await tap(pg, "#tAI", phone)
+    await ev("%s.querySelector('.undo').click()" % LAST); await settle(pg)
+    ok(await ev("T.text()") == SONG.replace("\t", "    ") and await ev("Fold.pieces('Chorus').length") == 0 and await ev("Link.of('%s').length" % cur) == 0 and await ev("Marks.list().length") == 0, "one reply = one Undo: the fold, the writing, the link and the bookmark all go back together")
+    ok(await ev("AI.chat.msgs[AI.chat.msgs.length - 1].undone") is True, "and the chat says its changes were undone")
+    log = " | ".join(await ev("T.log()")); ok("The AI folded 3 lines in “River song” as “Chorus”" in log and "The AI linked two lines (echoes)" in log and "You asked the AI:" in log, "the record says what the AI did, and what you asked")
+    # ---- it asks before changing or removing your words ----
+    bk = await L("and the banks")
+    ai.say(("write", {"line": bk, "how": "replace", "words": "and the banks lie low"})); ai.say(("text", "I left it."))
+    await ask(pg, "Reword the banks line", phone, wait=False); await pg.wait_for_selector(".m.it:last-child .ask .allow"); card = await pg.inner_text(".m.it:last-child .ask")
+    ok("and the banks are low" in card and "and the banks lie low" in card and await ev("Book.D.lines['%s'].text" % bk) == "and the banks are low", "changing your words: a card shows before and after, and nothing has changed yet")
+    await answer(pg, False); ok(await ev("Book.D.lines['%s'].text" % bk) == "and the banks are low" and ai.seen[-1]["messages"][-1]["content"][0].get("is_error") is True, "Don't: your words stay, and the AI is told no")
+    ai.say(("write", {"line": bk, "how": "replace", "words": "and the banks lie low"})); ai.say(("text", "Changed."))
+    await ask(pg, "Do it", phone, wait=False); await answer(pg, True); ok(await ev("Book.D.lines['%s'].text" % bk) == "and the banks lie low" and await ev("Book.D.lines['%s'].by" % bk) == "ai", "Allow: the change is made, and the line is marked as the AI's")
+    await ev("%s.querySelector('.undo').click()" % LAST); ok(await ev("Book.D.lines['%s'].text" % bk) == "and the banks are low" and await ev("Book.D.lines['%s'].by" % bk) == "me", "Undo puts your words back as yours")
+    f = await ev("Book.act('fold', { from: '%s', name: 'Chorus' })" % ch); await ev("Book.act('link', { from: '%s', to: '%s' })" % (cur, sw))
+    ai.say(("write", {"line": v2, "how": "remove"}), ("unfold", {"fold": f["fold"]}), ("unlink", {"from": cur, "to": sw})); ai.say(("text", "Left all three."))
+    await ask(pg, "Delete verse two, remove the fold and the link", phone, wait=False)
+    for _ in range(3): await pg.wait_for_selector(".m.it:last-child .ask .row button"); await ev("[...%s.querySelectorAll('.ask .row button')].find(b => b.textContent.indexOf('Don') === 0).click()" % LAST); await pg.wait_for_timeout(60)
+    await pg.wait_for_function("!AI.busy")
+    ok(await ev("!!Book.D.lines['%s']" % v2) and await ev("!!Book.D.folds['%s']" % f["fold"]) and await ev("Link.of('%s').length" % cur) == 1 and await pg.locator(".m.it:last-child .ask").count() == 3, "deleting a line, removing a fold, removing a link: each asks first, and Don't leaves them")
+    ok(await ev("Book.checkpoint('write', { line: '%s', words: 'x' }, 'ai')" % cur) == "The AI only acts while it is answering you.", "outside a reply the AI can't act at all")
+    # ---- folds carry instructions; attached leaves go along ----
+    await ev("Book.act('teach', { name: 'Chorus', words: 'Keep every chorus line to four words.' })"); await ev("AI.chat.attach = ['%s']" % psalm); ai.say(("text", "Yes."))
+    await ask(pg, "ok?", phone); sysm = ai.seen[-1]["system"]
+    ok("INSIDE FOLDS NAMED “Chorus”, FOLLOW THE WRITER'S INSTRUCTIONS: Keep every chorus line to four words." in sysm and "A LEAF THE WRITER ATTACHED" in sysm and "he leadeth me beside the still waters" in sysm, "a named fold's instructions and a leaf you attach both go along")
+    # ---- Stop, and offline ----
+    ai.hold = asyncio.Event(); ai.say(("text", "never shown")); await ask(pg, "A long story", phone, wait=False); await pg.wait_for_selector("#aiStop:not(.hide)"); await tap(pg, "#aiStop", phone); await pg.wait_for_function("!AI.busy"); ai.hold.set(); ai.hold = None; ai.script.clear()
+    ok(await ev("AI.chat.msgs[AI.chat.msgs.length - 1].stopped") is True and await pg.is_visible("#aiSend"), "Stop stops the reply")
+    await ctx.set_offline(True); await ev("dispatchEvent(new Event('offline'))"); n = len(ai.seen); await pg.fill("#aiIn", "a thought for later"); await ev("AI.send()"); await pg.wait_for_timeout(350)
+    ok("offline" in (await pg.inner_text("#aiNote")).lower() and len(ai.seen) == n and "a thought for later" in await ev("localStorage.getItem(Keep.K.chats)"), "offline: it says it needs the internet, sends nothing, and keeps your draft")
+    await ctx.set_offline(False); await ev("dispatchEvent(new Event('online'))"); await pg.fill("#aiIn", "")
+    # ---- any OpenAI-compatible AI, through the same window ----
+    await ev("Settings.open()"); await pg.fill('#sheet [data-key="openai"]', OKEY); await ev("document.querySelector('#saSave').click()")
+    hint = await pg.inner_text('#sheet [data-hint="openai"]'); ok(hint == "saved (ends in …9876)" and OKEY not in await pg.inner_text("#sheet") and await pg.input_value('#sheet [data-key="openai"]') == "", "a key for another AI is saved on the device; only its last four letters are ever shown")
+    await ev("Page.closeSheet(true)"); await ev("document.querySelector('#aiModel').click()"); await ev("document.querySelector('#sheet [data-p=openai]').click()"); await pg.wait_for_selector('#sheet [data-m="gpt-big"]'); await ev("document.querySelector('#sheet [data-m=\"gpt-big\"]').click()")
+    ok("ChatGPT" in await pg.inner_text("#aiModel") and "gpt-big" in await pg.inner_text("#aiModel"), "choose ChatGPT (or Venice, OpenRouter…) and one of its models from the same place")
+    ai.say(("text", "On it."), ("write", {"line": cur, "how": "after", "words": "all the way home"})); ai.say(("text", "Added a line."))
+    await ask(pg, "Add a line after carry me home", phone); first = ai.seen[-2]; second = ai.seen[-1]
+    ok(ai.urls[-1] == "https://api.openai.com/v1/chat/completions" and ai.headers[-1].get("authorization") == "Bearer " + OKEY and first["model"] == "gpt-big" and first["messages"][0]["role"] == "system" and "LEAF “River song”" in first["messages"][0]["content"], "it talks to that AI's own address with that AI's key, with the same instructions and leaf")
+    ok(first["tools"][0]["type"] == "function" and any(t["function"]["name"] == "write" and "line" in t["function"]["parameters"]["properties"] for t in first["tools"]) and OKEY not in json.dumps(first) and KEY not in json.dumps(first), "the same actions are offered, in that AI's own format; no key is in what it reads")
+    ok(second["messages"][-1]["role"] == "tool" and "New line ids" in second["messages"][-1]["content"] and second["messages"][-2]["tool_calls"][0]["function"]["name"] == "write", "its tool calls go through the same loop and it is told the result")
+    nl = await L("all the way home"); ok(bool(nl) and await ev("Book.D.lines['%s'].by" % nl) == "ai" and "✓ Wrote 1 line after" in await pg.inner_text(".m.it:last-child") and "Added a line." in await pg.inner_text(".m.it:last-child"), "and the book changed the same way: its line, in its color, with its action line")
+    # ---- one spending limit ----
+    sp = await ev("Socket.spend()"); ok(sp["calls"] >= 9 and sp["usd"] > 0, "what's spent this month is estimated across every AI ($%.4f in %d requests)" % (sp["usd"], sp["calls"]))
+    await ev("Socket.setLimit(0.0001)"); n = len(ai.seen); await ev("AI.show('chat')"); await pg.fill("#aiIn", "one more"); await ev("AI.send()"); await pg.wait_for_timeout(200)
+    ok(len(ai.seen) == n and "spending limit" in await pg.inner_text("#aiNote") and await pg.is_disabled("#aiSend"), "at the limit nothing more is sent, whichever AI is chosen"); await ev("Socket.setLimit(10)"); await ev("Socket.use('claude')"); await ev("AI.show('chat')"); await pg.fill("#aiIn", "")
+    # ---- requests to a coding AI ----
+    ai.say(("write_request", {"want": "Show a word count for each leaf", "done_looks_like": "A small count at the top of every leaf", "why": "To see how long a song is", "module": "the page"})); ai.say(("text", "I can't change BOLW myself, so I wrote a request."))
+    await ask(pg, "I want BOLW to show a word count. Write a request.", phone); rq = await ev("Requests.list()[0]")
+    rl = await ev("T.lines('%s')" % rq["leaf"]); ok(rq["status"] == "notyet" and rl[:4] == ["What I want: Show a word count for each leaf", "Done looks like: A small count at the top of every leaf", "Why: To see how long a song is", "Which part of BOLW: the page"] and rl[4].startswith("Where I was: Trunk › River song") and rl[5] == "Status: Not yet", "the AI can't change BOLW itself; it writes a request: a leaf with what you want, what done looks like, why, which part, and where you were")
+    ok(await ev("Book.path('%s').map(Book.title).join(' › ')" % rq["leaf"]) == "Trunk › Requests › Show a word count for each leaf" and "✓ Wrote a request: “Show a word count for each" in await pg.inner_text(".m.it:last-child"), "it lives on a Requests leaf on the trunk, and shows as one line in the chat")
+    pr = await ev("Requests.prompt(Requests.list()[0])"); ok("docs/core/" in pr and "AGENTS.md" in pr and "What I want: Show a word count for each leaf" in pr and "tests/test_core.py" in pr and "Status:" not in pr, "Copy for coding AI gives a ready-to-paste prompt: the request, where the code is, and how to work")
+    await ev("AI.close()"); await ev("Requests.openList()"); await ev("document.querySelector('#sheet [data-dn]').click()")
+    ok(await ev("Requests.list()[0].status") == "done" and await ev("T.lines('%s')[5]" % rq["leaf"]) == "Status: Done" and "Done ·" in await pg.inner_text("#sheet"), "you mark it Done (or Not yet); the leaf's Status line follows")
+    await ev("document.querySelector('#rqNew').click()"); await pg.fill('#sheet [data-f="want"]', "A darker night look"); await ev("[...document.querySelectorAll('#cdRow button')][0].click()"); await pg.wait_for_function("Requests.list().length === 2")
+    ok(await ev("Requests.list()[0].want") == "A darker night look" and await ev("Book.D.lines[Book.D.leaves[Requests.list()[0].leaf].lines[0]].by") == "me", "you can write a request yourself with the same card as a bookmark")
+    await ev("Page.closeSheet(true)")
+    # ---- chat history; switches ----
+    await ev("AI.open()"); await ev("AI.show('list')"); titles = await ev("[...document.querySelectorAll('#aiList [data-c] b')].map(b => b.textContent)")
+    ok(len(titles) >= 1 and "What is this about?" in titles, "past chats are listed, newest first")
+    cid = await ev("Object.values(AI.chats.chats).find(c => c.title === 'What is this about?').id"); await ev("document.querySelector('[data-more=\"%s\"]').click()" % cid)
+    ok(await ev("(() => { const b = [...document.querySelectorAll('#menu button')].find(b => b.textContent === 'Delete'); const r = b.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === b; })()"), "the ⋯ menu shows on top of the AI window, where a finger can reach it")
+    await ev("[...document.querySelectorAll('#menu button')].find(b => b.textContent === 'Delete').click()"); gone = await pg.locator('#aiList [data-back="%s"]' % cid).count(); await ev("document.querySelector('[data-back=\"%s\"]').click()" % cid)
+    ok(gone == 1 and await pg.locator('#aiList [data-c="%s"]' % cid).count() == 1, "a deleted chat waits under Recently deleted and can be brought back")
+    await ev("AI.close()"); await ev("Mods.set('fold', false)"); await ev("AI.open()"); tn = await ev("AI.tools.map(t => t.name)"); await ev("Mods.set('fold', true)")
+    ok("fold" not in tn and "name_fold" not in tn and "write" in tn, "it does what you can with the modules that are on: Fold switched off takes the folding tools away from it")
+    await ev("Mods.set('ai', false)"); ok(await pg.locator("#tAI.hide").count() == 1 and not await ev("AI.isOpen") and await ev("Object.keys(AI.chats.chats).length") >= 1, "the AI has its own switch; off, its window closes and the chats are kept"); await ev("Mods.set('ai', true)")
+    j = await ev("Keep.asJSON(Book, { chats: Keep.lsGet(Keep.K.chats) })"); ok(KEY not in j and OKEY not in j and "What is this about?" in j, "export has the chats and no keys")
+    ok(pg.errs == [], "no errors on the page " + str(pg.errs[:2])); await ctx.close()
+
+@stage("5")
+async def _s5(br, p, url):
+    for phone in (True, False): await stage5(br, p, url, phone)
+    for phone in (True, False): await guide(br, p, url, 5, phone)
+
 #STAGES-BELOW
 
 async def main():

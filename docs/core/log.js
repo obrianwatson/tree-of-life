@@ -72,7 +72,7 @@ function openRecord(scope) {
       body.querySelectorAll("[data-m]").forEach(b => { b.onclick = () => { mode = b.dataset.m; draw(); }; });
       (mode === "leaf" ? forBranch(Page.leaf) : all()).then(list => { const box = body.querySelector("#tlBox"); if (!box) return; list = list.slice().reverse(); let day = "", h = "";
         list.slice(0, shown).forEach(e => { const d = new Date(e.t), ds = d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }); if (ds !== day) { day = ds; h += `<h2>${Page.esc(ds)}</h2>`; }
-          h += `<div class="tl${e.who === "ai" ? " ai" : ""}"><small>${Page.esc(d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</small>${Page.esc(say(e))}</div>`; });
+          h += `<div class="tl${e.who === "ai" ? " by-ai" : ""}"><small>${Page.esc(d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</small>${Page.esc(say(e))}</div>`; });
         box.innerHTML = h || `<div class="none">Nothing here yet. The record starts with your first move.</div>`;
         if (list.length > shown) { const b = Page.el("button", "", "Show earlier"); b.onclick = () => { shown += 300; draw(); }; box.appendChild(b); } }); };
     draw(); });

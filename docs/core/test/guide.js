@@ -27,11 +27,21 @@ const strip = el("div", "gt"); strip.innerHTML = `<div class="gtl"><b id="gN"></
 function place() { const sheet = $("#sheet"), ai = $("#ai"), t = !sheet.classList.contains("hide") ? sheet : (ai && !ai.classList.contains("hide") && !matchMedia("(pointer:fine) and (min-width:900px)").matches) ? ai : $("#head"); if (strip.parentNode !== t) { t.insertBefore(strip, t.firstChild); if (window.AI && window.AI.fit) window.AI.fit(); } }
 place(); new MutationObserver(place).observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
+/* ---------- the rehearsal AI (Show me only): a scripted stand-in, no key, no cost ---------- */
+let script = [];
+if (window.Socket) window.Socket.plug("rehearsal", { label: "Rehearsal", who: "the AI", hasKey: () => true, models: async () => [{ id: "rehearsal", label: "Rehearsal (no cost)" }],
+  async stream({ messages, signal, onText }) { let blocks = script.shift() || [["text", "(end of the rehearsal)"]]; if (typeof blocks === "function") blocks = blocks(messages); const content = []; let tool = false;
+    for (const b of blocks) { if (b[0] === "text") { let t = ""; for (const w of b[1].split(" ")) { if (signal.aborted) throw Object.assign(new Error("stopped"), { name: "AbortError" }); onText(w + " "); t += w + " "; await new Promise(r => setTimeout(r, QUICK ? 1 : 70)); } content.push({ type: "text", text: t }); }
+      else { tool = true; await new Promise(r => setTimeout(r, QUICK ? 1 : 500)); content.push({ type: "tool_use", id: "t" + Math.random().toString(36).slice(2), name: b[0], input: typeof b[1] === "function" ? b[1](messages) : b[1] }); } }
+    return { content, stop: tool ? "tool_use" : "end_turn", usage: { in: 0, out: 0 } }; } });
+const lastIds = m => { const t = JSON.stringify(m[m.length - 1]); return (t.match(/\b[lfo][a-z0-9]{8,10}\b/g) || []); };
+
 /* ---------- the finger (Show me) ---------- */
 let run = 0, DEMO = false; const fg = $("#finger"), shield = $("#shield");
 const sleep = (ms, r) => new Promise((res, rej) => setTimeout(() => r === run ? res() : rej(0), QUICK ? Math.min(ms, 3) : ms));
 async function demo(fn) {
-  const before = JSON.stringify(B.D), uiB = JSON.stringify(Page.ui), y = scrollY, r = ++run, extra = Page.fire("demoStart") || null;
+  const before = JSON.stringify(B.D), uiB = JSON.stringify(Page.ui), y = scrollY, r = ++run, AI = window.AI, Socket = window.Socket, prov = Socket && Socket.using, chatsB = AI ? JSON.stringify(AI.chats) : null;
+  if (Socket) { Socket.use("rehearsal"); script = []; } if (AI) AI.close();
   openTask(false); Page.closeSheet(true); DEMO = true; Page.demo = true; shield.classList.remove("hide"); fg.classList.remove("hide"); fg.style.left = "50%"; fg.style.top = "70%";
   const f = {
     sleep: ms => sleep(ms, r), say: Page.say, find, leafNamed,
@@ -50,10 +60,16 @@ async function demo(fn) {
     async select(a, b) { const ia = find(a), ib = find(b); await f.point(Page.lineOf(ia)); fg.classList.add("down"); await sleep(300, r); await f.point(Page.lineOf(ib)); fg.classList.remove("down"); Page.demoSelect(ia, ib); await sleep(500, r); },
     async gate(fid, more) { const e = document.querySelector('.gate[data-f="' + fid + '"]' + (more ? " .gm" : "")); await f.tap(e); if (!more) window.Fold.toggle(fid); await sleep(800, r); },
     async undo() { await f.tap($("#b_undo")); Page.doUndo(); await sleep(900, r); },
+    /* the AI window */
+    async spark() { await f.tap($("#tAI")); AI.open(); AI.newChat({ leaf: Page.leaf }); await sleep(800, r); },
+    async ask(text, ...replies) { script = replies; const inp = $("#aiIn"); await f.point(inp); for (const ch of text) { inp.value += ch; await sleep(20, r); } await f.tap($("#aiSend")); return { done: AI.send(inp.value) }; },
+    async reply(text, ...replies) { await (await f.ask(text, ...replies)).done; await sleep(900, r); },
+    async back() { await f.click("#aiBack"); },
     async away() { const a = $("#col"); a.style.transition = "opacity .6s"; a.style.opacity = 0; await sleep(1300, r); a.style.opacity = ""; await sleep(900, r); a.style.transition = ""; }
   };
   try { await fn(f); await sleep(1300, r); } catch (e) { if (e !== 0) console.error(e); }
-  DEMO = false; Page.fire("demoEnd", extra); fg.classList.add("hide"); shield.classList.add("hide"); Page.closeSheet(true); Page.closeMenu(); $("#toast").classList.add("hide"); Page.demo = false;
+  DEMO = false; if (AI && AI.busy) { $("#aiStop").click(); await new Promise(r2 => setTimeout(r2, 80)); } document.querySelectorAll(".ask .row button").forEach(b => { if (b.textContent.indexOf("Don") === 0) b.click(); }); if (AI && AI.busy) await new Promise(r2 => setTimeout(r2, 120));
+  if (Socket) Socket.use(prov); if (AI) { AI.close(); AI.replaceChats(JSON.parse(chatsB)); } fg.classList.add("hide"); shield.classList.add("hide"); Page.closeSheet(true); Page.closeMenu(); $("#toast").classList.add("hide"); Page.demo = false;
   B.replace(JSON.parse(before)); const u = JSON.parse(uiB); Page.ui = u; Page.show(D().leaves[u.leaf] && B.alive(u.leaf) ? u.leaf : D().trunk); scrollTo(0, y); openTask(true);
 }
 shield.addEventListener("click", () => { run++; });
@@ -109,6 +125,20 @@ STAGES[4] = { name: "Bookmarks", tasks: [
     show: async f => { B.act("mark", { line: find("Verse two", river()), waiting: "a second line that rhymes with night" }); await f.go(leafNamed("Psalm 23")); await f.top("Bookmarks"); await f.sleep(1200); await f.click("#sheet [data-j]"); await f.sleep(1400); } },
   { t: "Done stays as a record", d: "In <b>☰</b> → <b>Bookmarks</b>, tap <b>Done</b> on a bookmark. It moves down to <i>Done (kept as a record)</i> and its ⚑ leaves the line. Open its card: <b>Not done after all</b> puts it back.",
     show: async f => { B.act("mark", { line: find("Verse two", river()), waiting: "a second line that rhymes with night" }); await f.go(river()); await f.top("Bookmarks"); await f.sleep(900); await f.click("#sheet [data-d]"); await f.sleep(1800); } }
+] };
+STAGES[5] = { name: "The fast AI and requests", tasks: [
+  { t: "Open the AI, choose it, ask", d: "Tap <b>✦</b> (top right): the AI opens full screen; <b>← Book</b> goes back. Tap the AI's name at the top to choose which AI and which model. Ask something about the leaf you're on and watch the answer arrive word by word. Ask for something long and tap <b>Stop</b>.", dLaptop: "Press <b>⌘K</b> (or click ✦): the AI opens beside the page. Click the AI's name at the top to choose which AI and which model. Ask something about the leaf you're on and watch it arrive word by word. Ask for something long and press <b>Stop</b>.", n: "Trying it yourself uses your own key: ☰ → Settings → The fast AI.",
+    show: async f => { await f.go(river()); await f.spark(); await f.point($("#aiModel")); await f.reply("What is this song about?", [["text", "A crossing. The river is high, the banks are low, and the singer asks to be carried over and home."]]); const p = await f.ask("Tell me the whole history of river songs", [["text", "Long before anyone wrote them down, people sang at the water's edge: work songs for the ferrymen, crossing songs for the ones leaving, and slow songs for the ones who never came back, and every one of them"]]); await f.sleep(1700); await f.tap($("#aiStop")); $("#aiStop").click(); await p.done; await f.sleep(800); await f.back(); } },
+  { t: "It acts in the book", d: "In a leaf, ask: <i>“Fold the chorus and name it Chorus, then write a two-line bridge after it.”</i> Check: each thing it did is a line in the chat; tapping one takes you there; its writing has its own color; <b>Undo the AI’s changes</b> takes the whole reply back in one tap.",
+    show: async f => { await f.go(river()); await f.spark(); await f.reply("Fold the chorus and name it Chorus, then write a two-line bridge after it", [["read_leaf", {}]], [["fold", { from: find("Chorus"), name: "Chorus" }]], [["write", { line: find("Chorus"), how: "after", words: "Bridge\n\tand if the water rises\n\tI will rise with it" }]], [["text", "I folded the chorus as “Chorus” and wrote a two-line bridge after it."]]);
+      const acts = document.querySelectorAll(".m.it:last-child .act"); await f.click(acts[acts.length - 1]); await f.sleep(1600); if (!matchMedia("(pointer:fine) and (min-width:900px)").matches) { await f.tap($("#tAI")); AI.open(); await f.sleep(600); } await f.click(".m.it:last-child .undo"); await f.sleep(900); } },
+  { t: "It asks before changing your words", d: "Ask it to <i>reword one of your lines</i>, or to <i>delete a line</i>, or to <i>remove a fold</i>. Each time a card shows Before and After with <b>Allow</b> and <b>Don’t</b>, and nothing changes until you choose. Adding words never asks.",
+    show: async f => { await f.go(river()); await f.spark(); const p = await f.ask("Reword the line about the banks", [["write", { line: find("and the banks"), how: "replace", words: "and the banks lie low" }]], [["text", "I left your line as it was."]]); await f.sleep(1700); const no = [...document.querySelectorAll(".ask .row button")].find(b => b.textContent.indexOf("Don") === 0); await f.tap(no); no.click(); await p.done; await f.sleep(1100); await f.back(); } },
+  { t: "Any AI, one spending limit", d: "<b>☰</b> → <b>Settings</b> → <b>The fast AI</b>: there's a place for a key for Claude, ChatGPT, Venice and OpenRouter, and you can add any other OpenAI-compatible AI. Below is one monthly spending limit for all of them. If you have a second key, add it and pick that AI from the name at the top of the AI window.", n: "Keys stay on this device. Only the last four letters are ever shown." ,
+    show: async f => { await f.top("Settings"); const e = document.querySelector('[data-sec="ai"]'); await f.point(e); await f.sleep(1500); await f.point(document.querySelector("#saLimit")); await f.sleep(1500); } },
+  { t: "A request for a coding AI", d: "Ask the AI for something BOLW can't do, like <i>“I want BOLW to show a word count for each leaf. Write a request.”</i> It writes a request instead of pretending. Then <b>☰</b> → <b>Requests</b>: <b>Copy for coding AI</b> gives the text to paste to Claude Code; mark it <b>Done</b> when the change lands. You can also write one yourself with <b>New request</b>.",
+    show: async f => { await f.go(river()); await f.spark(); await f.reply("I want BOLW to show a word count for each leaf. Write a request.", [["write_request", { want: "Show a word count for each leaf", done_looks_like: "A small count at the top of every leaf that updates as I write", why: "To see how long a song or a journal entry is", module: "the page" }]], [["text", "I can't change BOLW myself, so I wrote that up as a request. It's under ☰ → Requests: copy it for a coding AI when you're ready."]]); await f.back(); await f.top("Requests"); await f.sleep(1500); await f.point(document.querySelector("#sheet [data-cp]")); await f.sleep(1500); } },
+  { t: "Offline", d: "Turn on Airplane Mode. Open ✦: it says it needs the internet. Type something anyway, close this page and open it again: your draft is still in the box. Writing, folding and linking all still work offline. Turn the internet back on.", n: "No Show me for this one: it needs your device's own switch." }
 ] };
 window.GuideStages = STAGES;
 function addLong() { Page.go(D().trunk); Page.newLeaf(); const id = Page.leaf, t = []; B.act("write", { line: D().leaves[id].parent, at: 0, words: "A long leaf for the feel check" }); for (let i = 1; i <= 1200; i++) t.push((i % 6 === 2 ? "\t" : "") + "Line " + i + ": the river keeps on running and the page keeps up with it."); B.act("write", { line: D().leaves[id].lines[0], words: t.join("\n") }); B.clearUndo(); Page.show(id); openTask(false); }

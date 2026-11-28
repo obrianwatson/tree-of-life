@@ -108,7 +108,9 @@ g.makeBook = function (store) {
     Object.keys(snap.tables).forEach(k => { if (k.indexOf("rec:") === 0) { const p = k.split(":"); if (snap.tables[k] === undefined) delete D[p[1]][p[2]]; else if (p[1] !== "folds" || D.leaves[snap.tables[k].leaf]) D[p[1]][p[2]] = copy(snap.tables[k]); } else if (k.indexOf("more:") === 0) { const n = k.slice(5); if (snap.tables[k] === undefined) delete D.more[n]; else D.more[n] = copy(snap.tables[k]); } else D[k] = snap.tables[k]; });
   }
   B.before = function (leaf) {};                      // told before a leaf changes (keep.js keeps a ring)
-  B.checkpoint = function (name, needs, who, grant) { return true; };      // true = go · a sentence = refused (why) · { ask } = the writer must allow it first
+  /* the checkpoint: every guard is asked. true = go · a sentence = refused (why) · { ask } = the writer must allow it first */
+  const guards = []; B.guard = fn => guards.push(fn);
+  B.checkpoint = function (name, needs, who, grant) { for (const gd of guards) { const r = gd(name, needs, who, grant); if (r !== true && r !== undefined) return r; } return true; };
   B.modOn = function (mod) { return true; };          // (mods.js answers: is this module switched on?)
 
   /* ---------- the one door ---------- */

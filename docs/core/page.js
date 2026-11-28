@@ -70,7 +70,7 @@ function render() {
     if (!e) { e = el("div", "l"); e.dataset.id = id; e._t = null; els.set(id, e); }
     if (e._t !== L.text) setText(e, L.text);
     const m = marksOf(L), dk = lay ? lay.decor(i) : "", k = L.d + "|" + (L.by === "ai" ? 1 : 0) + "|" + m + "|" + dk;
-    if (e._k !== k) { e._k = k; e.className = "l" + (L.by === "ai" ? " ai" : "") + (L.leaf ? " lf" : "") + (m ? " mk" : ""); e.style.cssText = "--d:" + L.d + (m ? ";--m:" + m.length : "") + (dk ? ";" + dk : ""); if (m) e.dataset.m = m; else delete e.dataset.m; }
+    if (e._k !== k) { e._k = k; e.className = "l" + (L.by === "ai" ? " by-ai" : "") + (L.leaf ? " lf" : "") + (m ? " mk" : ""); e.style.cssText = "--d:" + L.d + (m ? ";--m:" + m.length : "") + (dk ? ";" + dk : ""); if (m) e.dataset.m = m; else delete e.dataset.m; }
     used.add(id); put(e);
   });
   while (at) { const n = at.nextSibling; pg.removeChild(at); at = n; }
