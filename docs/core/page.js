@@ -197,7 +197,9 @@ pg.addEventListener("beforeinput", e => {
   const t = e.inputType || "";
   if (t === "historyUndo") { e.preventDefault(); return doUndo(); }
   if (t === "historyRedo" || t.indexOf("format") === 0 || t === "insertFromDrop" || t === "deleteByDrag") return e.preventDefault();
-  const cur = readSel(); if (!cur) return e.preventDefault();
+  let cur = readSel();
+  if (!cur && pos && B.D.lines[pos.line] && B.D.lines[pos.line].in === ui.leaf && setCaret(pos, true)) cur = readSel();       // the browser lost the cursor (it happens after a blur): put it back where it was, so no key is swallowed
+  if (!cur) return e.preventDefault();
   if (t === "insertParagraph" || t === "insertLineBreak") { e.preventDefault(); return enter(cur); }
   const del = t.indexOf("delete") === 0;
   if (del && cur.collapsed) {

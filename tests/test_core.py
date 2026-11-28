@@ -45,6 +45,14 @@ async def tap(pg, sel, phone):
 
 async def settle(pg): await pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
 
+async def typed(pg, after, text):
+    """The cursor goes to the end of the line that has `after`; Return; type `text`; Return. (It first makes sure the page really has the keyboard.)"""
+    for _ in range(3):
+        await pg.evaluate("T.at(%s)" % json.dumps(after)); await settle(pg); n = await pg.evaluate("T.lines().length"); await pg.keyboard.press("Enter"); await settle(pg)
+        if await pg.evaluate("T.lines().length") == n + 1: break
+        await pg.wait_for_timeout(150)
+    await pg.keyboard.type(text); await pg.keyboard.press("Enter"); await settle(pg)
+
 RUN = "async push => { for (let i = 0; i < 150; i++) { if (!Lock.busy) { const n = Lock.runs; await Lock.syncNow(push); if (Lock.runs > n) return true; } await new Promise(r => setTimeout(r, 100)); } return false; }"
 async def push(pg):
     """This device's changes are sent, for certain: it waits out a sync that is already running, then runs its own to the end."""
@@ -771,13 +779,14 @@ async def stage6(br, p, url, phone):
     ok(await ev("Book.checkpoint('prune', { line: T.find('Bridge') }, 'cmd:;x')") == "A command only acts while it is running." and "delete" in await ev("Commands.keep({ code: ';bad', steps: [{ d: 0, text: 'delete everything' }] }).then(() => Commands.runAt(Commands.find(';bad'), []).why)") or True, "a command has no hand outside a run")
     # ---- an "ask" step waits for the internet; the rest still runs ----
     await ev("Commands.keep({ code: ';rhyme', about: 'asks for rhymes', steps: [{ d: 0, text: 'write Rhymes for {1}' }, { d: 0, text: 'ask Give three words that rhyme with {1}, one per line.' }] })")
-    await ctx.set_offline(True); await ev("dispatchEvent(new Event('offline'))"); await ev("T.at('Bridge')"); await pg.keyboard.press("Enter"); await pg.keyboard.type(";rhyme river"); await pg.keyboard.press("Enter"); await settle(pg); await pg.wait_for_timeout(200)
-    ok(await ev("!!T.find('Rhymes for river')") and await ev("Commands.waiting.length") == 1 and "waiting for the internet" in await pg.inner_text("#toast"), "offline, a command with an “ask” step runs its other steps, and that step waits")
+    await ctx.set_offline(True); await ev("dispatchEvent(new Event('offline'))"); await pg.wait_for_function("navigator.onLine === false"); await settle(pg)
+    await typed(pg, "Bridge", ";rhyme river"); await pg.wait_for_timeout(200)
+    ok(await ev("!!T.find('Rhymes for river')") and await ev("Commands.waiting.length") == 1 and "waiting for the internet" in await pg.inner_text("#toast"), "offline, a command with an “ask” step runs its other steps, and that step waits " + json.dumps(await ev("[T.lines().slice(-8), Commands.waiting.length, document.querySelector('#toast').textContent, navigator.onLine, document.activeElement && document.activeElement.id, !!Commands.find(';rhyme')]")))
     await ctx.set_offline(False); ai.say(("text", "shiver\ngiver\ndeliver")); await ev("Commands.flushWaiting()"); await pg.wait_for_function("Commands.waiting.length === 0"); await settle(pg)
     rl = await ev("T.lines()"); i = rl.index("Rhymes for river")
     ok(rl[i + 1:i + 4] == ["shiver", "giver", "deliver"] and await ev("Book.D.lines[T.find('shiver')].by") == "ai" and ai.seen[-1]["messages"][-1]["content"].startswith("Give three words that rhyme with river"), "back online, the fast AI writes the waiting step's lines (marked as the AI's)")
     # the AI can't be reached though the device thinks it's online (a weak signal): that step waits too
-    ai.fail = True; await ev("T.at('Bridge')"); await pg.keyboard.press("Enter"); await pg.keyboard.type(";rhyme road"); await pg.keyboard.press("Enter"); await pg.wait_for_function("Commands.waiting.length === 1"); await settle(pg)
+    ai.fail = True; await typed(pg, "Bridge", ";rhyme road"); await pg.wait_for_function("Commands.waiting.length === 1"); await settle(pg)
     ok(await ev("!!T.find('Rhymes for road')") and "waiting for the internet" in await pg.inner_text("#toast"), "and when the AI can't be reached on a weak signal, the step waits the same way")
     ai.fail = False; ai.say(("text", "load\ntoad")); await ev("Commands.flushWaiting()"); await pg.wait_for_function("Commands.waiting.length === 0"); ok(await ev("!!T.find('toad')"), "(and runs once the AI can be reached)")
     # ---- made with the fast AI: read it, try it first, keep it or not ----
