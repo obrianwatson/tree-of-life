@@ -36,28 +36,30 @@ function time(leaf, ms, kind) {               // from the writing clock: typing 
 B.on(ev => {
   if (ev.dry) return;
   if (ev.type === "action" && ev.log) { const L = ev.log; if (L.what === "write") wrote(ev.who, L.leaf, L.n || 0, L.r); else add(Object.assign({ who: ev.who }, L)); }
-  else if (ev.type === "undo") add({ who: "me", what: "undo", n: ev.name === "group" ? "a whole reply or command" : ev.name });
+  else if (ev.type === "undo") add({ who: "me", what: "undo", leaf: g.Page && g.Page.leaf, n: ev.name === "group" ? "a whole reply or command" : ev.name });
 });
 const all = () => Keep.tx("log", "readonly", s => s.getAll()).catch(() => []).then(a => { const seen = {}; tail.forEach(e => { seen[e.id] = 1; }); return (a || []).filter(e => !seen[e.id]).concat(tail).sort((x, y) => x.t - y.t); });
 function mergeIn(entries) {                   // another device's record: united by id, never replaced
   if (!entries || !entries.length) return Promise.resolve(0);
   return Keep.tx("log", "readwrite", s => { entries.forEach(e => { if (e && e.id && e.dev !== dev()) s.put(e); }); }).then(() => entries.length).catch(() => 0);
 }
+function forget(since) { const n = tail.length; tail = tail.filter(e => e.t < since); Object.keys(open).forEach(k => { delete open[k]; }); if (tail.length !== n) { dirty = true; saveTail(); } }      // (only the guided test uses this: a Show me puts the record back as it was, like the book)
 const mine = since => all().then(a => a.filter(e => e.dev === dev() && (e.t2 || e.t) >= (since || 0)));
 
 /* ---------- saying an entry in plain words ---------- */
-const WHO = w => w === "me" ? "You" : w === "ai" ? "The AI" : w.indexOf("cmd:") === 0 ? "Command " + w.slice(4) : w.indexOf("auto:") === 0 ? "Automation “" + w.slice(5) + "”" : w;
+const WHO = w => w === "me" ? "You" : w === "ai" ? "The AI" : w === "book" ? "The book" : w.indexOf("cmd:") === 0 ? "Command " + w.slice(4) : w.indexOf("auto:") === 0 ? "Automation “" + w.slice(5) + "”" : w;
 const mins = ms => ms < 60000 ? Math.max(1, Math.round(ms / 1000)) + " sec" : Math.round(ms / 60000) + " min";
 const q = s => "“" + String(s == null ? "" : s).slice(0, 50) + "”";
 const SAY = {
   write: e => "wrote in " + q(e.lt) + " (" + (e.c || 0) + " letters" + (e.r ? ", " + e.r + " taken away" : "") + (e.t2 ? ", over " + mins(e.t2 - e.t) : "") + ")",
   time: e => "spent " + mins(e.ms) + " writing in " + q(e.lt), held: e => "held the clock for " + mins(e.ms) + " in " + q(e.lt),
-  grow: e => (e.n === "back" ? "moved a line back out" : "grew a branch") + " in " + q(e.lt), lift: e => "lifted " + q(e.n) + " into its own leaf",
+  grow: e => (e.n === "back" ? "moved a line back out" : "grew a branch") + " in " + q(e.lt), lift: e => "lifted " + q(e.n) + " into its own leaf", newleaf: e => "made a new leaf" + (e.n ? " " + q(e.n) : "") + " in " + q(e.lt),
   move: e => "moved a branch " + (e.n === "up" || e.n === "down" ? e.n + " in " + q(e.lt) : "to " + q(e.n)), prune: e => "deleted " + q(e.n) + " from " + q(e.lt), restore: e => "brought back " + q(e.n),
   fold: e => "folded " + (e.k || 1) + " line" + (e.k > 1 ? "s" : "") + " in " + q(e.lt) + (e.n ? " as " + q(e.n) : ""), unfold: e => "removed a fold in " + q(e.lt), gate: e => (e.n === "open" ? "opened" : "closed") + " a fold in " + q(e.lt),
   name: e => "named a fold " + q(e.n), detail: e => "set " + q(e.n) + " on a fold", link: e => "linked two lines" + (e.n ? " (" + e.n + ")" : ""), unlink: e => "removed a link",
   mark: e => "left a bookmark in " + q(e.lt), markdone: e => "finished a bookmark", command: e => "ran the command " + e.n, automation: e => "ran: " + e.n, request: e => "wrote a request: " + q(e.n),
-  ask: e => "asked the AI: " + q(e.n), harvest: e => "started the harvest of " + q(e.lt), undo: e => "undid " + (e.n || "a move")
+  ask: e => "asked the AI: " + q(e.n), harvest: e => "started the harvest of " + q(e.lt), facts: e => "wrote what the record shows in " + q(e.lt) + " (" + (e.k || 0) + " lines)", lesson: e => "kept a line in “Ways of mine”: " + q(e.n),
+  undo: e => "undid " + (e.n || "a move") + (e.lt ? " in " + q(e.lt) : "")
 };
 const say = e => WHO(e.who || "me") + " " + (SAY[e.what] ? SAY[e.what](e) : e.what + (e.lt ? " in " + q(e.lt) : ""));
 /* every leaf that hangs under a leaf (itself too): a project's branch */
@@ -73,11 +75,11 @@ function openRecord(scope) {
       body.querySelectorAll("[data-m]").forEach(b => { b.onclick = () => { mode = b.dataset.m; draw(); }; });
       (mode === "leaf" ? forBranch(Page.leaf) : all()).then(list => { const box = body.querySelector("#tlBox"); if (!box) return; list = list.slice().reverse(); let day = "", h = "";
         list.slice(0, shown).forEach(e => { const d = new Date(e.t), ds = d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }); if (ds !== day) { day = ds; h += `<h2>${Page.esc(ds)}</h2>`; }
-          h += `<div class="tl${e.who === "ai" ? " by-ai" : ""}"><small>${Page.esc(d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</small>${Page.esc(say(e))}</div>`; });
+          h += `<div class="tl${e.who === "ai" ? " by-ai" : e.who === "book" ? " by-book" : ""}"><small>${Page.esc(d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</small>${Page.esc(say(e))}</div>`; });
         box.innerHTML = h || `<div class="none">Nothing here yet. The record starts with your first move.</div>`;
         if (list.length > shown) { const b = Page.el("button", "", "Show earlier"); b.onclick = () => { shown += 300; draw(); }; box.appendChild(b); } }); };
     draw(); });
 }
 Page.view({ order: 70, label: "The record (every move)", open: () => openRecord() });
-g.Log = { add, time, all, mine, mergeIn, say, WHO, saveTail, under, forBranch, open: openRecord, get tail() { return tail; } };
+g.Log = { add, time, all, mine, mergeIn, forget, say, WHO, saveTail, under, forBranch, open: openRecord, get tail() { return tail; } };
 })(window);

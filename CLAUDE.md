@@ -1,12 +1,37 @@
 > The app is now named **the Book of Living Waters** (BOLW); its logo is a baobab tree rooted in living water (`docs/logo.svg`). The repository and web address keep the old `tree-of-life` name. Never change the sync format strings (`tol-vault`, `tol-sealed`, check text `tree-of-life`).
 
-# Notes for Claude working on The Tree of Life
+# Notes for Claude working on the Book of Living Waters
 
-The owner is a writer and songwriter, not a programmer. Reply in plain words: what changed, what they'll see, and exactly what to try. No code in replies unless asked.
+The owner is a writer and songwriter, not a programmer. Reply in plain words: what changed, what they'll see, and exactly what to try. Short lists, one thing at a time, a "why" for each step. No code in replies unless asked.
 
 Writing is "to enscribe oneself into life". Keep the spelling "enscribe".
 
-## The app (current focus: the web app)
+## BOLW Core: the app being built now (`docs/core/`)
+
+**Read `AGENTS.md` first.** It explains the book, every module, the rules of the code and how to test. This is the short version.
+
+- **What it is:** leaves of lines. Branches to grow them, folds to gather them, webs (links) to connect them, and one map to see it all. A fast AI inside the book, a slow AI outside it (a coding AI working from a request), and commands that keep working offline. The plan is `claude/core-v1.md` in the BOLW project (it wins over every older plan); the floor is `claude/unchangeables.md`; what was built is `claude/core-as-built.md`.
+- **Where:** live at `/tree-of-life/core/`. Guided tests at `/core/test/?s=1` … `?s=7`. Safe mode at `/core/safe/` (one plain file; never make it depend on the app).
+- **Leave untouched:** BOLW Essentials (`docs/bolw/`), the trial (`docs/trial/`) and the old book (the root of `docs/`). Core shares nothing with them except the two keys' drawers (`tol-ai`, `tol-gh-token`) and the lock file (`sync/meta.json`).
+- **A small core plus modules.** No build step, no libraries. `docs/core/index.html` lists the files in order.
+  - Core (always on): `keep.js` storage, rings (earlier versions), export · `book.js` the book and its one door · `mods.js` the switches · `page.js` the page · `log.js` the record of every move · `settings.js` · `update.js` (never reloads while he is typing) · `lock.js` the lock and encrypted sync (`core/<deviceId>.json` on `tol-data`).
+  - Modules, each one file with a switch in Settings: `grow.js` (Grow) · `clock.js` (writing clock and Hold) · `search.js` · `fold.js` (Fold: the heart of BOLW) · `link.js` · `map.js` · `marks.js` (Bookmarks) · `socket.js` + `ai.js` (the fast AI: Claude or any OpenAI-compatible AI) · `requests.js` (requests to a coding AI) · `commands.js` · `autos.js` (Automations) · `harvest.js` (the Harvest).
+  - Switching a module off hides it and refuses its moves. **It never deletes its data**, and no module may need another to be on.
+- **The rules of the code:**
+  - Everything that changes the book is an action through `Book.act(name, needs)`. That is what gives Undo, the record, rings and sync. Never change `Book.D` outside an action; inside one, name what you change first (`T.leaf`, `T.table`, `T.rec`, `T.more`).
+  - Who made a move is stamped inside the book by the hand that made it: the writer (`Book.act`), the fast AI, a command, an automation, or the book itself (a harvest's facts). Each of those four hands is given out once by `Book.hand(kind)`. Never add a way to pass "who" in.
+  - Each hand is limited by a guard (`Book.guard`): the AI asks before changing or removing his words; commands add and arrange but never delete or rewrite; automations only add, only in the open leaf; nothing can do what the writer couldn't do himself, and nothing in the app can change BOLW's code.
+  - Keys are read in one place each (`socket.js` for AI keys, `lock.js` for the GitHub key and the lock). Nothing goes to an AI unless he pressed the button that says so.
+  - Only add fields to the book's data and the sync files. Never rename or remove one.
+- **Testing:** `python3 tests/test_core.py` (all seven stages; `python3 tests/test_core.py 7` for one), with a fake GitHub and a fake AI, phone-sized and laptop-sized. GitHub runs it in Safari's engine and Firefox on every push (workflow "Core (quick)"); both must pass before the owner is told to try something. Keep the guided checks (`docs/core/test/guide.js`) in step with what you change.
+- **Every change:** bump the version with `python3 tools/core-version.py <version>`, add checks, run them, and end with a plain-words reply.
+- **Smooth as butter** on an iPhone 16e (Safari, Home Screen app) and a 2011 MacBook (Firefox on macOS Catalina): no newest-only browser features, nothing heavy per key press, no reload or jump while typing, motion ≤ 0.2 s and off with Reduce Motion.
+
+## The older apps (left as they are)
+
+Everything below describes the old book, BOLW Essentials and the trial. They still work and are still published, but new work happens in Core.
+
+### The old book and Essentials
 - `docs/` is the Tree of Life web app, used on an iPhone 16e (Home Screen app, Safari) and a 2011 MacBook (Firefox on macOS Catalina, so no newest-only browser features).
   - `docs/index.html`: the BOOTLOADER, tiny and stable (Phase 5). It starts the app from this device's code vault (IndexedDB `bolw-code`) when an onboard version is chosen, otherwise from the published files (which it also saves in the vault). It falls back to the last good version if a version fails to start, and `?safe`/Shift starts the published files. It fetches the published files TOGETHER as one complete set with the header `x-bolw-boot` (so `sw.js` never answers them: no mix of old and new files), waits at most 3.5 s when a saved set exists (then starts the saved set and offers the newer one when it arrives), and carries the page's only Content-Security-Policy: `frame-src 'self'`, which stops sealed frames (add-ons, change previews) from loading another website. **Keep it working with every app version: don't move app code into it, don't change its vault format except by adding, and test boot after any change to it** (`tests/test_onboard.py`, `tests/test_boot.py`).
   - `docs/app.html`: the app shell (was index.html). It holds pages and folds, the writing surface, the writing clock, settings, export/import and the look-and-feel theme. Its `<script src="…"></script>` tags are the list of the app's files: the bootloader loads exactly those, so add new files there (and to `sw.js`). APP_VERSION lives here.
@@ -24,7 +49,7 @@ Writing is "to enscribe oneself into life". Keep the spelling "enscribe".
   - `docs/check.js`: Settings → Check this device: quick checks of this device (saving, storage, the database, safety copies, encryption, offline, the tab lock, the book's health, keys, sync) and a report with NO writing in it, to copy or send as a GitHub issue titled `Device check: …` (never containing `@claude`).
   - `docs/sw.js`: offline support. If you add a file the app needs, add it to `SHELL` and bump `CACHE`. Network first; the saved copy is used when the network fails, errors, or hangs 4 s. It never answers requests carrying `x-bolw-boot`.
   - `docs/board/`: the big-screen Board (on hold).
-  - `docs/bolw/`: **BOLW Essentials, the app being built now** (plan: `claude/essentials.md`, floor: `claude/unchangeables.md`, joints: `claude/six-action-card.md` in the BOLW project). Live at `/tree-of-life/bolw/`; the old book at the site root is untouched and shares nothing with it except the two keys' drawers (`tol-ai`, `tol-gh-token`) and the vault file. Small named pieces, loaded in this order by `index.html` (add new files there and to `bolw/sw.js`):
+  - `docs/bolw/`: **BOLW Essentials, the build before Core** (plan: `claude/essentials.md`, floor: `claude/unchangeables.md`, joints: `claude/six-action-card.md` in the BOLW project). Live at `/tree-of-life/bolw/`; the old book at the site root is untouched and shares nothing with it except the two keys' drawers (`tol-ai`, `tol-gh-token`) and the vault file. Small named pieces, loaded in this order by `index.html` (add new files there and to `bolw/sw.js`):
     - `keep.js` storage (localStorage `bolw-book`, `bolw-ui`, `bolw-clock`, `bolw-shelf`, `bolw-lock`; the guided test uses the `bolw-test-…` drawer via `window.BOLW_NS`), the rescue copy, earlier versions (IndexedDB `bolw-keep`: the note as it was, kept before a change at most every 10 minutes and before a newer version arrives by sync; brought back only as a NEW note), export (.txt and .json).
     - `joints.js` THE six actions (`write`, `open_note`, `fold_line`, `open_fold`, `remove_fold`, `trace_parent`), Undo, the one checkpoint. `Book.act(name, needs)` is the writer's hand; `Book.breath()` hands out the AI's hand ONCE (to breath.js). Who did it is stamped inside, never passed in. `Book.begin/end` make one reply one Undo. `Book.cut/graft/copyIn` lift whole notes (versions, sync). No seventh action.
     - `shelf.js` projects, which note is in which project, chats (deleted = marked, can be brought back), the "How BOLW works" instructions, the AI's settings. Not joints: none of it changes the writing.
@@ -45,7 +70,7 @@ Writing is "to enscribe oneself into life". Keep the spelling "enscribe".
 - A failed save sets `store.bad[name]` and shows the red "Not saved" bar (`paintSaveWarn`); safe.js then keeps the rescue copy. Never hide or soften that bar.
 - The native iPad app (`Sources/`, `project.yml`, `build.yml`) is ON HOLD until the Apple Pencil is replaced. Don't change it unless asked.
 
-## Rules that must never break
+## Rules that must never break (the old book; the same spirit holds for Core)
 - Never delete, rewrite or move the owner's writing or writing-time data. Storage names `tol-pages`, `tol-intervals`, `tol-ui`, `tol-theme`, `tol-looks`, `tol-sync` (and the `tol-vault` IndexedDB) keep their shape; only add fields. `bolw-safe` (safety copies) and `bolw-code` (the code vault) are IndexedDB databases on the device; add to them, never clear them. Previews use `tol-sbx<N>-…` copies automatically; keep that working.
 - Writing time: typing counts, and the clock keeps running through a pause up to the "typing pause" setting; a longer pause stops it at the last key. Holding Option (laptop) or the thumb button (phone) counts. Each second counts once. Claude's activity never adds time.
 - Look-and-feel choices belong in the theme (`THEME_DEFAULT` / `applyTheme` in app.html) so they can be changed instantly from the Claude page.
@@ -58,7 +83,7 @@ Writing is "to enscribe oneself into life". Keep the spelling "enscribe".
 - A page can never be inside itself: `healTree()` (start, after sync, after import) breaks any loop of parents the same way on every device; "Move into" keeps a fold that IS (or holds) the destination in the page, on the ⤷ marker.
 - Importing a file never deletes anything, never brings in app code (`memory.codeversions` is dropped), only accepts ids the app could have made (`SAFE_ID`), and turns add-ons it brings OFF. Deleted pages come back only through `revive()` (Recently deleted, a safety copy, or the import's "Bring back" button).
 
-## How to work
+## How to work (on the old book)
 - Keep each change small and safe. Read the related code first. You can't run the app on a phone, so keep changes simple and test what you can (e.g. `node --check` on scripts).
 - Bump `APP_VERSION` in `docs/app.html` with each change. Owners may also have an ONBOARD version of the app (made in the app itself); a newer published version is offered to them, never forced over their onboard one.
 - Add a short checklist for the change to `TESTING.md` (concrete steps on the iPhone/laptop and what should happen) and tick off items in `ROADMAP.md` you finish.

@@ -69,8 +69,8 @@ function render() {
     const L = B.D.lines[id]; let e = els.get(id);
     if (!e) { e = el("div", "l"); e.dataset.id = id; e._t = null; els.set(id, e); }
     if (e._t !== L.text) setText(e, L.text);
-    const m = marksOf(L), dk = lay ? lay.decor(i) : "", k = L.d + "|" + (L.by === "ai" ? 1 : 0) + "|" + m + "|" + dk;
-    if (e._k !== k) { e._k = k; e.className = "l" + (L.by === "ai" ? " by-ai" : "") + (L.leaf ? " lf" : "") + (m ? " mk" : ""); e.style.cssText = "--d:" + L.d + (m ? ";--m:" + m.length : "") + (dk ? ";" + dk : ""); if (m) e.dataset.m = m; else delete e.dataset.m; }
+    const m = marksOf(L), dk = lay ? lay.decor(i) : "", k = L.d + "|" + (L.by === "ai" ? 1 : L.by === "book" ? 2 : 0) + "|" + m + "|" + dk;
+    if (e._k !== k) { e._k = k; e.className = "l" + (L.by === "ai" ? " by-ai" : L.by === "book" ? " by-book" : "") + (L.leaf ? " lf" : "") + (m ? " mk" : ""); e.style.cssText = "--d:" + L.d + (m ? ";--m:" + m.length : "") + (dk ? ";" + dk : ""); if (m) e.dataset.m = m; else delete e.dataset.m; }
     used.add(id); put(e);
   });
   while (at) { const n = at.nextSibling; pg.removeChild(at); at = n; }
@@ -288,11 +288,8 @@ function go(leafId, line, o) {
 function step(d) { const n = ui.nav.i + d; if (n < 0 || n >= ui.nav.list.length) return; ui.nav.i = n; const id = ui.nav.list[n]; if (B.D.leaves[id] && B.alive(id)) go(id, null, { nav: true }); else step(d); saveUi(); }
 $("#tBack").onclick = () => step(-1); $("#tFwd").onclick = () => step(1);
 /* a new leaf, like a new note: a new line at the end of the leaf you're on, lifted, opened, ready for its name */
-function newLeaf() {
-  if (!Mods.on("grow")) return say("Growing is switched off (Settings).");
-  const leaf = lf(), lastId = leaf.lines[leaf.lines.length - 1], last = B.D.lines[lastId]; let line = lastId; B.begin("newleaf");
-  if (last.text || last.leaf || last.d) { const r = B.act("write", { line: lastId, at: last.text.length, words: "\n" }); line = r.line; if (B.D.lines[line].d) B.act("grow", { line, dir: -B.D.lines[line].d }); }
-  const r = B.act("lift", { line }); B.end(); if (!r.ok) return say(r.why); go(r.leaf); ttl.focus();
+function newLeaf() {                                  // a new leaf: a new line at the end of this leaf, with its own leaf (its name is that line)
+  const r = B.act("leaf", { under: lf().id }); if (!r.ok) return say(r.why); go(r.leaf); ttl.focus();
 }
 $("#plus").onclick = newLeaf;
 
@@ -339,14 +336,14 @@ function toast(text, label, fn) { const t = $("#toast"); t.textContent = ""; t.a
 function refresh() { buildBar(); render(); placeBar(); }
 function start() {
   const tr = B.D.leaves[B.D.trunk];                // a brand-new book: the trunk gets a Seeds leaf (for ideas not planted yet)
-  if (Object.keys(B.D.leaves).length === 1 && tr.lines.length === 1 && !B.D.lines[tr.lines[0]].text && Mods.on("grow")) { const l = tr.lines[0]; B.act("write", { line: l, at: 0, words: "Seeds" }); B.act("lift", { line: l }); B.act("write", { line: l, words: "\n" }); B.clearUndo(); ui.leaf = B.D.trunk; }
+  if (Object.keys(B.D.leaves).length === 1 && tr.lines.length === 1 && !B.D.lines[tr.lines[0]].text) { const l = tr.lines[0]; B.act("leaf", { under: tr.id, name: "Seeds" }); B.act("write", { line: l, words: "\n" }); B.clearUndo(); ui.leaf = B.D.trunk; }
   refresh();
   try { history.scrollRestoration = "manual"; } catch (e) {}
   const spot = ui.spots[ui.leaf]; if (spot && spot.line && B.D.lines[spot.line] && B.D.lines[spot.line].in === ui.leaf) { fire("reveal", spot.line); const e = els.get(spot.line); if (e) { const rc = e.getBoundingClientRect(); if (rc.bottom > innerHeight - 100) scrollTo(0, Math.max(0, scrollY + rc.top - innerHeight * 0.4)); e.classList.add("flash"); } if (!TOUCH) setCaret(spot, true); else { pos = { leaf: ui.leaf, line: spot.line, at: spot.at || 0 }; const i = lf().lines.indexOf(spot.line); sel = { a: i, b: i, collapsed: true }; paintBar(); } }
   else if (!TOUCH) setCaret({ line: lf().lines[0], at: 0 }, true);
   fire("leaf", ui.leaf);
 }
-Mods.changed(() => { els.clear(); pg.textContent = ""; refresh(); });
+Mods.changed(() => { const had = focused() && pos; els.clear(); pg.textContent = ""; refresh(); if (had && B.D.lines[had.line] && B.D.lines[had.line].in === ui.leaf) setCaret(had, true); });      // (a switch flipped while the cursor is in the page: the cursor stays where it was)
 /* The book changed under the page (the AI, a command, another device, a rescue copy): draw again and keep your place. */
 let drawT = 0;
 function redraw() { if (drawT) return; drawT = requestAnimationFrame(() => { drawT = 0; if (!B.D.leaves[ui.leaf] || !B.alive(ui.leaf)) { show(B.D.trunk); return; } const keep = pos, had = focused(); render(); if (keep && had && B.D.lines[keep.line] && B.D.lines[keep.line].in === ui.leaf) setCaret(keep, true); }); }

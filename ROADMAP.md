@@ -8,7 +8,24 @@ Status key: ✅ done · 🔨 in progress · ⬜ not started · ⏸ on hold
 
 ---
 
-# ▶ NOW: Text Tree of Life on the iPhone 16e + the laptop
+# ▶ NOW: BOLW Core (`docs/core/`, live at `/tree-of-life/core/`)
+
+The plan is `claude/core-v1.md` in the BOLW project; what was built and the choices made are in `claude/core-as-built.md`; how the code is put together is in `AGENTS.md`. Each stage has a guided test at `/core/test/?s=N`.
+
+- ✅ **1 · The core, Grow, the writing clock and Hold.** Leaves that save as you type, the trunk, branches by indenting, lifting a branch into its own leaf, Move, Delete (recoverable), Undo, search, rings, export, encrypted sync, safe mode, the record of every move.
+- ✅ **2 · Fold.** Overlapping folds, open and close, names, named folds gathering across the book, the fold list, details.
+- ✅ **3 · Link and the Map.**
+- ✅ **4 · Bookmarks.**
+- ✅ **5 · The fast AI** (Claude or any OpenAI-compatible AI) **and requests to a coding AI.**
+- ✅ **6 · Commands, then Automations.**
+- ✅ **7 · The harvest.**
+- ⬜ Views (table, board, calendar) · Seeds as its own module · Redo · putting a lifted leaf back into its branch · import · a real-key check of ChatGPT, Venice and OpenRouter.
+
+All seven are built and pass in Chromium, Safari's engine and Firefox. None has been tried on the real iPhone and MacBook yet: that is the next step.
+
+---
+
+# Earlier: Text Tree of Life on the iPhone 16e + the laptop
 
 ## L · One Living Page interface ⬜ (planned; nothing built yet)
 Build one use case at a time; each is tried by the owner before the next goes on top. Order: write and see

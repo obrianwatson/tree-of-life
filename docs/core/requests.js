@@ -27,9 +27,9 @@ async function create(f, A, where) {
   A = A || ((name, needs) => B.act(name, needs)); where = where || whereNow(); const mine = !arguments[1]; if (mine) B.begin("request");
   try {
     let home = requestsLeaf();
-    if (!home) { const tr = D().leaves[D().trunk], last = tr.lines[tr.lines.length - 1], LL = D().lines[last]; let line = last; if (LL.text || LL.leaf) { line = (await A("write", { line: last, at: LL.text.length, words: "\n" })).line; if (D().lines[line].d) await A("grow", { line, dir: -9 }); } await A("write", { line, at: 0, words: "Requests" }); home = (await A("lift", { line })).leaf; }
+    if (!home) { const tr = D().leaves[D().trunk], last = tr.lines[tr.lines.length - 1], LL = D().lines[last]; let line = last; if (LL.text || LL.leaf) { line = (await A("write", { line: last, at: LL.text.length, words: "\n" })).line; if (D().lines[line].d) await A("grow", { line, dir: -9 }); } await A("write", { line, at: 0, words: "Requests" }); home = (await A("leaf", { line })).leaf; }
     const hl = D().leaves[home], last = hl.lines[hl.lines.length - 1], LL = D().lines[last]; let line = last; if (LL.text || LL.leaf) { line = (await A("write", { line: last, at: LL.text.length, words: "\n" })).line; if (D().lines[line].d) await A("grow", { line, dir: -9 }); }
-    await A("write", { line, at: 0, words: clip(String(f.want || "A request").replace(/\n/g, " "), 70) }); const leaf = (await A("lift", { line })).leaf;
+    await A("write", { line, at: 0, words: clip(String(f.want || "A request").replace(/\n/g, " "), 70) }); const leaf = (await A("leaf", { line })).leaf;
     const text = ["What I want: " + (f.want || ""), "Done looks like: " + (f.doneLooks || ""), "Why: " + (f.why || ""), "Which part of BOLW: " + (f.module || ""), "Where I was: " + (where.text || ""), "Status: Not yet"].map(t => t.replace(/\n/g, " ")).join("\n");
     await A("write", { line: D().leaves[leaf].lines[0], at: 0, words: text }); const r = await A("request", { leaf, want: f.want || "", where: { leaf: where.leaf, line: where.line } });
     return { ok: true, request: r.request, leaf };
@@ -43,7 +43,7 @@ function prompt(R) { const lf = D().leaves[R.leaf], body = lf ? lf.lines.map(l =
     "- Build on a copy (a branch), and when you're done say in plain words what changed and what the writer should try. He is a writer, not a programmer."].join("\n"); }
 function setDone(id, done) { const R = tbl()[id]; if (!R) return; B.begin("reqdone"); B.act("requestdone", { request: id, done }); const lf = D().leaves[R.leaf]; if (lf) { const l = lf.lines.find(x => /^Status:/.test(D().lines[x].text)); if (l) B.act("write", { line: l, at: 0, remove: D().lines[l].text.length, words: "Status: " + (done ? "Done" : "Not yet") }); } B.end(); }
 const list = () => Object.values(tbl()).filter(R => D().leaves[R.leaf]).sort((a, b) => b.at - a.at);
-function newCard() { const where = whereNow(), vals = {};
+function newCard(pre) { const where = whereNow(), vals = pre && typeof pre.want === "string" ? { want: pre.want } : {};
   g.Marks.card({ title: "A request for a coding AI", intro: "For when you want BOLW itself to change. Write what you want; a coding AI (like Claude Code) does it outside the app while you keep writing.", where: where.text, whereNote: "where you were (it goes into the request)", go: () => {}, fields: FIELDS, values: vals, change: (k, v) => { vals[k] = v; },
     buttons: [["Save the request", async msg => { if (!(vals.want || "").trim()) { msg.textContent = "Say what you want first."; return; } const r = await create(vals, null, where); Page.closeSheet(true); openList(); Page.toast("The request is saved on your Requests leaf.", "Undo", Page.doUndo); }, "go"], ["Cancel", () => Page.closeSheet(false)]] });
 }

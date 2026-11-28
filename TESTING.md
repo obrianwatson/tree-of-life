@@ -5,6 +5,30 @@
 
 ---
 
+## BOLW Core (`/tree-of-life/core/`): try it with the guided tests
+
+Each stage has a short guided test: the real app on its own sample book (never your real book, never synced). Each check has **Show me** (a finger does it slowly, then everything is put back), then you try it and tap **Works** or **Something's off**.
+
+Open `https://obrianwatson.github.io/tree-of-life/core/test/?s=1` and change the number at the end for the stage:
+
+1. The core, Grow, the writing clock and Hold
+2. Fold
+3. Link and the Map
+4. Bookmarks
+5. The fast AI and requests
+6. Commands and Automations
+7. The harvest
+
+By hand, on the real app (`/tree-of-life/core/`), the things a robot can't feel:
+- [ ] iPhone: type a long paragraph fast. Nothing lags, the bar stays above the keyboard, the page never jumps.
+- [ ] MacBook (Firefox): the same, in a leaf with a few hundred lines.
+- [ ] Both: leave the app open while a new version is published. It never reloads while you're typing; when you stop, it updates and you're back on the same line.
+- [ ] Both: turn on sync with your passphrase on one device, then the other. A line written on one arrives on the other.
+- [ ] iPhone: Airplane Mode. Open the app from the Home Screen, write, run `;today`. Turn the internet back on: it syncs.
+- [ ] `/tree-of-life/core/safe/` opens and shows your book even if the app itself won't start.
+
+---
+
 ## H · Hardening (versions 1.2–1.3): nothing lost, sync that lasts
 **Nothing gets lost**
 - [ ] Laptop: open the book in a second tab. It says the book is already open and pauses. "Use it here instead" swaps them

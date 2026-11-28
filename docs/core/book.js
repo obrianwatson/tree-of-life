@@ -140,8 +140,8 @@ g.makeBook = function (store) {
     return out;
   }
   B.act = (name, needs) => act(name, needs, "me");                         // the writer's hand
-  const HANDS = { ai: 0, cmd: 0, auto: 0 };
-  B.hand = function (kind) {                                                // one hand each for the fast AI, commands and automations
+  const HANDS = { ai: 0, cmd: 0, auto: 0, book: 0 };
+  B.hand = function (kind) {                                                // one hand each for the fast AI, commands, automations, and the book itself (the harvest's facts)
     if (!(kind in HANDS) || HANDS[kind]) throw new Error("That hand was already given out."); HANDS[kind] = 1;
     return (name, needs, o) => act(name, needs, kind + (o && o.as ? ":" + String(o.as).replace(/[^\w;.-]/g, "").slice(0, 30) : ""), o && o.grant);
   };
@@ -221,6 +221,19 @@ g.makeBook = function (store) {
     const cl = ids[ids.length - 1], ct = D.lines[cl].text.length - tail.length;
     return { line: cl, reads: first.text, caret: { leaf: lf.id, line: cl, at: ct }, structural: ids.length > 1 || j > i,
       log: { what: "write", leaf: lf.id, line: L.id, n: words.replace(/\n/g, "").length, r: rem } };
+  });
+
+  /* LEAF: a new, empty leaf. needs: line (that line gets its own leaf), or under + name (a new line of that name at the end of
+     the leaf `under`, with its own leaf). Making a leaf is the core's; lifting a BRANCH into one is Grow's. */
+  B.action("leaf", function (needs, who, T) {
+    let L = needs.line && D.lines[needs.line], lf;
+    if (L) { if (L.leaf && D.leaves[L.leaf]) throw plain("This line already has its own leaf. Tap › to open it."); lf = T.leaf(L.in); }
+    else { lf = D.leaves[needs.under || D.trunk]; if (!lf || !alive(lf.id)) throw plain("That leaf isn't there."); T.leaf(lf.id);
+      L = D.lines[lf.lines[lf.lines.length - 1]]; if (!L || L.text || L.leaf || L.d) { const id = newLine(lf.id, "", 0, who); lf.lines.push(id); L = D.lines[id]; }
+      if (needs.name != null) { L.text = String(needs.name).replace(/\s+/g, " ").trim().slice(0, 200); L.by = who; } }
+    const now = Date.now(), id = uid("f"); T.leaf(id);
+    D.leaves[id] = { id, lines: [], folds: [], parent: L.id, at: now, updatedAt: now, name: L.text }; L.leaf = id; fixDepths(D.leaves[id]); D.lines[D.leaves[id].lines[0]].by = who;
+    return { leaf: id, line: L.id, first: D.leaves[id].lines[0], structural: true, log: { what: "newleaf", leaf: lf.id, line: L.id, n: L.text.slice(0, 60) } };
   });
 
   /* MOVE (grafting): a line goes somewhere else, and its branch goes with it.

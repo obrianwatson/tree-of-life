@@ -18,7 +18,23 @@ function seed() {
   const scr = mk(D().trunk, "Scripture", ""); mk(scr, "Psalm 23", "The Lord is my shepherd; I shall not want.\nHe maketh me to lie down in green pastures:\nhe leadeth me beside the still waters.\nHe restoreth my soul.");
   mk(D().trunk, "Journal", "Friday\n\tWrote by the window. The light was good.");
   if (window.Commands) { window.Commands.examples(); window.Commands.keep({ code: ";flag", about: "leaves a bookmark on this line", steps: [{ d: 0, text: "bookmark {line}" }] }); }
+  seedRecord(songs, river, leafNamed("Desert road"));
   B.clearUndo(); B.flush(); Page.show(river);
+}
+/* a made-up record for the sample project "Songs" (two weeks of work), so the harvest in stage 7 has something to show.
+   It is only ever written to this page's own sample drawer. */
+function seedRecord(songs, river, desert) {
+  const Log = window.Log; if (!Log || !desert) return; const DAYMS = 86400000;
+  const past = (ago, hour, min, e, span) => { const x = Log.add(e), d = new Date(Date.now() - ago * DAYMS); d.setHours(hour, min, 0, 0); x.t = d.getTime(); if (span) x.t2 = x.t + span * 60000; return x; };
+  const day = (ago, leaf, typed, held, c, r) => { past(ago, 9, 5, { who: "me", what: "write", leaf, c, r }, typed); past(ago, 9, 6, { who: "me", what: "time", leaf, ms: typed * 60000 }, typed); if (held) past(ago, 9, 40, { who: "me", what: "held", leaf, ms: held * 60000 }, held); };
+  day(14, river, 26, 0, 640, 60); past(14, 9, 30, { who: "me", what: "fold", leaf: river, k: 3, n: "Chorus" }); past(14, 9, 33, { who: "me", what: "grow", leaf: river, n: "in" });
+  day(13, river, 31, 12, 720, 110); past(13, 9, 20, { who: "me", what: "fold", leaf: river, k: 3, n: "Chorus" }); for (let i = 0; i < 3; i++) past(13, 9, 22 + i, { who: "me", what: "undo", leaf: river, n: "write" });
+  day(12, desert, 22, 0, 480, 40); past(12, 9, 15, { who: "me", what: "fold", leaf: desert, k: 3, n: "Chorus" }); past(12, 9, 18, { who: "me", what: "link", leaf: desert, n: "rhymes" }); past(12, 9, 19, { who: "me", what: "link", leaf: desert, n: "rhymes" });
+  day(6, river, 18, 25, 300, 420); for (let i = 0; i < 4; i++) past(6, 9, 10 + i, { who: "me", what: "undo", leaf: river, n: "write" }); past(6, 9, 50, { who: "me", what: "ask", leaf: river, n: "what rhymes with river?" });
+  day(5, desert, 20, 0, 410, 30); past(5, 9, 12, { who: "me", what: "command", leaf: desert, n: ";song (5 moves)" }); past(5, 9, 14, { who: "me", what: "ask", leaf: desert, n: "is the second verse too long?" });
+  day(1, river, 15, 0, 220, 20);
+  if (window.Marks && Mods.on("marks")) { const m = B.act("mark", { line: find("Verse two", river), doing: "writing the second verse", waiting: "the drum take from Sam" }); if (m.ok) { const M = D().marks[m.mark]; M.at = Date.now() - 12 * DAYMS; M.done = Date.now() - 8 * DAYMS; } }
+  Log.saveTail();
 }
 if (B.leaves().length <= 2 && !leafNamed("River song")) seed();
 window.addEventListener("bolw-seed", seed);
@@ -41,7 +57,7 @@ const lastIds = m => { const t = JSON.stringify(m[m.length - 1]); return (t.matc
 let run = 0, DEMO = false; const fg = $("#finger"), shield = $("#shield");
 const sleep = (ms, r) => new Promise((res, rej) => setTimeout(() => r === run ? res() : rej(0), QUICK ? Math.min(ms, 3) : ms));
 async function demo(fn) {
-  const before = JSON.stringify(B.D), uiB = JSON.stringify(Page.ui), y = scrollY, r = ++run, AI = window.AI, Socket = window.Socket, prov = Socket && Socket.using, chatsB = AI ? JSON.stringify(AI.chats) : null;
+  const before = JSON.stringify(B.D), uiB = JSON.stringify(Page.ui), y = scrollY, t0 = Date.now(), r = ++run, AI = window.AI, Socket = window.Socket, prov = Socket && Socket.using, chatsB = AI ? JSON.stringify(AI.chats) : null;
   if (Socket) { Socket.use("rehearsal"); script = []; } if (AI) AI.close();
   openTask(false); Page.closeSheet(true); DEMO = true; Page.demo = true; shield.classList.remove("hide"); fg.classList.remove("hide"); fg.style.left = "50%"; fg.style.top = "70%";
   const f = {
@@ -66,13 +82,15 @@ async function demo(fn) {
     async ask(text, ...replies) { script = replies; const inp = $("#aiIn"); await f.point(inp); for (const ch of text) { inp.value += ch; await sleep(20, r); } await f.tap($("#aiSend")); return { done: AI.send(inp.value) }; },
     async reply(text, ...replies) { await (await f.ask(text, ...replies)).done; await sleep(900, r); },
     async back() { await f.click("#aiBack"); },
+    script(...replies) { script = replies; },
+    async quiet() { for (let i = 0; i < 600 && AI && AI.busy && !document.querySelector(".ask .row"); i++) await sleep(60, r); await sleep(900, r); },
     async runTyped(text) { await f.type(text); f.say("Return"); await sleep(500, r); const L = D().lines[Page.pos.line], m = /^(;\S+)\s*(.*)$/.exec(L.text.trim()), c = window.Commands.find(m[1]); B.begin("demo"); B.act("write", { line: L.id, at: 0, remove: L.text.length, words: "" }); const out = window.Commands.run(c, m[2] ? m[2].split(/\s+/) : [], L.id); B.end(); Page.render(); if (D().lines[out.line]) Page.setCaret({ line: out.line }); f.say(""); await sleep(1300, r); },
     async away() { const a = $("#col"); a.style.transition = "opacity .6s"; a.style.opacity = 0; await sleep(1300, r); a.style.opacity = ""; await sleep(900, r); a.style.transition = ""; }
   };
   try { await fn(f); await sleep(1300, r); } catch (e) { if (e !== 0) console.error(e); }
   DEMO = false; if (AI && AI.busy) { $("#aiStop").click(); await new Promise(r2 => setTimeout(r2, 80)); } document.querySelectorAll(".ask .row button").forEach(b => { if (b.textContent.indexOf("Don") === 0) b.click(); }); if (AI && AI.busy) await new Promise(r2 => setTimeout(r2, 120));
   if (Socket) Socket.use(prov); if (AI) { AI.close(); AI.replaceChats(JSON.parse(chatsB)); } fg.classList.add("hide"); shield.classList.add("hide"); Page.closeSheet(true); Page.closeMenu(); $("#toast").classList.add("hide"); Page.demo = false;
-  B.replace(JSON.parse(before)); const u = JSON.parse(uiB); Page.ui = u; Page.show(D().leaves[u.leaf] && B.alive(u.leaf) ? u.leaf : D().trunk); scrollTo(0, y); openTask(true);
+  B.replace(JSON.parse(before)); if (window.Log && window.Log.forget) window.Log.forget(t0); const u = JSON.parse(uiB); Page.ui = u; Page.show(D().leaves[u.leaf] && B.alive(u.leaf) ? u.leaf : D().trunk); scrollTo(0, y); openTask(true);
 }
 shield.addEventListener("click", () => { run++; });
 const river = () => leafNamed("River song");
@@ -154,6 +172,21 @@ STAGES[6] = { name: "Commands and Automations", tasks: [
   { t: "Automations", d: "<b>☰</b> → <b>Commands</b> → under Automations choose <i>when a line starts with …</i>, type <b>todo</b>, pick <b>;flag</b> and tap <b>Add</b>. Now in any leaf write a line that starts with <i>todo</i> and press Return: the line gets a bookmark, and a note says what ran (with Undo). Switch the automation off in the same place.", n: "Automations only add, and only in the leaf you're on. Only your own moves set them off.",
     show: async f => { await window.Commands.keep({ when: "a line starts with todo", code: ";flag" }); await f.go(leafNamed("Journal")); await f.caret("Wrote by the window"); await f.type("\ntodo call the studio about Friday"); const id = Page.pos.line; const w = B.act("write", { line: id, words: "\n" }); Page.render(); Page.setCaret(w.caret); window.Autos.fireFor("starts", D().lines[id].text, id); await f.sleep(2200); await f.top("Commands"); await f.point(document.querySelector("#sheet [data-auto]")); await f.sleep(1600); } },
   { t: "Offline", d: "Turn on Airplane Mode. Type <b>;song</b> on an empty line: it still runs. Turn the internet back on.", n: "No Show me for this one. A step that says “ask …” waits for the internet; the rest of the command still runs." }
+] };
+const songsLeaf = () => leafNamed("Songs"), hv = () => window.Harvest.harvestOf(songsLeaf()), lastUnder = head => { const lf = D().leaves[hv()], i = lf.lines.findIndex(l => D().lines[l].text === head); return lf.lines[B.branchEnd(lf, i) - 1]; };
+STAGES[7] = { name: "The harvest", tasks: [
+  { t: "Start the harvest of a project", d: "This sample book has a made-up record: two weeks of work on <b>Songs</b>. Open <b>Songs</b> (tap it in the path at the top). Then <b>☰</b> → <b>Harvest</b> → <b>Start the harvest</b>. A <b>Harvest</b> leaf appears as the last line of Songs and opens: what the record shows, in grey, under five headings.", n: "Starting a harvest sends nothing anywhere. It needs no AI and no internet.",
+    show: async f => { await f.go(songsLeaf()); await f.top("Harvest"); await f.click("#hvStart"); await f.sleep(2600); scrollBy(0, 500); await f.sleep(2200); } },
+  { t: "Write your own lines beside the book's", d: "In the Harvest leaf, put the cursor at the end of a grey line under <b>Where you got stuck</b>, press Return, and write what you remember. Your lines are plain; the book's stay grey.",
+    show: async f => { await f.go(songsLeaf()); await window.Harvest.start(songsLeaf()); await f.go(hv()); await f.caret({ id: lastUnder("Where you got stuck") }); await f.type("\nThe second verse. I kept changing the melody."); await f.sleep(1200); } },
+  { t: "Reflect together with the fast AI", d: "<b>☰</b> → <b>Harvest</b> → <b>Ask the fast AI for its debrief</b>. It reads the same record, adds its own lines (purple) under the headings, and then asks you about what it noticed. Answer it in the chat.", n: "In the real app this needs your key (Settings → The fast AI). Show me uses a rehearsal that costs nothing.",
+    show: async f => { await f.go(songsLeaf()); await window.Harvest.start(songsLeaf()); await f.go(hv());
+      f.script([["write", () => ({ line: lastUnder("How it went"), how: "after", words: "Two quick days, a pause, then a slower return: the song was found early and finished late." })]], [["write", () => ({ line: lastUnder("Where you got stuck"), how: "after", words: "The second verse: more taken away than written, and long holds. You were listening for it, not typing it." })]], [["text", "I've added my lines in purple. One question: what changed in the five days you stayed away?"]]);
+      await f.top("Harvest"); await f.point(document.querySelector("#hvAI")); window.Harvest.askAI(songsLeaf()); await f.sleep(700); await f.quiet(); await f.sleep(1800); await f.back(); await f.sleep(1500); } },
+  { t: "Choose what to keep", d: "Three things can be kept. <b>A command:</b> ☰ → Harvest shows repeated moves (here <b>;chorus</b>); <b>Try it first</b>, then <b>Keep</b>. <b>A lesson:</b> in the Harvest leaf, tap <b>⌄</b> on a line → <b>Keep in Ways of mine</b>. <b>A request:</b> <b>⌄</b> → <b>Make this a request…</b> for something BOLW couldn't do.", n: "The fast AI follows your Ways of mine leaf in every chat. In a harvest chat it can also offer a command, an automation, a lesson or a request: each is a card, kept only when you say so.",
+    show: async f => { await f.go(songsLeaf()); await window.Harvest.start(songsLeaf()); await f.go(hv()); await f.top("Harvest"); await f.sleep(900); const tr = document.querySelector("#sheet [data-try]"); if (tr) { await f.click(tr); await f.sleep(1800); } const kp = document.querySelector("#sheet [data-keep]"); if (kp) { await f.click(kp); await f.sleep(1800); }
+      Page.closeSheet(true); await f.caret({ id: lastUnder("What you did again and again") }); await f.type("\nI fold the chorus before I write the verses."); await f.menu("Keep in Ways of mine"); await f.sleep(1500); await f.go(window.Harvest.waysLeaf()); await f.sleep(1800); } },
+  { t: "It stays as the project's last leaf", d: "Go back to <b>Songs</b>: <b>Harvest</b> is its last line, with its own leaf (›). <b>☰</b> → <b>The record</b> shows the harvest too. One <b>Undo</b> right after starting takes a harvest away again.", n: "No Show me for this one." }
 ] };
 window.GuideStages = STAGES;
 function addLong() { Page.go(D().trunk); Page.newLeaf(); const id = Page.leaf, t = []; B.act("write", { line: D().leaves[id].parent, at: 0, words: "A long leaf for the feel check" }); for (let i = 1; i <= 1200; i++) t.push((i % 6 === 2 ? "\t" : "") + "Line " + i + ": the river keeps on running and the page keeps up with it."); B.act("write", { line: D().leaves[id].lines[0], words: t.join("\n") }); B.clearUndo(); Page.show(id); openTask(false); }

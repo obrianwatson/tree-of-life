@@ -31,7 +31,7 @@ button:disabled{opacity:.4}
 .ttl.trunk{color:var(--ink3);font-size:15px;font-family:var(--sans);font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding-top:16px}
 .pg{padding:4px 12px 24px 6px;font-family:var(--serif);font-size:19px;line-height:1.6;outline:none;min-height:40vh;-webkit-user-select:text;user-select:text;caret-color:var(--acc)}
 .l{position:relative;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;min-height:1.6em;padding:1px calc(var(--m,0) * 30px) 1px calc(var(--gut) + var(--d,0) * var(--step));background-repeat:no-repeat}
-.l.by-ai{color:var(--ai)}
+.l.by-ai{color:var(--ai)}.l.by-book{color:var(--ink2)}
 .l.lf{font-weight:600}
 .l.mk::after{content:attr(data-m);position:absolute;right:0;top:0;height:100%;min-width:calc(var(--m) * 30px);display:flex;align-items:center;justify-content:flex-end;letter-spacing:19px;margin-right:-10px;color:var(--acc);font-family:var(--sans);font-weight:400;font-size:19px;cursor:pointer;pointer-events:none}
 .l.cur{background-color:var(--accbg);border-radius:4px}
@@ -163,3 +163,4 @@ body.ai-open .bar{display:none}
 .sb select{font:inherit;font-size:15px;height:36px;border:1px solid var(--line2);border-radius:10px;background:var(--card);color:var(--ink);padding:0 8px;max-width:100%}
 .ask.card .fld input{display:block;width:100%;border:1px solid var(--line2);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit;font-size:16px;padding:6px 10px;margin-top:4px}
 .rowi.cmd .go{flex:1 1 100%}.rowi.cmd small{white-space:normal}
+.tl.by-book{color:var(--ink2)}

@@ -296,8 +296,8 @@ async def guide(br, p, url, n, phone, ai=None, more=None):
     count = await pg.evaluate("Guide.STAGES[%d].tasks.length" % n)
     for i in range(count):
         if not await pg.evaluate("!!Guide.STAGES[%d].tasks[%d].show" % (n, i)): continue
-        before = await pg.evaluate(snap); await pg.evaluate("Guide.demo(Guide.STAGES[%d].tasks[%d].show)" % (n, i))
-        C.ok(await pg.evaluate(snap) == before and await pg.locator("#shield.hide").count() == 1 and pg.errs == [], who + "Show me %d runs and puts everything back %s" % (i + 1, str(pg.errs[:1]) if pg.errs else ""))
+        before = await pg.evaluate(snap); rec = await pg.evaluate("Log.all().then(a => a.length)"); await pg.wait_for_timeout(3); await pg.evaluate("Guide.demo(Guide.STAGES[%d].tasks[%d].show)" % (n, i))
+        C.ok(await pg.evaluate(snap) == before and await pg.evaluate("Log.all().then(a => a.length)") == rec and await pg.locator("#shield.hide").count() == 1 and pg.errs == [], who + "Show me %d runs and puts everything back %s" % (i + 1, str(pg.errs[:1]) if pg.errs else ""))
     await pg.evaluate("Guide.task = 0"); await pg.evaluate("document.querySelector('.av[data-v=off]').click()"); await pg.fill("#gNote", "the bar jumped")
     rep = await pg.evaluate("Guide.report()")
     C.ok(": SOMETHING'S OFF\n   the bar jumped" in rep and "river is high" not in rep and "shepherd" not in rep, who + "the answers report has your answers and none of the writing")
@@ -810,7 +810,7 @@ async def stage6(br, p, url, phone):
     # ---- the switches ----
     await ev("Mods.set('autos', false)"); n1 = await ev("Marks.list().length"); await ev("T.at('Verse two')"); await pg.keyboard.press("Enter"); await pg.keyboard.type("todo with automations off"); await pg.keyboard.press("Enter"); await pg.wait_for_timeout(150)
     ok(await ev("Marks.list().length") == n1, "Automations switched off: none run"); await ev("Mods.set('autos', true)")
-    await ev("Mods.set('commands', false)"); await pg.keyboard.type(";today"); await pg.keyboard.press("Enter"); await settle(pg)
+    await ev("Mods.set('commands', false)"); await ev("T.at('todo with automations off')"); await pg.keyboard.press("Enter"); await pg.keyboard.type(";today"); await pg.keyboard.press("Enter"); await settle(pg)
     ok(await ev("!!T.find(';today')") and await pg.locator("#b_cmd.hide").count() == 1 and await ev("Commands.all().length") >= 6, "Commands switched off: ;today is just a line, the ; button goes, and your commands are all still in their leaf"); await ev("Mods.set('commands', true)")
     ok(pg.errs == [], "no errors on the page " + str(pg.errs[:2])); await ctx.close()
 
@@ -818,6 +818,131 @@ async def stage6(br, p, url, phone):
 async def _s6(br, p, url):
     for phone in (True, False): await stage6(br, p, url, phone)
     for phone in (True, False): await guide(br, p, url, 6, phone)
+
+# ====================================================================== stage 7: the harvest
+MKLEAF = "([name, text, under]) => { Page.go(under || Book.D.trunk); Page.newLeaf(); Book.act('write', { line: Book.D.leaves[Page.leaf].parent, at: 0, words: name }); if (text) Book.act('write', { line: Book.D.leaves[Page.leaf].lines[0], words: text }); Book.clearUndo(); Page.show(Page.leaf); return Page.leaf; }"
+HEADS = ["How it went", "What you did again and again", "Where you got stuck", "What you were waiting on", "How the time was spent"]
+async def work(pg, album, river, desert):
+    """Real moves in a small project, so its record has something to show (and two earlier days, nine and eight days ago)."""
+    ev = pg.evaluate
+    await ev("""([river, desert]) => { const past = (ago, e, span) => { const x = Log.add(e); x.t -= ago * 86400000; if (span) x.t2 = x.t + span * 60000; };
+      past(9, { who: 'me', what: 'write', leaf: river, c: 300, r: 200 }, 20); past(9, { who: 'me', what: 'time', leaf: river, ms: 20 * 60000 }, 20);
+      past(8, { who: 'me', what: 'write', leaf: river, c: 200, r: 30 }, 12); past(8, { who: 'me', what: 'time', leaf: river, ms: 12 * 60000 }, 12); past(8, { who: 'me', what: 'held', leaf: river, ms: 15 * 60000 }, 15);
+      Book.act('fold', { from: T.find('Chorus', river), name: 'Chorus' }); Book.act('fold', { from: T.find('Chorus', desert), name: 'Chorus' });
+      Book.act('mark', { line: T.find('Verse two', river), waiting: 'the drum take from Sam' });
+      Book.act('link', { from: T.find('carry me home', river), to: T.find('make a way', desert), label: 'echoes' });
+      Log.time(desert, 6 * 60000); Commands.examples(); }""", [river, desert])
+    await ev("Page.go('%s')" % river); await ev("T.at('the rain came down')")
+    for _ in range(2): await pg.keyboard.type(" x"); await ev("Book.sealUndo()"); await ev("Page.doUndo()")
+    await ev("Commands.runAt(Commands.find(';today'), [])"); await ev("Commands.runAt(Commands.find(';today'), [])"); await ev("Log.saveTail()")
+
+async def stage7(br, p, url, phone):
+    who = ("iPhone" if phone else "laptop") + " 7: "; ok = lambda c, m: C.ok(c, who + m)
+    ai = FakeAI(); ctx = await device(br, p, phone, ai=ai); pg = await page(ctx, url); ev = pg.evaluate
+    album = await ev(MKLEAF, ["Album", "", None]); river = await ev(MKLEAF, ["River song", SONG, album]); desert = await ev(MKLEAF, ["Desert road", "Verse one\n\trivers in the desert\nChorus\n\tmake a way", album])
+    await work(pg, album, river, desert); words = await ev("T.text('%s') + T.text('%s')" % (river, desert)); sent = len(ai.seen)
+    # ---- where it starts ----
+    await ev("Page.go(Book.D.trunk)"); await tap(pg, "#tMenu", phone); items = await ev("[...document.querySelectorAll('#menu button')].map(b => b.textContent)"); await ev("Page.closeMenu()")
+    ok(any(i.startswith("Harvest") for i in items), "☰ has Harvest")
+    await ev("Harvest.open()"); ok("Open the project's own leaf first" in await pg.inner_text("#sheet") and await pg.locator("#hvStart").count() == 0 and (await ev("Book.act('harvest', { leaf: Book.D.trunk })"))["ok"] is False, "on the trunk it asks you to open the project's own leaf first (a harvest looks at one leaf and everything under it)"); await ev("Page.closeSheet(true)")
+    await ev("Page.go('%s')" % album); await ev("Harvest.open()"); await pg.wait_for_selector("#hvStart")
+    ok("Start the harvest of “Album”" in await pg.inner_text("#hvStart") and "Nothing is sent anywhere" in await pg.inner_text("#sheet"), "in the project's leaf: Start the harvest of “Album”")
+    await tap(pg, "#hvStart", phone); await pg.wait_for_function("!!Harvest.harvestOf('%s') && Page.leaf === Harvest.harvestOf('%s')" % (album, album)); await settle(pg); hv = await ev("Page.leaf")
+    # ---- the Harvest leaf: what the record shows ----
+    ok(await ev("T.lines('%s')" % album) == ["River song", "Desert road", "Harvest"] and await ev("Book.path(Page.leaf).map(Book.title).join(' › ')") == "Trunk › Album › Harvest", "a Harvest leaf is made as the project's last line, and opens")
+    lines = await ev("T.lines()"); txt = "\n".join(lines); depths = await ev("T.depths()")
+    ok(all(h in lines for h in HEADS) and lines[-5] == "What to keep" or "What to keep" in lines, "it holds five headings (how it went · again and again · stuck · waiting · time) and What to keep")
+    ok(all(depths[lines.index(h)] == 0 and depths[lines.index(h) + 1] == 1 for h in HEADS), "what the record shows grows from each heading")
+    ok("3 days of work across 10 days" in txt and "3 leaves" in txt and "Who made the moves: you" in txt and ", commands 1." in txt, "how it went: the days, the size, and who made the moves " + json.dumps([l for l in lines if "days" in l or "moves" in l][:3]))
+    ok("You gave folds the name “Chorus” twice." in txt and "You ran ;today twice." in txt and "You folded lines twice." in txt and "These lines open more than one of its leaves: Verse one, Chorus." in txt, "what you did again and again: repeated folds, names, commands, and lines your leaves share")
+    ok("The longest pause: 7 days with no moves" in txt and "You pressed Undo twice in “River song”." in txt and "You rewrote the most in “River song”" in txt and "You held the clock longest in “River song”: 15 min of holding beside 32 min of typing." in txt, "where you got stuck: the longest pause, Undo, rewriting, long holds " + json.dumps([l for l in lines if "pause" in l or "Undo" in l or "held" in l]))
+    ok("Waiting for “the drum take from Sam”: still open after less than a day." in txt, "what you were waiting on: your bookmarks")
+    ok("38 min of writing and 15 min of holding" in txt and "Where it went: “River song” 47 min · “Desert road” 6 min." in txt, "how the time was spent: from the writing clock " + json.dumps([l for l in lines if "writing" in l or "went:" in l]))
+    ok("A command you could keep: ;chorus" in txt and "Keep in Ways of mine" in txt and "Make this a request" in txt, "What to keep lists a command the record suggests, and says how to keep a lesson or make a request")
+    ok(await ev("Book.D.leaves[Page.leaf].lines.every(l => Book.D.lines[l].by === 'book')") and await pg.locator("#pg > .l.by-book").count() == len(lines) and await ev("getComputedStyle(document.querySelector('#pg > .l.by-book')).color !== getComputedStyle(document.querySelector('#ttl')).color"), "every line of it is marked as the book's own (grey), never as yours")
+    ok(await ev("T.text('%s') + T.text('%s')" % (river, desert)) == words and len(ai.seen) == sent, "starting a harvest changes none of your writing and sends nothing to an AI")
+    log = " | ".join(await ev("T.log()")); ok("You started the harvest of “Album”" in log and "The book wrote what the record shows in “Harvest” (%d lines)" % len(lines) in log, "the record says you started it, and that the book wrote the facts")
+    ok(await ev("Book.checkpoint('harvest', { leaf: '%s' }, 'book')" % album) == "The book only writes during a harvest." and (await ev("Book.act('harvest', { leaf: '%s' })" % hv))["why"].startswith("This is a Harvest leaf"), "the book's hand writes only during a harvest; a Harvest leaf can't be harvested itself")
+    await ev("Page.doUndo()"); await settle(pg); ok(await ev("T.lines('%s')" % album) == ["River song", "Desert road"] and await ev("Harvest.harvestOf('%s')" % album) is None, "one Undo takes the whole harvest away again")
+    r = await ev("Harvest.start('%s').then(r => ({ ok: r.ok, leaf: r.leaf, made: r.made }))" % album); hv = r["leaf"]; await ev("Page.go('%s')" % hv); await settle(pg); ok(r["ok"] and r["made"], "(started again)")
+    # ---- your own lines, beside the book's ----
+    stuck = await ev("(() => { const lf = Book.D.leaves[Page.leaf], i = lf.lines.findIndex(l => Book.D.lines[l].text === 'Where you got stuck'); return lf.lines[Book.branchEnd(lf, i) - 1]; })()")
+    await ev("Page.setCaret({ line: '%s', at: Book.D.lines['%s'].text.length })" % (stuck, stuck)); await pg.keyboard.press("Enter"); await pg.keyboard.type("The second verse. I kept changing the melody."); await settle(pg)
+    mine = await ev("T.find('I kept changing')"); ok(await ev("Book.D.lines['%s'].by" % mine) == "me" and await ev("Book.D.lines['%s'].d" % mine) == 1 and await ev("Page.lineOf('%s').className" % mine) == "l" and await ev("Book.D.lines['%s'].by" % stuck) == "book", "you write your own lines under any heading: yours are plain, the book's stay grey")
+    # ---- ☰ → Harvest, once it's started: what to keep ----
+    await ev("Harvest.open()"); await pg.wait_for_selector("#hvOpen"); sh = await pg.inner_text("#sheet")
+    ok("Ask the fast AI for its debrief" in sh and "This sends the record of this project's moves and the Harvest leaf to Claude" in sh and ";chorus" in sh and "You gave folds the name “Chorus” twice." in sh, "from the Harvest leaf, ☰ → Harvest shows what's next: the AI's debrief (saying what would be sent) and what to keep")
+    before = await ev("T.canon()"); await ev("document.querySelector('#sheet [data-try]').click()"); tr = await pg.inner_text("#hvTry")
+    ok("nothing was kept" in tr and "+ [a fold named “Chorus”" in tr and await ev("T.canon()") == before, "a suggested command can be tried first: it shows what it would do and keeps nothing")
+    await ev("document.querySelector('#sheet [data-keep]').click()"); await pg.wait_for_function("!!Commands.find(';chorus')"); await pg.wait_for_function("((document.querySelector('#hvMsg') || {}).textContent || '').indexOf('Kept as ;chorus') === 0")
+    ok(await ev("Commands.find(';chorus').steps.map(s => s.text).join()") == "fold as Chorus" and await ev("[...document.querySelectorAll('#sheet [data-keep]')].length") == 1, "Keep: the repeated move is a command in your Commands leaf now (and is no longer suggested)")
+    await ev("Page.closeSheet(true)"); await ev("Page.go('%s')" % desert); await ev("T.at('Verse one')"); n0 = await ev("Fold.pieces('Chorus').length"); await ev("Commands.runAt(Commands.find(';chorus'), [])")
+    ok(await ev("Fold.pieces('Chorus').length") == n0 + 1, "and it runs like any command"); await ev("Page.doUndo()"); await ev("Page.go('%s')" % hv)
+    # ---- reflect together: the fast AI reads the same record ----
+    how = await ev("(() => { const lf = Book.D.leaves[Page.leaf], i = lf.lines.findIndex(l => Book.D.lines[l].text === 'How it went'); return lf.lines[Book.branchEnd(lf, i) - 1]; })()")
+    ai.say(("write", {"line": how, "how": "after", "words": "Two quick days, a pause, then a slower return."})); ai.say(("text", "I've added my line. What changed in the days you stayed away?"))
+    ok(len(ai.seen) == sent, "(nothing has gone to the AI so far)"); await ev("Harvest.open()"); await pg.wait_for_selector("#hvAI"); await tap(pg, "#hvAI", phone)
+    await pg.wait_for_function("AI.isOpen && !AI.busy && AI.chat && AI.chat.msgs.length === 2 && AI.chat.msgs[1].parts.length >= 2"); b = ai.seen[-2]; sysm = b["system"]
+    ok("THIS CHAT IS A HARVEST" in sysm and "THE RECORD OF EVERY MOVE IN THIS PROJECT" in sysm and "You folded 3 lines in “River song” as “Chorus”" in sysm and "Command ;today wrote in “River song”" in sysm and "You left a bookmark in “River song”" in sysm, "Ask the fast AI: the record of this project's moves goes along (who did what, and when) " + json.dumps([l for l in sysm.split("\n") if " · " in l][:12]))
+    ok(("LEAF “Harvest” (leaf id %s)" % hv) in sysm and "«from the record»" in sysm and "I kept changing the melody." in sysm and "keep_lesson" in json.dumps(b["tools"]) and b["messages"][0]["content"].startswith("Read the record of “Album”"), "so does the Harvest leaf, with the book's lines and yours told apart, and what it may offer to keep")
+    ok(await ev("AI.chat.title") == "Harvest of Album" and await ev("Page.leaf") == hv, "it opens as its own chat, on the Harvest leaf")
+    al = await ev("T.find('Two quick days')"); ok(await ev("Book.D.lines['%s'].by" % al) == "ai" and "by-ai" in await ev("Page.lineOf('%s').className" % al) and await ev("T.lines().indexOf('Two quick days, a pause, then a slower return.')") == await ev("T.lines().indexOf('How the time was spent')") * 0 + await ev("Book.D.leaves[Page.leaf].lines.indexOf('%s')" % how) + 1, "its debrief goes into the Harvest leaf under the headings, marked as the AI's (purple): three voices, each marked")
+    # the AI offers a lesson: a card, kept only when you say so
+    ai.say(("keep_lesson", {"line": "I fold the chorus before I write the verses."})); ai.say(("text", "Kept."))
+    await ask(pg, "I came back when I stopped forcing the second verse.", phone, wait=False); await pg.wait_for_selector(".m.it:last-child .ask.card .allow"); card = await pg.inner_text(".m.it:last-child .ask.card")
+    ok("A line for “Ways of mine”" in card and "I fold the chorus before I write the verses." in card and await ev("Harvest.waysLeaf()") is None, "in the chat the AI can offer a lesson for your Ways of mine leaf: a card, nothing kept yet")
+    await ev("document.querySelector('.m.it:last-child .ask.card .allow').click()"); await pg.wait_for_function("!AI.busy"); ways = await ev("Harvest.waysLeaf()")
+    ok(await ev("Book.path('%s').map(Book.title).join(' › ')" % ways) == "Trunk › Ways of mine" and await ev("T.lines('%s')" % ways) == ["I fold the chorus before I write the verses."] and await ev("Book.D.lines[Book.D.leaves['%s'].lines[0]].by" % ways) == "ai" and "KEPT" in ai.seen[-1]["messages"][-1]["content"][0]["content"], "Keep: the line goes to a Ways of mine leaf on the trunk (made if it wasn't there), marked as the AI's words")
+    ai.say(("keep_lesson", {"line": "Never rest."})); ai.say(("text", "Okay."))
+    await ask(pg, "Anything else?", phone, wait=False); await pg.wait_for_selector(".m.it:last-child .ask.card .row"); sysm2 = ai.seen[-1]["system"]; await ev("[...%s.querySelectorAll('.ask.card .row button')].pop().click()" % LAST); await pg.wait_for_function("!AI.busy")
+    ok(await ev("T.lines('%s').length" % ways) == 1 and "NOT KEPT" in ai.seen[-1]["messages"][-1]["content"][0]["content"], "Don't: nothing is kept")
+    ok("THE WRITER'S OWN WAYS" in sysm2 and "I fold the chorus before I write the verses." in sysm2, "and from then on the AI follows your Ways of mine in every chat"); await ev("AI.close()")
+    # ---- keeping a lesson and making a request yourself, from a line ----
+    await ev("Page.setCaret({ line: '%s' })" % mine); ok(await ev("T.menu('Keep in Ways of mine')"), "⌄ on a line in the Harvest leaf: Keep in Ways of mine"); await settle(pg)
+    ok(await ev("T.lines('%s')" % ways) == ["I fold the chorus before I write the verses.", "The second verse. I kept changing the melody."] and await ev("Book.D.lines[Book.D.leaves['%s'].lines[1]].by" % ways) == "me" and "Kept in Ways of mine" in await pg.inner_text("#toast") and await ev("!!T.find('I kept changing')"), "the line is copied there as yours (it stays in the Harvest leaf too)")
+    await ev("T.menu('Keep in Ways of mine')"); ok("already in Ways of mine" in await pg.inner_text("#msg") and await ev("T.lines('%s').length" % ways) == 2, "the same line isn't kept twice")
+    log = " | ".join(await ev("T.log()")); ok("You kept a line in “Ways of mine”: “The second verse. I kept changing the melody.”" in log and "The AI kept a line in “Ways of mine”" in log, "the record says who kept each lesson")
+    ok(await ev("T.menu('Make this a request')"), "⌄ → Make this a request…"); await pg.wait_for_selector("#sheet textarea[data-f=want]")
+    ok(await pg.input_value("#sheet textarea[data-f=want]") == "The second verse. I kept changing the melody.", "the request card opens with that line as what you want"); await ev("Page.closeSheet(true)")
+    await ev("Page.go('%s')" % river); await ev("T.at('Verse one')"); ok(not await ev("Page.menuItems().some(i => i && i[0].indexOf('Keep in Ways of mine') === 0)"), "(those two are only offered in a Harvest leaf)")
+    # ---- today's facts again; it stays the project's last leaf ----
+    await ev("Page.go('%s')" % hv); n0 = await ev("T.lines().length"); await ev("Harvest.open()"); await pg.wait_for_selector("#hvAgain"); await ev("document.querySelector('#hvAgain').click()"); await pg.wait_for_function("T.lines('%s').length > %d" % (hv, n0)); await ev("Page.closeSheet(true)"); await settle(pg)
+    lines2 = await ev("T.lines()"); d2 = await ev("T.depths()"); i = next(k for k, l in enumerate(lines2) if l.startswith("What the record shows now"))
+    ok(i == n0 and d2[i] == 0 and lines2[i + 1] == "How it went" and d2[i + 1] == 1 and d2[i + 2] == 2 and lines2[:n0] == await ev("T.lines().slice(0, %d)" % n0) and "I kept changing" in "\n".join(lines2[:n0]), "Write today's facts again adds a new dated branch at the end; nothing earlier is touched")
+    ok(await ev("T.lines('%s')" % album) == ["River song", "Desert road", "Harvest"] and await ev("Object.keys(Book.D.more.harvests).length") == 1, "the Harvest leaf stays as the project's last leaf (one harvest per project)")
+    await ev("Page.go(Book.D.trunk)"); await ev("Harvest.open()"); ok("Harvests so far" in await pg.inner_text("#sheet") and "Album" in await pg.inner_text("#sheet .rows"), "from the trunk, ☰ → Harvest lists the harvests so far"); await ev("document.querySelector('#sheet [data-h]').click()"); ok(await ev("Page.leaf") == hv, "and opens one")
+    # ---- modules: each a switch; off never deletes; none needs another ----
+    await ev("Settings.open()"); mods = await ev("[...document.querySelectorAll('#sheet [data-mod]')].map(c => c.dataset.mod)"); await ev("Page.closeSheet(true)")
+    ok(mods == ["grow", "clock", "search", "fold", "link", "map", "marks", "ai", "requests", "commands", "autos", "harvest"], "Settings lists every module with its switch: " + ",".join(mods))
+    await ev("Mods.set('harvest', false)"); await tap(pg, "#tMenu", phone); items = await ev("[...document.querySelectorAll('#menu button')].map(b => b.textContent)"); await ev("Page.closeMenu()"); await ev("Page.setCaret({ line: '%s' })" % mine)
+    ok(not any(i.startswith("Harvest") for i in items) and "switched off" in (await ev("Book.act('lesson', { text: 'x' })"))["why"] and not await ev("Page.menuItems().some(i => i && i[0].indexOf('Keep in Ways') === 0)") and await ev("T.lines().length") == len(lines2) and await ev("T.lines('%s').length" % ways) == 2, "Harvest switched off: it leaves the menus and its moves are refused, and the Harvest leaf and Ways of mine are all still there")
+    await ev("Mods.set('harvest', true)"); await ev("Mods.set('grow', false)"); await ev("Mods.set('ai', false)"); await ev("Mods.set('commands', false)")
+    r = await ev("Harvest.start('%s').then(r => ({ ok: r.ok, made: r.made, leaf: r.leaf }))" % river); await ev("Page.go('%s')" % river); await ev("Harvest.open()"); await pg.wait_for_selector("#hvOpen")
+    ok(r["ok"] and r["made"] and await ev("T.lines('%s').pop()" % river) == "Harvest" and await pg.locator("#hvAI").count() == 0 and "Commands are switched off" in await pg.inner_text("#sheet"), "with Grow, the fast AI and Commands switched off, a harvest still works (a leaf's own harvest, without the parts that are off)"); await ev("Page.closeSheet(true)")
+    await ev("Page.go(Book.D.trunk)"); n0 = await ev("Book.leaves().length"); await tap(pg, "#plus", phone); await settle(pg); ok(await ev("Book.leaves().length") == n0 + 1 and await ev("Page.leaf !== Book.D.trunk"), "and ＋ still makes a new leaf with Grow off (leaves are the core's)")
+    for m in ("grow", "ai", "commands"): await ev("Mods.set('%s', true)" % m)
+    ok(pg.errs == [], "no errors on the page " + str(pg.errs[:2])); await ctx.close()
+
+async def sync3(br, p, url):
+    """A harvest, the lessons kept and the record travel between devices; who wrote each line travels with them."""
+    gh = FakeGitHub(); gh.refs["tol-data"] = "d" * 40; A = await device(br, p, False, gh); Bc = await device(br, p, True, gh)
+    for ctx in (A, Bc): await ctx.add_init_script("try { localStorage.setItem('tol-gh-token', JSON.stringify('ghp_test')); } catch (e) {}")
+    a = await page(A, url); album = await a.evaluate(MKLEAF, ["Album", "", None]); river = await a.evaluate(MKLEAF, ["River song", SONG, album]); desert = await a.evaluate(MKLEAF, ["Desert road", "Verse one\n\trivers in the desert\nChorus\n\tmake a way", album])
+    await work(a, album, river, desert); hv = await a.evaluate("Harvest.start('%s').then(r => r.leaf)" % album); await a.evaluate("Book.act('lesson', { text: 'I fold the chorus first.' })")
+    await a.evaluate("Lock.turnOn('willow bridge candle seven')"); await a.wait_for_function("Lock.label().indexOf('Synced') === 0")
+    b = await page(Bc, url); await b.evaluate("Lock.turnOn('willow bridge candle seven')"); await b.wait_for_function("!!T.leafNamed('Ways of mine') && !!T.leafNamed('Harvest')"); await settle(b)
+    got = await b.evaluate("(() => { const al = T.leafNamed('Album'), h = Harvest.harvestOf(al); return { h, last: T.lines(al).pop(), book: h && Book.D.leaves[h].lines.every(l => Book.D.lines[l].by === 'book'), lines: h && T.lines(h).length, ways: T.lines(T.leafNamed('Ways of mine')) }; })()")
+    C.ok(got["h"] == hv and got["last"] == "Harvest" and got["book"] and got["lines"] == await a.evaluate("T.lines('%s').length" % hv) and got["ways"] == ["I fold the chorus first."], "sync: the Harvest leaf arrives on the other device as the project's harvest, its lines still marked as the book's, and Ways of mine with it " + json.dumps(got))
+    await b.evaluate("Page.go('%s')" % hv); await settle(b); C.ok(await b.locator("#pg > .l.by-book").count() == got["lines"], "sync: the book's lines are grey there too")
+    logb = " | ".join(await b.evaluate("T.log()")); C.ok("You started the harvest of “Album”" in logb and "The book wrote what the record shows" in logb, "sync: the record of the harvest travels too")
+    blob = " ".join(v[0].decode(errors="ignore") for v in gh.files.values()); C.ok("drum take" not in blob and "fold the chorus" not in blob and "longest pause" not in blob, "sync: nothing readable is written to the repository")
+    for ctx in (A, Bc): await ctx.close()
+
+@stage("7")
+async def _s7(br, p, url):
+    for phone in (True, False): await stage7(br, p, url, phone)
+    await sync3(br, p, url)
+    for phone in (True, False): await guide(br, p, url, 7, phone)
 
 #STAGES-BELOW
 

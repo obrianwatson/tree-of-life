@@ -11,6 +11,7 @@ outcome on the `test-results` branch: see `.github/workflows/tests.yml` and `TES
 
 ```
 pip install playwright        # once (and `playwright install chromium` if Chrome isn't installed)
+python3 tests/test_core.py        # BOLW Core (docs/core/): all seven stages; `python3 tests/test_core.py 7` runs one (see AGENTS.md)
 python3 tests/test_basics.py      # pages, writing clock, hold, Claude page look changes
 python3 tests/test_folds.py       # folds: create, overlap, picker, edits, staircase, focus view, resume, export/import, alignment
 python3 tests/test_folds_sync.py  # folds between two devices through encrypted sync
