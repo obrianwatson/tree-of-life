@@ -1,0 +1,50 @@
+browser: real-github
+commit: 6aef3c6a52f55abc39806aad2270e5a019ea20bc
+when: 2026-11-28T10:38:05Z
+result: PASS
+--- pass 1 ---
+PASS REAL GitHub: the first device makes the branch and the vault, and writes its base ('Syncing…\n      Rename device\n      Sync nowTurn off on this deviceSync is on. No' ok )
+PASS the second device unlocks with the passphrase and syncs ('Syncing…\n      Rename device\n      Sync nowTurn off on this deviceUnlocked. Your' ok )
+PASS the book arrives on the second device
+PASS round 1: an edit crosses through real GitHub (ok/ok  )
+PASS round 2: an edit crosses through real GitHub (ok/ok  )
+PASS round 3: an edit crosses through real GitHub (ok/ok  )
+PASS round 4: an edit crosses through real GitHub (ok/ok  )
+PASS those edits went up as delta files ([('241314a.d.json', 201), ('51f1ee1.d.json', 201), ('241314a.d.json', 200), ('51f1ee1.d.json', 200)])
+   (extra looks needed because GitHub's list lagged: 0)
+PASS two devices writing at the same moment both get through and end up the same
+   (conflicts GitHub answered: [('PUT', '770e74af241314a.d.json', 409)])
+PASS a third device joins and reads base + delta from real GitHub ('Syncing…\n      Rename device\n      Sync nowTurn off on this ')
+PASS …with no needless 'Other version' pages
+PASS the leave-the-app save is accepted by real GitHub ([('PUT', 'atson/tree-of-life/contents/sync/a770e74af241314a.d.json', 200)])
+PASS …and the other device picks up from there
+PASS on GitHub: the vault, three base files, and delta files ([('51f1ee1.d.json', 2418), ('1151f1ee1.json', 60775), ('241314a.d.json', 2274), ('af241314a.json', 61111), ('181576ef3.json', 61315), ('meta.json', 221)])
+PASS nothing readable is stored on GitHub
+PASS no page errors on A []
+PASS no page errors on B []
+PASS no page errors on C []
+   (requests to GitHub: 82; answers seen: [200, 201, 404, 409])
+18 passed, 0 failed
+--- pass 2 ---
+PASS REAL GitHub: the first device makes the branch and the vault, and writes its base ('Syncing…\n      Rename device\n      Sync nowTurn off on this deviceSync is on. No' ok )
+PASS the second device unlocks with the passphrase and syncs ('Syncing…\n      Rename device\n      Sync nowTurn off on this deviceUnlocked. Your' ok )
+PASS the book arrives on the second device
+PASS round 1: an edit crosses through real GitHub (ok/ok  )
+PASS round 2: an edit crosses through real GitHub (ok/ok  )
+PASS round 3: an edit crosses through real GitHub (ok/ok  )
+PASS round 4: an edit crosses through real GitHub (ok/ok  )
+PASS those edits went up as delta files ([('d1316e0.d.json', 201), ('647d0dc.d.json', 201), ('d1316e0.d.json', 200), ('647d0dc.d.json', 200)])
+   (extra looks needed because GitHub's list lagged: 0)
+PASS two devices writing at the same moment both get through and end up the same
+   (conflicts GitHub answered: [('PUT', '21b501dd647d0dc.d.json', 409)])
+PASS a third device joins and reads base + delta from real GitHub ('Syncing…\n      Rename device\n      Sync nowTurn off on this ')
+PASS …with no needless 'Other version' pages
+PASS the leave-the-app save is accepted by real GitHub ([('PUT', 'atson/tree-of-life/contents/sync/3b57efa7fd1316e0.d.json', 200)])
+PASS …and the other device picks up from there
+PASS on GitHub: the vault, three base files, and delta files ([('647d0dc.d.json', 2418), ('dd647d0dc.json', 60775), ('d1316e0.d.json', 2274), ('7fd1316e0.json', 61111), ('2f4ff6682.json', 61315), ('meta.json', 221)])
+PASS nothing readable is stored on GitHub
+PASS no page errors on A []
+PASS no page errors on B []
+PASS no page errors on C []
+   (requests to GitHub: 83; answers seen: [200, 201, 404, 409])
+18 passed, 0 failed

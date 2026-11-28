@@ -1,0 +1,22 @@
+browser: webkit
+commit: 6aef3c6a52f55abc39806aad2270e5a019ea20bc
+when: 2026-11-28T10:46:34Z
+result: PASS
+test_addons: pass=20 fail=0 exit=0
+test_agent: pass=34 fail=0 exit=0
+test_anywhere: pass=40 fail=0 exit=0
+test_basics: pass=13 fail=0 exit=0
+test_bolw: pass=188 fail=0 exit=0
+test_boot: pass=18 fail=0 exit=0
+test_core: pass=765 fail=0 exit=0
+test_drill: pass=54 fail=0 exit=0
+test_drill_sync: pass=10 fail=0 exit=0
+test_folds: pass=48 fail=0 exit=0
+test_folds_sync: pass=16 fail=0 exit=0
+test_memory: pass=87 fail=0 exit=0
+test_memory_sync: pass=14 fail=0 exit=0
+test_onboard: pass=55 fail=0 exit=0
+test_safety: pass=74 fail=0 exit=0
+test_sync_delta: pass=48 fail=0 exit=0
+test_trial: pass=161 fail=0 exit=0
+--- failures ---
