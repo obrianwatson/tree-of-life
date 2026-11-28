@@ -193,7 +193,8 @@ BROWSER=webkit python3 tests/test_core.py      # Safari's engine (or BROWSER=fir
 2. Make the change small. One module per file.
 3. Add or update checks in `tests/test_core.py`, and the guided check if the writer will see a difference.
 4. Bump the version: `python3 tools/core-version.py 1.6.1` (it rewrites `version.txt`, `index.html`, the test page and `sw.js`).
-5. Run the tests. Push. Check **Core (quick)** passed in both engines.
+5. Run the tests. Push. Check **Core (quick)** passed in both engines, and that **Publish web app** went through.
+   (If publishing fails with "Fetching artifact metadata failed", that is GitHub's side: run that workflow again.)
 6. Tell the writer in plain words: what changed, what he'll see, exactly what to try. Short lists, one thing at a time,
    and the "why" for each step. No code unless he asks.
 
