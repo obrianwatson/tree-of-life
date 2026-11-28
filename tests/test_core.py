@@ -500,6 +500,57 @@ async def _s3(br, p, url):
     for phone in (True, False): await stage3(br, p, url, phone)
     for phone in (True, False): await guide(br, p, url, 3, phone)
 
+# ====================================================================== stage 4: Bookmarks
+async def stage4(br, p, url, phone):
+    who = ("iPhone" if phone else "laptop") + " 4: "; ok = lambda c, m: C.ok(c, who + m)
+    ctx = await device(br, p, phone); pg = await page(ctx, url); ev = pg.evaluate
+    other = await new_leaf(pg, "Psalm 23", "The Lord is my shepherd"); song = await new_leaf(pg, "River song", SONG)
+    await ev("T.at('Verse two')"); await tap(pg, "#tMark", phone); await settle(pg)
+    m = await ev("Marks.list()[0]"); line = await ev("T.find('Verse two')")
+    ok(m["leaf"] == song and m["line"] == line and m["title"] == "River song · Verse two" and abs(m["at"] - await ev("Date.now()")) < 5000, "🔖 saves where you were, filled in by itself: the leaf, the line and the time")
+    ok(await pg.locator("#sheet [data-f]").count() == 5 and "River song · Verse two" in await pg.inner_text("#sheet"), "its card opens with five optional lines: doing, waiting for, why, done looks like, meanwhile")
+    await pg.fill('#sheet [data-f="waiting"]', "a second line"); await ev("document.querySelector('#sheet [data-f=waiting]').dispatchEvent(new Event('change'))"); await pg.fill('#sheet [data-f="doing"]', "writing verse two")
+    await ev("[...document.querySelectorAll('#cdRow button')].pop().click()"); await settle(pg)
+    m = await ev("Marks.list()[0]"); ok(m.get("waiting") == "a second line" and m.get("doing") == "writing verse two" and "why" not in m, "the lines you fill in are kept (even one typed just before Close); the rest stay empty")
+    ok(await ev("Page.lineOf('%s').dataset.m" % line) == "⚑", "the bookmarked line shows ⚑")
+    await ev("Page.go('%s')" % other); await ev("Marks.openList()"); txt = await pg.inner_text("#sheet")
+    ok("Left waiting" in txt and "River song · Verse two" in txt and "What I was doing: writing verse two" in txt, "☰ → Bookmarks lists what's left waiting, with its first line")
+    await ev("document.querySelector('#sheet [data-j]').click()"); await settle(pg)
+    ok(await ev("Page.leaf") == song and await ev("document.querySelector('#pg .l.flash').textContent") == "Verse two", "tapping it jumps back to the leaf and the line")
+    await ev("Marks.openList()"); await ev("document.querySelector('#sheet [data-d]').click()"); txt = await pg.inner_text("#sheet")
+    ok("Nothing is waiting" in txt and "Done (kept as a record)" in txt and "River song · Verse two" in txt and await ev("!!Marks.list()[0].done"), "Done: it leaves the waiting list and stays below as a record")
+    await ev("Page.closeSheet(true)"); ok(await ev("Page.lineOf('%s').dataset.m || ''" % line) == "", "and its ⚑ leaves the line")
+    await ev("Marks.openCard(Marks.list()[0].id)"); await ev("document.querySelector('#cdRow button').click()"); ok(await ev("Marks.waiting().length") == 1, "Not done after all puts it back")
+    await ev("Page.closeSheet(true)"); await ev("Page.doUndo()"); ok(await ev("!!Marks.list()[0].done"), "Undo works on bookmarks too"); await ev("Book.act('markdone', { mark: Marks.list()[0].id, done: false })")
+    await ev("Book.act('prune', { line: '%s' })" % line); await ev("Page.go('%s')" % other); await ev("Marks.jump(Marks.list()[0])"); await settle(pg)
+    ok(await ev("Page.leaf") == song and "is gone" in await pg.inner_text("#msg") and await ev("Marks.list().length") == 1, "if its line was deleted, the bookmark is kept and takes you to its leaf, saying so")
+    await ev("Page.doUndo()")
+    log = " | ".join(await ev("T.log()")); ok("You left a bookmark in “River song”" in log and "You finished a bookmark" in log, "the record has the bookmark and its finishing")
+    await ev("Mods.set('marks', false)"); await settle(pg); ok(await pg.locator("#tMark.hide").count() == 1 and await ev("Marks.list().length") == 1, "Bookmarks switched off: 🔖 goes, the bookmarks are kept"); await ev("Mods.set('marks', true)")
+    ok("BOOKMARKS" in await ev("Keep.asText(Book)") and "waiting: a second line" in await ev("Keep.asText(Book)"), "export lists the bookmarks and their lines")
+    ok(pg.errs == [], "no errors on the page " + str(pg.errs[:2])); await ctx.close()
+
+async def sync2(br, p, url):
+    """Folds, names, details, links and bookmarks travel between devices too."""
+    gh = FakeGitHub(); gh.refs["tol-data"] = "d" * 40; A = await device(br, p, False, gh); Bc = await device(br, p, True, gh)
+    for ctx in (A, Bc): await ctx.add_init_script("try { localStorage.setItem('tol-gh-token', JSON.stringify('ghp_test')); } catch (e) {}")
+    a = await page(A, url); song = await new_leaf(a, "River song", SONG); ps = await new_leaf(a, "Psalm 23", "he leadeth me beside the still waters")
+    await a.evaluate("(() => { const f = Book.act('fold', { from: T.find('Chorus', '%s'), name: 'Chorus' }); Book.act('detail', { fold: f.fold, key: 'Key', value: 'G' }); Book.act('link', { from: T.find('carry me home', '%s'), to: T.find('still waters', '%s'), label: 'echoes' }); Book.act('mark', { line: T.find('Verse two', '%s'), waiting: 'a rhyme' }); Book.act('gather', { name: 'Water', search: 'river' }); })()" % (song, song, ps, song))
+    await a.evaluate("Lock.turnOn('willow bridge candle seven')"); await a.wait_for_function("Lock.label().indexOf('Synced') === 0")
+    b = await page(Bc, url); await b.evaluate("Lock.turnOn('willow bridge candle seven')"); await b.wait_for_function("!!T.leafNamed('River song')"); await settle(b)
+    got = await b.evaluate("(() => { const s = T.leafNamed('River song'); return { pieces: Fold.pieces('Chorus').length, key: (Fold.pieces('Chorus')[0].details || {}).Key, links: Link.of(T.find('carry me home', s)).map(x => x.label + ':' + x.text), marks: Marks.waiting().map(m => m.title + '|' + m.waiting), names: Fold.names().map(n => n.name).join() }; })()")
+    C.ok(got == {"pieces": 1, "key": "G", "links": ["echoes:he leadeth me beside the still waters"], "marks": ["River song · Verse two|a rhyme"], "names": "Chorus,Water"}, "sync 2: folds with their names and details, links, bookmarks and gatherings all arrive on the other device " + json.dumps(got))
+    await b.evaluate("(() => { Book.act('markdone', { mark: Marks.list()[0].id }); const s = T.leafNamed('River song'); Book.act('unlink', { link: Link.of(T.find('carry me home', s))[0].id }); Book.flush(); return Lock.syncNow(true); })()"); await b.wait_for_timeout(500)
+    await a.evaluate("Lock.syncNow()"); await a.wait_for_function("Marks.waiting().length === 0")
+    C.ok(await a.evaluate("Link.of(T.find('carry me home', '%s')).length" % song) == 0 and await a.evaluate("Marks.list().length") == 1, "sync 2: a bookmark finished and a link removed on the phone are so on the laptop")
+    C.ok(a.errs == [] and b.errs == [], "sync 2: no errors " + str((a.errs + b.errs)[:2])); await A.close(); await Bc.close()
+
+@stage("4")
+async def _s4(br, p, url):
+    for phone in (True, False): await stage4(br, p, url, phone)
+    await sync2(br, p, url)
+    for phone in (True, False): await guide(br, p, url, 4, phone)
+
 #STAGES-BELOW
 
 async def main():
