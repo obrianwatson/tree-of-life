@@ -34,6 +34,7 @@ function time(leaf, ms, kind) {               // from the writing clock: typing 
   open[k] = add({ who: "me", what: kind === "hold" ? "held" : "time", leaf, ms });
 }
 B.on(ev => {
+  if (ev.dry) return;
   if (ev.type === "action" && ev.log) { const L = ev.log; if (L.what === "write") wrote(ev.who, L.leaf, L.n || 0, L.r); else add(Object.assign({ who: ev.who }, L)); }
   else if (ev.type === "undo") add({ who: "me", what: "undo", n: ev.name === "group" ? "a whole reply or command" : ev.name });
 });

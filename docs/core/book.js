@@ -136,7 +136,7 @@ g.makeBook = function (store) {
       if (group) group.list.push(step); else { undos.push(step); if (undos.length > 120) undos.shift(); } }
     const log = out.log; delete out.log; out.ok = true;
     if (!out.look) save();
-    emit({ type: "action", name, needs, who, result: out, log, group: group && group.tag });
+    emit({ type: "action", name, needs, who, result: out, log, group: group && group.tag, dry: B.dry });
     return out;
   }
   B.act = (name, needs) => act(name, needs, "me");                         // the writer's hand
@@ -146,15 +146,20 @@ g.makeBook = function (store) {
     return (name, needs, o) => act(name, needs, kind + (o && o.as ? ":" + String(o.as).replace(/[^\w;.-]/g, "").slice(0, 30) : ""), o && o.grant);
   };
   /* many actions, one Undo */
-  B.begin = function (tag, who) { if (!group) group = { tag, who: who || "me", list: [] }; return !!group; };
-  B.end = function () { const gp = group; group = null; if (!gp || !gp.list.length) return 0;
+  B.begin = function (tag, who) { if (group) group.depth++; else group = { tag, who: who || "me", list: [], depth: 1 }; return true; };       // (begin/end pairs can sit inside one another: the outermost pair is the Undo)
+  B.end = function () { if (!group) return 0; if (--group.depth > 0) return 0; const gp = group; group = null; if (!gp.list.length) return 0;
     undos.push({ name: "group", group: gp.tag, who: gp.who, t: Date.now(), t0: 0, sealed: true, n: gp.list.length, list: gp.list }); if (undos.length > 120) undos.shift(); return gp.list.length; };
   B.groupDepth = tag => { for (let i = undos.length - 1; i >= 0; i--) if (undos[i].group === tag) return undos.length - 1 - i; return -1; };
   B.undo = function () {
     const u = undos.pop(); if (!u) return null;
     if (u.list) for (let i = u.list.length - 1; i >= 0; i--) putBack(u.list[i].snap); else putBack(u.snap);
-    save(); emit({ type: "undo", name: u.name, who: u.who, group: u.group }); return { name: u.name, group: u.group, key: u.key };
+    save(); emit({ type: "undo", name: u.name, who: u.who, group: u.group, dry: B.dry }); return { name: u.name, group: u.group, key: u.key };
   };
+  /* A TRIAL: fn's moves really happen, are read, and are then put back exactly, whatever else is going on. Nothing is kept:
+     not in the Undo list, not in the record, not in sync (the moves are marked dry). This is how a command "runs on a copy first". */
+  B.trial = function (fn) { const saved = group, tg = group = { tag: "trial", who: "trial", list: [], depth: 1 }; B.dry = true; let out;
+    try { out = fn(); } finally { group = saved; for (let i = tg.list.length - 1; i >= 0; i--) putBack(tg.list[i].snap); B.dry = false; save(); } return out; };
+  B.dry = false;                                      // a TRIAL: moves made while this is on are marked, so the record, sync and the page ignore them (they are undone straight after)
   B.canUndo = () => undos.length > 0;
   B.sealUndo = () => { const l = undos[undos.length - 1]; if (l) l.sealed = true; };
   B.clearUndo = () => { undos.length = 0; };

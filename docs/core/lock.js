@@ -129,7 +129,7 @@ async function syncNow(pushOnly, keepalive) {
   saveL(); running = false; paint(); if (again) { again = false; setTimeout(() => syncNow(), 4000); }
 }
 function changed() { if (!canSync()) return; dirty = true; clearTimeout(pushT); pushT = setTimeout(() => syncNow(true), Math.max(5000, 15000 - (Date.now() - lastPush))); }
-B.on(ev => { if ((ev.type === "action" && !ev.result.look) || ev.type === "undo") changed(); });
+B.on(ev => { if (ev.dry) return; if ((ev.type === "action" && !ev.result.look) || ev.type === "undo") changed(); });
 document.addEventListener("visibilitychange", () => { if (!canSync()) return; if (document.hidden) { if (dirty) { clearTimeout(pushT); B.flush(); syncNow(true, true); } } else syncNow(); });
 setInterval(() => { if (canSync() && !document.hidden && navigator.onLine !== false && !Page.typing) syncNow(); }, 20000);
 

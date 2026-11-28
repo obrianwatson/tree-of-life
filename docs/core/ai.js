@@ -115,7 +115,7 @@ function jumpTo(go) { const leaf = go.leaf || (go.line && B.leafOf(go.line)); if
 function undoReply(m) { const depth = B.groupDepth(m.tag); if (depth < 0) { m.undone = true; return redrawMsg(m); }
   if (depth > 0 && !confirm("You've done " + depth + " thing" + (depth > 1 ? "s" : "") + " in the book since this reply. Undoing it takes " + (depth > 1 ? "those" : "that") + " back too. Go ahead?")) return;
   for (let i = 0; i <= depth; i++) B.undo(); Page.redraw(); }
-B.on(ev => { if (ev.type === "undo" && ev.group) { const c = Object.values(S.chats).find(c => c.msgs.some(m => m.tag === ev.group)); if (c) { const m = c.msgs.find(m => m.tag === ev.group); m.undone = true; touch(c); if (c === chat) redrawMsg(m); } } });
+B.on(ev => { if (ev.type === "undo" && ev.group && !ev.dry) { const c = Object.values(S.chats).find(c => c.msgs.some(m => m.tag === ev.group)); if (c) { const m = c.msgs.find(m => m.tag === ev.group); m.undone = true; touch(c); if (c === chat) redrawMsg(m); } } });
 function redrawMsg(m) { const d = msgs.querySelector('.m[data-id="' + m.id + '"]'); if (d) drawTail(d, m); }
 function grow() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 160) + "px"; }
 input.addEventListener("input", () => { grow(); if (chat) { chat.draft = input.value; clearTimeout(saveT); saveT = setTimeout(flush, 300); } });        // what you type is kept as a draft, online or not
@@ -263,6 +263,15 @@ async function send(text) {
   $("#aiSend").classList.remove("hide"); $("#aiStop").classList.add("hide"); paintNote(); touch(chat); msgs.scrollTop = msgs.scrollHeight; Page.fire("aiDone", m);
 }
 
+/* ONE-SHOT WRITING for a command's "ask" step: the AI writes new lines after a line, from short instructions. No chat, no tools.
+   It needs the internet; when there is none, commands.js keeps the step waiting. */
+async function compose(line, instructions) {
+  const L = D().lines[line]; if (!L) throw new Error("That line isn't there any more."); if (navigator.onLine === false) throw Object.assign(new Error("offline"), { wait: true }); if (!Socket.hasKey()) throw Object.assign(new Error("no key"), { wait: true });
+  let text = ""; const res = await Socket.stream({ model: Socket.model(), system: BASE + "\n\nYou are filling one step of the writer's own command. Write ONLY the lines asked for, as plain lines of text (one per line; start a line with a tab to grow it under the one before). No preface, no explanation.\n\nTHE LEAF:\n" + clip(outline(L.in, line), 20000), messages: [{ role: "user", content: instructions }], tools: [], signal: new AbortController().signal, onText: t => { text += t; } });
+  text = (text || (res.content.find(b => b.type === "text") || {}).text || "").replace(/\s+$/, ""); if (!text.trim()) return { ok: false, why: "The AI wrote nothing." };
+  const tag = "c" + uid(); replying = true; B.begin(tag, "ai"); let r; try { r = await TOOLS.find(t => t.name === "write").run({ line, how: "after", words: text }, {}); } finally { B.end(); replying = false; } return r;
+}
+
 /* ================= history ================= */
 const when = t => { const d = new Date(t); return new Date().toDateString() === d.toDateString() ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : d.toLocaleDateString([], { month: "short", day: "numeric" }); };
 function paintList() { paintTitle(); const L = $("#aiList"), cs = chatsLive(listQ), gone = Object.values(S.chats).filter(c => c.deleted && c.msgs.length).sort((a, b) => b.deleted - a.deleted);
@@ -289,7 +298,7 @@ if (g.Settings) g.Settings.add({ order: 40, mod: "ai", title: "The fast AI", id:
   box.querySelector("#saLimit").onchange = e => { Socket.setLimit(e.target.value); paintNote(); }; }; draw(); } });
 Page.menu(c => c.has ? [["Ask the AI about this", () => { open(); if (WIDE()) input.focus(); }]] : [], "ai", 60);
 Mods.changed(id => { if (id === "ai" && !Mods.on("ai")) close(); });
-g.AI = { open, close, toggle, send, fit, tool, cards, extras, act, newChat: o => { chat = newChat(o); if (!win.classList.contains("hide")) show("chat"); return chat; }, show, no, done, outline, system: () => system(), clip, q,
+g.AI = { open, close, toggle, send, fit, tool, cards, extras, act, compose, drawPart, addPart(env, p) { env.m.parts.push(p); const e = drawPart(env.d, p); msgs.scrollTop = msgs.scrollHeight; return e; }, waitCard(fn) { pendingAsk = fn; }, newChat: o => { chat = newChat(o); if (!win.classList.contains("hide")) show("chat"); return chat; }, show, no, done, outline, system: () => system(), clip, q,
   reset() { chat = null; listQ = ""; if (!win.classList.contains("hide")) { chat = newChat({ leaf: Page.leaf }); show("chat"); } }, replaceChats(s) { S = s; chat = null; flush(); }, get chats() { return S; },
   get chat() { return chat; }, get busy() { return !!busy; }, get replying() { return replying; }, get isOpen() { return !win.classList.contains("hide"); }, get tools() { return toolsNow(); } };
 })(window);

@@ -158,3 +158,8 @@ body.ai-open .bar{display:none}
   body.ai-open .bar{display:block}body.ai-open .plus{display:block;right:416px}
   .aih .model{max-width:170px}
 }
+/* the bar gets crowded on a phone: tighter buttons, and it can slide sideways rather than squeeze */
+@media (max-width:520px){.bar .in{gap:5px;overflow-x:auto;scrollbar-width:none}.bar .in::-webkit-scrollbar{display:none}.bar button{padding:0 11px}.bar .ic{padding:0 9px}}
+.sb select{font:inherit;font-size:15px;height:36px;border:1px solid var(--line2);border-radius:10px;background:var(--card);color:var(--ink);padding:0 8px;max-width:100%}
+.ask.card .fld input{display:block;width:100%;border:1px solid var(--line2);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit;font-size:16px;padding:6px 10px;margin-top:4px}
+.rowi.cmd .go{flex:1 1 100%}.rowi.cmd small{white-space:normal}

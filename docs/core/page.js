@@ -47,8 +47,8 @@ const focused = () => document.activeElement === pg;
 
 /* ---------- what modules plug in ---------- */
 const bars = [], menus = [], views = [], keys = [], markers = [], hooks = {};
-const on = (what, fn) => { (hooks[what] = hooks[what] || []).push(fn); };
-const fire = (what, a, b) => { let r; (hooks[what] || []).forEach(fn => { try { const x = fn(a, b); if (x !== undefined) r = x; } catch (e) { console.error(e); } }); return r; };
+const on = (what, fn, first) => { const h = hooks[what] = hooks[what] || []; if (first) h.unshift(fn); else h.push(fn); };
+const fire = (what, a, b) => { let r; for (const fn of (hooks[what] || [])) { try { const x = fn(a, b); if (x === true) return true; if (x !== undefined) r = (typeof r === "string" && typeof x === "string") ? r + x : x; } catch (e) { console.error(e); } } return r; };       // (a hook that answers true has handled it: the rest aren't asked)
 const live = m => !m || Mods.on(m);
 
 /* a button that never takes the cursor or the keyboard away */
@@ -350,7 +350,7 @@ Mods.changed(() => { els.clear(); pg.textContent = ""; refresh(); });
 /* The book changed under the page (the AI, a command, another device, a rescue copy): draw again and keep your place. */
 let drawT = 0;
 function redraw() { if (drawT) return; drawT = requestAnimationFrame(() => { drawT = 0; if (!B.D.leaves[ui.leaf] || !B.alive(ui.leaf)) { show(B.D.trunk); return; } const keep = pos, had = focused(); render(); if (keep && had && B.D.lines[keep.line] && B.D.lines[keep.line].in === ui.leaf) setCaret(keep, true); }); }
-B.on(ev => { if ((ev.type === "action" && ev.who !== "me") || ev.type === "replace") redraw(); });
+B.on(ev => { if (ev.dry) return; if ((ev.type === "action" && ev.who !== "me") || ev.type === "replace") redraw(); });
 Keep.rescue().then(D => { if (D) { B.replace(D); toast("Your last save didn't fit in this device's storage. The rescue copy was brought back."); } });
 document.addEventListener("visibilitychange", () => { if (document.hidden) { B.flush(); saveSpot(); } });
 addEventListener("pagehide", () => { B.flush(); saveSpot(); });

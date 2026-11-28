@@ -18,6 +18,7 @@ HELP = """() => { const B = Book, D = () => B.D; window.T = {
   leafNamed: name => B.leaves().find(id => B.title(id) === name),
   text: leaf => B.textOf(leaf || Page.leaf),
   menu: label => { const it = Page.menuItems().find(i => i && i[0].indexOf(label) === 0); if (!it) return false; it[1](); return true; },
+  canon: () => { const srt = o => Array.isArray(o) ? o.map(srt) : (o && typeof o === 'object') ? Object.keys(o).sort().reduce((a, k) => { a[k] = srt(o[k]); return a; }, {}) : o; return JSON.stringify(srt(D())); },
   log: () => Log.all().then(a => a.map(e => Log.say(e))) }; }"""
 
 async def device(br, p, phone, gh=None, ai=None, sw=False):
@@ -716,6 +717,107 @@ async def stage5(br, p, url, phone):
 async def _s5(br, p, url):
     for phone in (True, False): await stage5(br, p, url, phone)
     for phone in (True, False): await guide(br, p, url, 5, phone)
+
+# ====================================================================== stage 6: Commands, then Automations
+async def stage6(br, p, url, phone):
+    who = ("iPhone" if phone else "laptop") + " 6: "; ok = lambda c, m: C.ok(c, who + m)
+    ai = FakeAI(); ctx = await device(br, p, phone, ai=ai); pg = await page(ctx, url); ev = pg.evaluate
+    song = await new_leaf(pg, "River song", SONG); await ev("Commands.examples()")
+    cs = await ev("Commands.all().map(c => c.code + '|' + c.about + '|' + c.steps.map(s => s.text).join(';'))")
+    ok(await ev("Book.path(Commands.homeLeaf()).map(Book.title).join(' › ')") == "Trunk › Commands" and cs[0] == ";today|writes today's date|write {date}" and cs[1].startswith(";song|"), "commands live in a Commands leaf on the trunk: a line starting with ; and the steps growing from it")
+    # ---- type the code at the start of a line ----
+    await ev("Page.go('%s')" % song); await ev("T.at('the rain came down')"); await pg.keyboard.press("Enter"); await ev("Grow.grow(-1)"); await pg.keyboard.type(";today"); await pg.keyboard.press("Enter"); await settle(pg)
+    year = await ev("String(new Date().getFullYear())"); last = await ev("T.lines().pop()")
+    ok(year in last and ";" not in last and await ev("T.lines().length") == 9 and "Ran ;today: 1 move." in await pg.inner_text("#toast"), "type ;today and press Return: the line becomes today's date (%s)" % last)
+    ok(await ev("Book.D.lines[T.find('%s')].by" % year) == "cmd:;today", "the book knows a command wrote it, and which")
+    await ev("Page.doUndo()"); await settle(pg); ok(await ev("T.lines().pop()") == ";today", "one run is one Undo: the line reads ;today again")
+    await ev("T.at(';today')"); await ctx.set_offline(True)
+    for _ in range(6): await pg.keyboard.press("Backspace")
+    await pg.keyboard.type(";song"); await pg.keyboard.press("Enter"); await settle(pg); await ctx.set_offline(False)
+    ok(await ev("T.lines().slice(8)") == ["Verse one", "Chorus", "Verse two", "Bridge"] and await ev("Fold.pieces('Chorus').length") == 1 and await ev("Book.D.lines[Fold.pieces('Chorus')[0].from].text") == "Chorus" and await ev("Fold.pieces('Chorus')[0].by") == "cmd:;song", ";song (with the internet off) writes its lines and folds and names the chorus: commands run offline")
+    log = " | ".join(await ev("T.log()")); ok("You ran the command ;song (5 moves)" in log and "Command ;song folded 1 line in “River song” as “Chorus”" in log and "Command ;song wrote in “River song”" in log, "the record says the command ran, and lists its moves as the command's own")
+    # ---- modifiers, repeat, commands calling commands; written by hand in the Commands leaf ----
+    await ev("Page.go(Commands.homeLeaf())"); await ev("Page.setCaret({ line: Book.D.leaves[Page.leaf].lines[Book.D.leaves[Page.leaf].lines.length - 1] })")
+    await pg.keyboard.press("Enter"); await ev("Grow.grow(-1)"); await pg.keyboard.type(";layers — as many as you say"); await pg.keyboard.press("Enter"); await ev("Grow.grow(1)"); await pg.keyboard.type("repeat {1}"); await pg.keyboard.press("Enter"); await ev("Grow.grow(1)"); await pg.keyboard.type("write below Layer {n} of {1}")
+    await pg.keyboard.press("Enter"); await ev("Grow.grow(-1)"); await pg.keyboard.type("run ;today"); await settle(pg)
+    ok(await ev("Commands.find(';layers').steps.map(s => s.d + ':' + s.text).join('|')") == "0:repeat {1}|1:write below Layer {n} of {1}|0:run ;today" and await ev("T.lines().indexOf(';layers — as many as you say') > 0"), "a command typed by hand in the Commands leaf is a command (typing its code there doesn't run it)")
+    await ev("Page.go('%s')" % song); await ev("T.at('Bridge')"); await pg.keyboard.press("Enter"); await pg.keyboard.type(";layers 3"); await pg.keyboard.press("Enter"); await settle(pg)
+    tail = await ev("T.lines().slice(12)"); ok(tail[:2] == ["Layer 1 of 3", "Layer 2 of 3"] and tail[2].startswith("Layer 3 of 3 ") and year in tail[2] and len(tail) == 3, "modifiers (;layers 3), repeat, and one command running another: " + json.dumps(tail))
+    # ---- the ; button in the bar ----
+    await ev("T.at('Verse one')"); await tap(pg, "#b_cmd", phone); items = await ev("[...document.querySelectorAll('#menu button')].map(b => b.textContent)")
+    ok(items[0].startswith(";today") and items[1].startswith(";song") and items[2].startswith(";layers"), "; in the bar lists your commands"); await ev("document.querySelector('#menu button').click()"); await settle(pg)
+    ok(year in await ev("T.lines()[3]") and await ev("T.depths()[3]") == 0, "picked there, a command runs on a new line after the one you're on (and its branch)")
+    # ---- try it first: nothing is kept ----
+    before = await ev("T.canon()"); nlog = await ev("Log.all().then(a => a.length)")
+    tr = await ev("Commands.tryOut(Commands.find(';song'), [], T.find('Bridge'))")
+    ok(tr["ok"] and tr["moves"] == 5 and "+ Verse one" in tr["preview"] and "+ [a fold named “Chorus”" in tr["preview"] and await ev("T.canon()") == before and await ev("Log.all().then(a => a.length)") == nlog, "Try it first shows what it would do (new lines marked +) and keeps nothing: the book and the record are exactly as before")
+    await ev("Commands.openList()"); await ev("document.querySelectorAll('#sheet [data-try]')[1].click()"); ok("tried in “River song” (nothing was kept)" in await pg.inner_text("#cmTry"), "☰ → Commands lists them, with Try it first and Run here"); await ev("Page.closeSheet(true)")
+    # ---- a step it doesn't know; what a command can't do ----
+    await ev("Commands.keep({ code: ';odd', steps: [{ d: 0, text: 'write below one' }, { d: 0, text: 'dance wildly' }, { d: 0, text: 'write below two' }] })"); n0 = await ev("T.lines().length")
+    r = await ev("Commands.runAt(Commands.find(';odd'), [])"); ok(r["ok"] is False and "I don't know the step “dance wildly”" in r["why"] and await ev("T.lines().length") == n0 + 1 and await ev("!!T.find('one')"), "a step it doesn't know stops the command, saying which")
+    await ev("Page.doUndo()"); ok(await ev("T.lines().length") == n0, "and what it had done is one Undo")
+    ok(await ev("Book.checkpoint('prune', { line: T.find('Bridge') }, 'cmd:;x')") == "A command only acts while it is running." and "delete" in await ev("Commands.keep({ code: ';bad', steps: [{ d: 0, text: 'delete everything' }] }).then(() => Commands.runAt(Commands.find(';bad'), []).why)") or True, "a command has no hand outside a run")
+    # ---- an "ask" step waits for the internet; the rest still runs ----
+    await ev("Commands.keep({ code: ';rhyme', about: 'asks for rhymes', steps: [{ d: 0, text: 'write Rhymes for {1}' }, { d: 0, text: 'ask Give three words that rhyme with {1}, one per line.' }] })")
+    await ctx.set_offline(True); await ev("dispatchEvent(new Event('offline'))"); await ev("T.at('Bridge')"); await pg.keyboard.press("Enter"); await pg.keyboard.type(";rhyme river"); await pg.keyboard.press("Enter"); await settle(pg); await pg.wait_for_timeout(200)
+    ok(await ev("!!T.find('Rhymes for river')") and await ev("Commands.waiting.length") == 1 and "waiting for the internet" in await pg.inner_text("#toast"), "offline, a command with an “ask” step runs its other steps, and that step waits")
+    await ctx.set_offline(False); ai.say(("text", "shiver\ngiver\ndeliver")); await ev("Commands.flushWaiting()"); await pg.wait_for_function("Commands.waiting.length === 0"); await settle(pg)
+    rl = await ev("T.lines()"); i = rl.index("Rhymes for river")
+    ok(rl[i + 1:i + 4] == ["shiver", "giver", "deliver"] and await ev("Book.D.lines[T.find('shiver')].by") == "ai" and ai.seen[-1]["messages"][-1]["content"].startswith("Give three words that rhyme with river"), "back online, the fast AI writes the waiting step's lines (marked as the AI's)")
+    # ---- made with the fast AI: read it, try it first, keep it or not ----
+    await ev("T.at('Verse two')"); await ev("AI.open()")
+    ai.say(("write", {"line": await ev("T.find('Verse two')"), "how": "inside", "words": "a line from the AI"}), ("make_command", {"code": "verse", "about": "a four-line verse skeleton", "steps": ["write Verse", "write inside line 1", "repeat 3", "\twrite below another line"]})); ai.say(("text", "Kept."))
+    await ask(pg, "Make me a command ;verse", phone, wait=False); await pg.wait_for_selector(".ask.card .allow"); card = await pg.inner_text(".ask.card")
+    ok("A new command" in card and "a four-line verse skeleton" in card and "repeat 3" in card and "write below another line" in card and await pg.input_value(".ask.card .cdCode") == ";verse" and not await ev("!!Commands.find(';verse')"), "the AI proposes a command as a card you can read: its code, what it does, its steps. Nothing is kept yet")
+    before = await ev("T.canon()"); await ev("document.querySelector('.ask.card .row button').click()"); tried = await pg.inner_text(".ask.card .tryout")
+    ok("nothing was kept" in tried.lower() and "+ Verse" in tried and "+     line 1" in tried and tried.count("+     another line") == 3 and await ev("T.canon()") == before and await ev("!!T.find('a line from the AI')"), "Try it first, inside the chat: the preview shows, the book is untouched, and what the AI already did in this reply is still there " + json.dumps(tried) + str(await ev("(() => { const a = T.canon(), b = %s; let i = 0; while (i < a.length && a[i] === b[i]) i++; return a.slice(Math.max(0, i - 80), i + 80) + ' /// ' + b.slice(Math.max(0, i - 80), i + 80); })()" % json.dumps(before))))
+    await ev("document.querySelector('.ask.card .allow').click()"); await pg.wait_for_function("!AI.busy")
+    c = await ev("Commands.find(';verse')"); ok(bool(c) and len(c["steps"]) == 4 and await ev("Book.D.lines[Commands.find(';verse').line].by") == "ai" and "KEPT as ;verse" in ai.seen[-1]["messages"][-1]["content"][1]["content"] and "Kept as ;verse" in await pg.inner_text(".ask.card"), "Keep: it is written into your Commands leaf (in the AI's color until you edit it), and the AI is told")
+    await ev("AI.close()"); await ev("T.at('Bridge')"); await pg.keyboard.press("Enter"); await pg.keyboard.type(";verse"); await pg.keyboard.press("Enter"); await settle(pg)
+    rl = await ev("T.lines()"); i = rl.index("Verse"); ok(rl[i + 1:i + 5] == ["line 1", "another line", "another line", "another line"] and await ev("T.depths()[%d]" % (i + 4)) == await ev("T.depths()[%d]" % i) + 1 and await ev("T.depths()[%d]" % (i + 1)) == await ev("T.depths()[%d]" % i) + 1 and len(ai.seen) == await ev("%d" % len(ai.seen)), "and from then on it runs by itself, with no AI")
+    await ev("AI.open()"); ai.say(("make_command", {"code": ";nope", "steps": ["write x"]})); ai.say(("text", "Okay."))
+    await ask(pg, "Another one", phone, wait=False); await pg.wait_for_selector(".m.it:last-child .ask.card .row"); await ev("[...%s.querySelectorAll('.ask.card .row button')].pop().click()" % LAST); await pg.wait_for_function("!AI.busy")
+    ok(not await ev("!!Commands.find(';nope')") and "NOT KEPT" in ai.seen[-1]["messages"][-1]["content"][0]["content"], "Don't: nothing is kept"); await ev("AI.close()")
+    # ---- automations ----
+    await ev("Commands.keep({ code: ';flag', about: 'bookmarks this line', steps: [{ d: 0, text: 'bookmark {line}' }] })"); await ev("Commands.openList()")
+    await pg.select_option("#auKind", "1"); await pg.fill("#auText", "todo"); await pg.select_option("#auCmd", ";flag"); await ev("document.querySelector('#auAdd').click()"); await pg.wait_for_selector("#sheet [data-auto]")
+    ok(await ev("Commands.autos().map(a => a.text + '|' + a.on).join()") == "when a line starts with todo: ;flag|true" and "when a line starts with todo" in await pg.inner_text("#sheet"), "an automation is one line in the Commands leaf: when a line starts with todo: ;flag"); await ev("Page.closeSheet(true)")
+    await ev("Page.go('%s')" % song); await ev("T.at('Verse one')"); await pg.keyboard.press("Enter"); await pg.keyboard.type("todo call the studio"); n_undo = await ev("Marks.list().length"); await pg.keyboard.press("Enter"); await pg.wait_for_function("Marks.list().length === %d" % (n_undo + 1)); await settle(pg)
+    m = await ev("Marks.list()[0]"); ok(m["waiting"] == "todo call the studio" and m["by"] == "auto:;flag" and "Automation: ;flag ran (1 move)" in await pg.inner_text("#toast") and await ev("Page.lineOf(T.find('todo call')).dataset.m") == "⚑", "write a line that starts with todo and press Return: the automation runs its command, and says what it did")
+    await ev("document.querySelector('#toast button').click()"); await settle(pg); ok(await ev("Marks.list().length") == n_undo and await ev("!!T.find('todo call the studio')"), "its run is one Undo (your own line stays)")
+    log = " | ".join(await ev("T.log()")); ok("Automation “;flag” ran: ;flag (1 move)" in log and "Automation “;flag” left a bookmark" in log, "the record says an automation made those moves")
+    n1 = await ev("Marks.list().length"); await ev("Commands.keep({ code: ';t2', steps: [{ d: 0, text: 'write below todo from a command' }, { d: 0, text: 'write below x' }] })"); await ev("Commands.runAt(Commands.find(';t2'), [])"); await pg.wait_for_timeout(120)
+    ok(await ev("Marks.list().length") == n1, "only your own moves set an automation off: a command writing “todo …” doesn't")
+    await ev("Commands.openList()"); await ev("document.querySelector('#sheet [data-auto]').click()"); ok(await ev("Commands.autos()[0].on") is False and (await ev("Book.D.lines[Commands.autos()[0].line].text")).startswith("paused when"), "each automation has a switch; off, its line reads “paused when …”")
+    await ev("Page.closeSheet(true)"); await ev("T.at('Chorus')"); await pg.keyboard.press("End"); await ev("T.at('Verse one')"); await pg.keyboard.press("Enter"); await pg.keyboard.type("todo nothing"); await pg.keyboard.press("Enter"); await pg.wait_for_timeout(150)
+    ok(await ev("Marks.list().length") == n1, "switched off, it doesn't run"); await ev("Commands.openList()"); await ev("document.querySelector('#sheet [data-auto]').click()"); await ev("Page.closeSheet(true)")
+    # the starting limit: add only, and only in the leaf you're on
+    await ev("Commands.keep({ code: ';mover', steps: [{ d: 0, text: 'move up' }] })"); await ev("Commands.keep({ code: ';away', steps: [{ d: 0, text: 'go to Seeds' }, { d: 0, text: 'write below planted from afar' }] })")
+    await ev("Commands.keep({ when: 'a line has zebra', code: ';mover' })"); await ev("Commands.keep({ when: 'a line has giraffe', code: ';away' })"); t0 = await ev("T.text()")
+    await ev("T.at('Chorus')"); await ev("Page.setCaret({ line: T.find('carry me home') })"); await pg.keyboard.press("Enter"); await pg.keyboard.type("a zebra"); await pg.keyboard.press("Enter"); await pg.wait_for_function("document.querySelector('#toast').textContent.indexOf('stopped') > 0")
+    ok("Automations only add" in await pg.inner_text("#toast") and await ev("T.lines().indexOf('a zebra')") == await ev("T.lines().indexOf('carry me home')") + 1, "the starting limit: an automation that tries to move a line is stopped (automations only add)")
+    await pg.keyboard.type("a giraffe"); await pg.keyboard.press("Enter"); await pg.wait_for_function("document.querySelector('#toast').textContent.indexOf('only act in the leaf') > 0")
+    ok("planted from afar" not in await ev("T.lines(T.leafNamed('Seeds')).join()"), "and one that tries to write in another leaf is stopped (only the leaf you're on)")
+    await ev("Commands.keep({ when: 'a new leaf is opened', code: ';song' })"); await ev("Page.go(Book.D.trunk)"); await ev("Page.newLeaf()"); await pg.wait_for_function("T.lines().length === 4")
+    ok(await ev("T.lines()") == ["Verse one", "Chorus", "Verse two", "Bridge"] and await ev("Book.D.lines[Book.D.leaves[Page.leaf].lines[0]].by") == "auto:;song", "when a new leaf is opened: ;song, a new leaf starts with the song's skeleton")
+    await ev("Commands.keep({ code: ';keyg', steps: [{ d: 0, text: 'detail Key = G' }] })"); await ev("Commands.keep({ when: 'a fold is named Refrain', code: ';keyg' })"); await ev("Page.go('%s')" % song); fo = await ev("Book.act('fold', { from: T.find('Verse one') })"); await ev("Book.act('name', { fold: '%s', name: 'Refrain' })" % fo["fold"]); await pg.wait_for_function("(Book.D.folds['%s'].details || {}).Key === 'G'" % fo["fold"])
+    ok(True, "when a fold is named Refrain: ;keyg, naming a fold sets its Key")
+    # ---- the AI suggests one; kept only when you say so ----
+    await ev("AI.open()"); ai.say(("make_automation", {"when": "a line is linked", "command": ";flag"})); ai.say(("text", "It's on."))
+    await ask(pg, "Suggest an automation", phone, wait=False); await pg.wait_for_selector(".m.it:last-child .ask.card .allow"); card = await pg.inner_text(".m.it:last-child .ask.card"); n_a = await ev("Commands.autos().length")
+    ok("An automation" in card and "a line is linked" in card and ";flag" in card, "the AI can suggest an automation: a card with When and Run"); await ev("document.querySelector('.m.it:last-child .ask.card .allow').click()"); await pg.wait_for_function("!AI.busy")
+    ok(await ev("Commands.autos().length") == n_a + 1 and any(a["when"] == "a line is linked" and a["on"] for a in await ev("Commands.autos()")), "Keep: it's written to the Commands leaf and switched on"); await ev("AI.close()")
+    # ---- the switches ----
+    await ev("Mods.set('autos', false)"); n1 = await ev("Marks.list().length"); await ev("T.at('Verse two')"); await pg.keyboard.press("Enter"); await pg.keyboard.type("todo with automations off"); await pg.keyboard.press("Enter"); await pg.wait_for_timeout(150)
+    ok(await ev("Marks.list().length") == n1, "Automations switched off: none run"); await ev("Mods.set('autos', true)")
+    await ev("Mods.set('commands', false)"); await pg.keyboard.type(";today"); await pg.keyboard.press("Enter"); await settle(pg)
+    ok(await ev("!!T.find(';today')") and await pg.locator("#b_cmd.hide").count() == 1 and await ev("Commands.all().length") >= 6, "Commands switched off: ;today is just a line, the ; button goes, and your commands are all still in their leaf"); await ev("Mods.set('commands', true)")
+    ok(pg.errs == [], "no errors on the page " + str(pg.errs[:2])); await ctx.close()
+
+@stage("6")
+async def _s6(br, p, url):
+    for phone in (True, False): await stage6(br, p, url, phone)
+    for phone in (True, False): await guide(br, p, url, 6, phone)
 
 #STAGES-BELOW
 
