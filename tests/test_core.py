@@ -428,6 +428,78 @@ async def _s2(br, p, url):
     await feel2(br, p, url)
     for phone in (True, False): await guide(br, p, url, 2, phone)
 
+# ====================================================================== stage 3: Link and the Map
+async def stage3(br, p, url, phone):
+    who = ("iPhone" if phone else "laptop") + " 3: "; ok = lambda c, m: C.ok(c, who + m)
+    ctx = await device(br, p, phone); pg = await page(ctx, url); ev = pg.evaluate
+    psalm = await new_leaf(pg, "Psalm 23", "The Lord is my shepherd\nhe leadeth me beside the still waters")
+    song = await new_leaf(pg, "River song", SONG); F = lambda t, leaf: "T.find(%s, '%s')" % (json.dumps(t), leaf)
+    # ---- link through the page: ⌄ → Link to… → search → label ----
+    await ev("T.at('carry me home')"); await ev("T.menu('Link to')"); await pg.fill("#sheet input", "still waters"); await ev("document.querySelector('#sheet [data-line]').click()")
+    await pg.fill("#lkLabel", "echoes"); await ev("document.querySelector('#lkOk').click()"); await settle(pg)
+    a = await ev(F("carry me home", song)); b = await ev(F("still waters", psalm))
+    la = await ev("Link.of('%s')" % a); lb = await ev("Link.of('%s')" % b)
+    ok(len(la) == 1 and la[0]["other"] == b and la[0]["label"] == "echoes" and len(lb) == 1 and lb[0]["other"] == a and lb[0]["label"] == "echoes", "Link to…: pick the other line by searching, add a label; both ends know")
+    ok(await ev("Page.lineOf('%s').dataset.m" % a) == "∞" and "Linked (echoes)" in await pg.inner_text("#toast"), "the linked line shows ∞, and it says so with Undo")
+    # ---- the strip floats; it never moves the page ----
+    h0 = await ev("document.querySelector('#head').offsetHeight"); y0 = await ev("Page.lineOf('%s').getBoundingClientRect().top" % a)
+    await ev("T.at('carry me home')"); await settle(pg); await settle(pg)
+    ok(await pg.locator("#strip:not(.hide) button").count() == 1 and "echoes: he leadeth me" in await pg.inner_text("#strip"), "with the cursor on a linked line, its links show under the top row")
+    ok(await ev("document.querySelector('#head').offsetHeight") == h0 and abs(await ev("Page.lineOf('%s').getBoundingClientRect().top" % a) - y0) < 1, "and nothing on the page moves when they appear")
+    await ev("T.at('Verse one')"); await settle(pg); await settle(pg); ok(await pg.locator("#strip.hide").count() == 1, "on a line without links, they go")
+    # ---- tap ∞ → the other end, wherever it is ----
+    box = await pg.locator('#pg > .l[data-m]').bounding_box(); x, y = box["x"] + box["width"] - 12, box["y"] + box["height"] / 2
+    if phone and BROWSER != "firefox": await pg.touchscreen.tap(x, y)
+    else: await pg.mouse.click(x, y)
+    await settle(pg); items = await ev("[...document.querySelectorAll('#menu button')].map(b => b.textContent)")
+    ok(len(items) >= 2 and items[0].startswith("echoes → he leadeth me beside") and "Psalm 23" in items[0], "tapping ∞ lists the line's links: " + items[0])
+    await ev("document.querySelector('#menu button').click()"); await settle(pg)
+    ok(await ev("Page.leaf") == psalm and await ev("document.querySelector('#pg .l.flash').textContent") == "he leadeth me beside the still waters" and await ev("Page.lineOf('%s').dataset.m" % b) == "∞", "tapping a link jumps to the other line, which shows ∞ too")
+    # ---- labels are the kinds; each gets its own color ----
+    await ev("Book.act('link', { from: '%s', to: %s, label: 'rhymes with' })" % (a, F("carry me over", song))); r = await ev("Book.act('link', { from: '%s', to: %s })" % (a, F("Verse two", song)))
+    await ev("Book.act('link', { from: %s, to: '%s', label: 'Echoes' })" % (F("The Lord", psalm), a))
+    cols = await ev("Link.of('%s').map(x => [x.label, x.color])" % a); cd = dict((c[0].lower(), c[1]) for c in cols)
+    ok(len(cols) == 4 and cd["echoes"] != cd["rhymes with"] and cd[""] != cd["echoes"] and len(set(c[1] for c in cols if c[0].lower() == "echoes")) == 1, "each label has its own color, the same wherever it's used; a link without a label is plain: " + json.dumps(cd))
+    dup = await ev("Book.act('link', { from: '%s', to: '%s', label: 'ECHOES' })" % (b, a)); me = await ev("Book.act('link', { from: '%s', to: '%s' })" % (a, a))
+    ok(dup["ok"] is False and "already linked" in dup["why"] and me["ok"] is False, "the same link twice, or a line to itself, is refused with the reason")
+    ok(await ev("Link.labels().join()") in ("echoes,rhymes with,Echoes", "echoes,Echoes,rhymes with", "Echoes,echoes,rhymes with", "echoes,rhymes with"), "the labels you typed are the kinds on offer next time")
+    # ---- remove, relabel, Undo; a deleted line's links wait for it ----
+    await ev("Book.act('relabel', { link: '%s', label: 'see also' })" % r["link"]); ok(any(x["label"] == "see also" for x in await ev("Link.of('%s')" % a)), "a link's label can be changed")
+    await ev("Book.act('unlink', { link: '%s' })" % r["link"]); ok(len(await ev("Link.of('%s')" % a)) == 3, "a link can be removed")
+    await ev("Page.doUndo()"); ok(len(await ev("Link.of('%s')" % a)) == 4, "and Undo brings it back")
+    await ev("Page.go('%s')" % psalm); await ev("Book.act('prune', { line: '%s' })" % b); n1 = len(await ev("Link.of('%s')" % a)); await ev("Page.doUndo()")
+    ok(n1 == 3 and len(await ev("Link.of('%s')" % a)) == 4, "delete a linked line and its link goes quiet; bring the line back and the link is there again")
+    # ---- the map ----
+    await ev("Page.go('%s')" % song); await ev("T.at('carry me home')"); await ev("MapView.open()"); await settle(pg)
+    up = await ev("[...document.querySelectorAll('#sheet .mup .mn')].map(e => e.textContent)"); here = await pg.inner_text("#mHere"); web = await pg.locator("#sheet .mn.web").count()
+    ok(up == ["Trunk", "River song", "Chorus"] and "carry me home" in here and web == 4, "the Map centers on your line: above, what it grew from, back to the trunk; to the sides, its links: " + json.dumps(up))
+    ok(await pg.locator("#mapSvg .web").count() == 4 and await pg.locator("#mapSvg .tree").count() >= 3, "branches and links are drawn as lines to the center")
+    await ev("document.querySelector('#sheet [data-only=\"rhymes with\"]').click()"); await settle(pg)
+    ok(await pg.locator("#sheet .mn.web").count() == 1 and "carry me over" in await pg.inner_text("#sheet .mn.web"), "filtered by label: only those links show")
+    await ev("document.querySelector('#sheet [data-only=\"\"]').click()"); await ev("[...document.querySelectorAll('#sheet .mup .mn')].pop().click()"); await settle(pg)
+    down = await ev("[...document.querySelectorAll('#sheet .mdown .mn')].map(e => e.textContent)")
+    ok("Chorus" in await pg.inner_text("#mHere") and down == ["carry me over", "carry me home"], "tap a node and the map centers on it; below it, what grows from it: " + json.dumps(down))
+    await ev("document.querySelector('#sheet .mup .mn.up').click()"); await settle(pg); down = await ev("[...document.querySelectorAll('#sheet .mdown .mn')].map(e => e.textContent)")
+    ok("River song" in await pg.inner_text("#mHere") and down == ["Verse one", "Chorus", "Verse two"], "a line with a leaf shows the leaf's lines growing from it")
+    await ev("document.querySelector('#sheet [data-c=\"\"]').click()"); await settle(pg)
+    ok("Trunk" in await pg.inner_text("#mHere") and "Psalm 23" in await pg.inner_text("#sheet .mdown"), "the trunk is the top of the map")
+    await ev("document.querySelector('#mBack').click()"); await ev("document.querySelector('#mBack').click()"); await ev("document.querySelector('#mGo').click()"); await settle(pg)
+    ok(await ev("Page.leaf") == song and await ev("document.querySelector('#pg .l.flash').textContent") == "Chorus", "Back on the map retraces your steps; Go there opens the line")
+    before = await ev("JSON.stringify(Book.D)"); await ev("MapView.open()"); await ev("Page.closeSheet(true)"); ok(await ev("JSON.stringify(Book.D)") == before, "the map only looks: it changes nothing")
+    # ---- the record, the switches, export ----
+    log = " | ".join(await ev("T.log()")); ok("You linked two lines (echoes)" in log and "You removed a link" in log, "the record has the linking and unlinking")
+    await ev("Mods.set('link', false)"); await settle(pg); await ev("MapView.open('%s')" % a); await settle(pg)
+    ok(await pg.locator("#pg > .l[data-m]").count() == 0 and await pg.locator("#sheet .mn.web").count() == 0 and await ev("Object.keys(Book.D.links).length") == 4, "Link switched off: the ∞ marks and the map's sides go; the links are kept")
+    await ev("Page.closeSheet(true)"); await ev("Mods.set('link', true)"); await ev("Mods.set('map', false)"); await ev("document.querySelector('#tMenu').click()")
+    ok("Map" not in await ev("[...document.querySelectorAll('#menu button')].map(b => b.textContent)") and await pg.locator("#pg > .l[data-m]").count() >= 1, "the Map has its own switch"); await ev("Page.closeMenu()"); await ev("Mods.set('map', true)")
+    txt = await ev("Keep.asText(Book)"); ok("LINKS" in txt and "“carry me home” <-> “he leadeth me beside the still waters”  (echoes)" in txt, "export lists the links and their labels")
+    ok(pg.errs == [], "no errors on the page " + str(pg.errs[:2])); await ctx.close()
+
+@stage("3")
+async def _s3(br, p, url):
+    for phone in (True, False): await stage3(br, p, url, phone)
+    for phone in (True, False): await guide(br, p, url, 3, phone)
+
 #STAGES-BELOW
 
 async def main():
