@@ -24,7 +24,7 @@ const OFF = Keep.NS !== "core" || /\/preview\//.test(location.pathname);        
 let L = Object.assign({ on: false, deviceId: null, salt: null, mySha: null, seen: {}, synced: {}, clocks: {}, lastSync: 0 }, Keep.lsGet(Keep.K.lock) || {});
 if (!L.deviceId) { L.deviceId = Array.from(rand(8), x => x.toString(16).padStart(2, "0")).join(""); Keep.lsSet(Keep.K.lock, L); }
 const saveL = () => Keep.lsSet(Keep.K.lock, L);
-let key = null, phase = "off", detail = "", running = false, again = false, dirty = false, pushT = null, lastPush = 0; const subs = [], carried = {};
+let key = null, phase = "off", detail = "", running = false, again = false, dirty = false, pushT = null, lastPush = 0, runs = 0; const subs = [], carried = {};
 const paint = () => subs.forEach(fn => { try { fn(); } catch (e) {} });
 
 /* ---------- the unlocked key stays in this device's database (it can't be read out, only used) ---------- */
@@ -126,7 +126,7 @@ async function syncNow(pushOnly, keepalive) {
     }
     L.lastSync = Date.now(); phase = "ok"; detail = "";
   } catch (e) { phase = e.offline ? "offline" : "trouble"; detail = e.offline ? "" : (e.status === 401 ? "GitHub didn't accept the key on this device." : e.message); }
-  saveL(); running = false; paint(); if (again) { again = false; setTimeout(() => syncNow(), 4000); }
+  saveL(); running = false; runs++; paint(); if (again) { again = false; setTimeout(() => syncNow(), 4000); }
 }
 function changed() { if (!canSync()) return; dirty = true; clearTimeout(pushT); pushT = setTimeout(() => syncNow(true), Math.max(5000, 15000 - (Date.now() - lastPush))); }
 B.on(ev => { if (ev.dry) return; if ((ev.type === "action" && !ev.result.look) || ev.type === "undo") changed(); });
@@ -155,7 +155,7 @@ function label() { if (OFF) return "Sync is off on this page."; if (!L.on) retur
 const otherToday = () => { const d = Keep.stamp(); return Object.keys(L.clocks || {}).reduce((s, id) => s + ((L.clocks[id] || {})[d] || 0), 0); };
 if (!OFF && L.on) keyGet().then(r => { if (r && r.key && r.salt === L.salt) { key = r.key; syncNow(); } paint(); });
 const Lock = { turnOn, turnOff, useOtherLock, hasOtherLock: () => otherKey().then(o => !!(o && o.key)), syncNow, changed, label, otherToday, on: fn => subs.push(fn), carry: (name, c) => { carried[name] = c; },
-  get isOn() { return L.on; }, get unlocked() { return !!key; }, get off() { return OFF; }, hasToken: () => !!token(), setToken: t => Keep.lsSet("tol-gh-token", String(t).trim()), deviceId: L.deviceId };
+  get isOn() { return L.on; }, get unlocked() { return !!key; }, get busy() { return running; }, get runs() { return runs; }, get off() { return OFF; }, hasToken: () => !!token(), setToken: t => Keep.lsSet("tol-gh-token", String(t).trim()), deviceId: L.deviceId };
 g.Lock = Lock;
 
 /* ---------- its part of Settings ---------- */

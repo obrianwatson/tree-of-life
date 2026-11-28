@@ -45,6 +45,18 @@ async def tap(pg, sel, phone):
 
 async def settle(pg): await pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
 
+RUN = "async push => { for (let i = 0; i < 150; i++) { if (!Lock.busy) { const n = Lock.runs; await Lock.syncNow(push); if (Lock.runs > n) return true; } await new Promise(r => setTimeout(r, 100)); } return false; }"
+async def push(pg):
+    """This device's changes are sent, for certain: it waits out a sync that is already running, then runs its own to the end."""
+    await pg.evaluate("Book.flush()"); await pg.evaluate(RUN, True)
+async def pull(pg, until=None):
+    """This device reads the others (and sends its own), again if it must, until `until` is true."""
+    for _ in range(25):
+        await pg.evaluate(RUN, False)
+        if until is None or await pg.evaluate(until): return True
+        await pg.wait_for_timeout(250)
+    return False
+
 # ====================================================================== stage 1: the core plus Grow, the clock and Hold
 async def stage1(br, p, url, phone):
     who = ("iPhone" if phone else "laptop") + " 1: "; ok = lambda c, m: C.ok(c, who + m)
@@ -243,8 +255,7 @@ async def sync(br, p, url):
     C.ok(await b.evaluate("Book.D.trunk") == await a.evaluate("Book.D.trunk") and "Morning pages" in tr and "a line from the phone" in tr, "sync: the second device joins the first one's trunk, and what it had written moves onto it " + json.dumps(tr))
     C.ok(await b.evaluate("Object.keys(localStorage).every(k => (localStorage.getItem(k) || '').toLowerCase().indexOf('willow') < 0)"), "sync: the passphrase is never stored")
     mp = await b.evaluate("T.leafNamed('Morning pages')"); await b.evaluate("Page.go('%s')" % mp); await b.evaluate("T.at('the river is high today')"); await b.keyboard.type(" and loud"); await b.keyboard.press("Enter"); await b.keyboard.type("from the phone"); await b.evaluate("Grow.grow(1)")
-    await b.evaluate("Book.flush(); Lock.syncNow(true)"); await b.wait_for_function("Lock.label().indexOf('Synced') === 0"); await b.wait_for_timeout(300)
-    await a.evaluate("Lock.syncNow()"); await a.wait_for_function("Book.textOf('%s').indexOf('from the phone') > 0" % mp)
+    await push(b); await pull(a, "Book.textOf('%s').indexOf('    from the phone') > 0" % mp)
     C.ok(await a.evaluate("Book.textOf('%s')" % mp) == "the river is high today and loud\n    from the phone" and "a line from the phone" in await a.evaluate("T.lines(Book.D.trunk)"), "sync: writing and a branch made on the phone arrive on the laptop")
     await settle(a)
     C.ok(await a.evaluate("Page.leaf") == mp and await a.evaluate("JSON.stringify(T.dom()) === JSON.stringify(T.lines())"), "sync: the open leaf is redrawn with what arrived")
@@ -259,8 +270,8 @@ async def sync(br, p, url):
     seeds = await a.evaluate("T.leafNamed('Seeds')"); line = await a.evaluate("T.find('from the phone', '%s')" % mp)
     await a.evaluate("Book.act('move', { line: '%s', leaf: '%s' })" % (line, seeds)); await a.evaluate("Book.flush()")
     await b.wait_for_timeout(50); await b.evaluate("Book.act('write', { line: Book.D.leaves['%s'].lines[0], at: 0, words: 'B ' })" % mp)
-    await b.evaluate("Book.act('write', { line: Book.D.leaves['%s'].lines[0], at: 0, words: 'idea ' })" % seeds); await b.evaluate("Book.flush(); Lock.syncNow(true)"); await b.wait_for_timeout(500)
-    await a.evaluate("Lock.syncNow()"); await a.wait_for_timeout(700); await a.evaluate("Lock.syncNow(true)"); await a.wait_for_timeout(500); await b.evaluate("Lock.syncNow()"); await b.wait_for_timeout(700)
+    await b.evaluate("Book.act('write', { line: Book.D.leaves['%s'].lines[0], at: 0, words: 'idea ' })" % seeds); await push(b)
+    await pull(a, "Book.textOf(Book.D.trunk, '', true).indexOf('idea ') >= 0"); await push(a); await pull(b); await push(b); await pull(a); await pull(b)
     ta = await a.evaluate("Book.textOf(Book.D.trunk, '', true)"); tb = await b.evaluate("Book.textOf(Book.D.trunk, '', true)")
     C.ok(ta.count("from the phone (phone)") == 1 and tb.count("from the phone (phone)") == 1, "sync: a line moved on one device while the other edited both leaves is kept, once, on both")
     # the record is united
@@ -556,7 +567,7 @@ async def _s4(br, p, url):
 KEY = "sk-ant-test-SECRETKEY1234"; OKEY = "sk-other-SECRETKEY9876"
 class FakeAI:
     """A stand-in for Claude (api.anthropic.com) and for an OpenAI-compatible AI (api.openai.com): both stream scripted replies."""
-    def __init__(self): self.script = []; self.seen = []; self.hold = None; self.headers = []; self.urls = []
+    def __init__(self): self.script = []; self.seen = []; self.hold = None; self.headers = []; self.urls = []; self.fail = False
     def say(self, *blocks): self.script.append(blocks[0] if len(blocks) == 1 and callable(blocks[0]) else list(blocks))
     async def attach(self, ctx):
         await ctx.route("https://api.anthropic.com/**", self.claude); await ctx.route("https://api.openai.com/**", self.openai)
@@ -570,6 +581,7 @@ class FakeAI:
         req = route.request; cors = {"access-control-allow-origin": "*", "access-control-allow-headers": "*"}
         if req.method == "OPTIONS": return await route.fulfill(status=204, headers=cors)
         if "/v1/models" in req.url: return await route.fulfill(status=200, headers=cors, content_type="application/json", body=json.dumps({"data": [{"id": m, "display_name": m.replace("-", " ").title()} for m in ("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2")]}))
+        if self.fail: return await route.abort()             # the AI can't be reached (the device still thinks it's online)
         blocks = await self.next(req); ev = [{"type": "message_start", "message": {"usage": {"input_tokens": 1000}}}]; tool = False
         for i, b in enumerate(blocks):
             if b[0] == "text":
@@ -764,6 +776,10 @@ async def stage6(br, p, url, phone):
     await ctx.set_offline(False); ai.say(("text", "shiver\ngiver\ndeliver")); await ev("Commands.flushWaiting()"); await pg.wait_for_function("Commands.waiting.length === 0"); await settle(pg)
     rl = await ev("T.lines()"); i = rl.index("Rhymes for river")
     ok(rl[i + 1:i + 4] == ["shiver", "giver", "deliver"] and await ev("Book.D.lines[T.find('shiver')].by") == "ai" and ai.seen[-1]["messages"][-1]["content"].startswith("Give three words that rhyme with river"), "back online, the fast AI writes the waiting step's lines (marked as the AI's)")
+    # the AI can't be reached though the device thinks it's online (a weak signal): that step waits too
+    ai.fail = True; await ev("T.at('Bridge')"); await pg.keyboard.press("Enter"); await pg.keyboard.type(";rhyme road"); await pg.keyboard.press("Enter"); await pg.wait_for_function("Commands.waiting.length === 1"); await settle(pg)
+    ok(await ev("!!T.find('Rhymes for road')") and "waiting for the internet" in await pg.inner_text("#toast"), "and when the AI can't be reached on a weak signal, the step waits the same way")
+    ai.fail = False; ai.say(("text", "load\ntoad")); await ev("Commands.flushWaiting()"); await pg.wait_for_function("Commands.waiting.length === 0"); ok(await ev("!!T.find('toad')"), "(and runs once the AI can be reached)")
     # ---- made with the fast AI: read it, try it first, keep it or not ----
     await ev("T.at('Verse two')"); await ev("AI.open()")
     ai.say(("write", {"line": await ev("T.find('Verse two')"), "how": "inside", "words": "a line from the AI"}), ("make_command", {"code": "verse", "about": "a four-line verse skeleton", "steps": ["write Verse", "write inside line 1", "repeat 3", "\twrite below another line"]})); ai.say(("text", "Kept."))

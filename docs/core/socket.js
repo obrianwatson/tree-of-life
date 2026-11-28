@@ -16,7 +16,7 @@ const put = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catc
 const PRESETS = { openai: { label: "ChatGPT (OpenAI)", base: "https://api.openai.com/v1" }, venice: { label: "Venice", base: "https://api.venice.ai/api/v1" }, openrouter: { label: "OpenRouter", base: "https://openrouter.ai/api/v1" } };
 const PRICE = { "claude-haiku-5-5": [0.10, 0.50], "claude-sonnet-5-5": [2, 10], "claude-opus-5-5": [4, 20] }, UNKNOWN = [4, 20];         // dollars per million tokens in / out
 const KNOWN = [["claude-sonnet-5-5", "Claude Sonnet 5.5"], ["claude-haiku-5-5", "Claude Haiku 5.5"], ["claude-opus-5-5", "Claude Opus 5.5"]].map(m => ({ id: m[0], label: m[1] }));
-const offline = () => new Error(navigator.onLine === false ? "You're offline." : "Couldn't reach the AI. Check your connection.");
+const offline = () => Object.assign(new Error(navigator.onLine === false ? "You're offline." : "Couldn't reach the AI. Check your connection."), { offline: true });
 function explain(status, msg, who) {
   if (/workspace/i.test(msg || "") && /scoped|anthropic-workspace-id/i.test(msg || "")) return "This key works across several workspaces, so Anthropic needs your Workspace ID too (Settings → The fast AI).";
   if (status === 401 || status === 403) return "The key for " + who + " wasn't accepted (Settings → The fast AI).";
