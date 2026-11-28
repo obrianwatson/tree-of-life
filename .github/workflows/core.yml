@@ -1,0 +1,40 @@
+name: Core (quick)
+
+# A quick check of BOLW Core (docs/core/) in Safari's engine and in Firefox, so each stage can be tried in minutes.
+# The full Tests workflow still runs everything in all three engines.
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/core/**', 'tests/test_core.py', 'tests/helpers.py', '.github/workflows/core.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [webkit, firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright and the browser
+        run: |
+          pip install --quiet playwright
+          python -m playwright install --with-deps ${{ matrix.browser }}
+      - name: Run the Core test
+        env:
+          BROWSER: ${{ matrix.browser }}
+          CHROME: ''
+        run: timeout 1300 python tests/test_core.py

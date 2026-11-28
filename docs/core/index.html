@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="BOLW Core">
+<meta name="theme-color" content="#f1efe8" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#262624" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png"><link rel="manifest" href="manifest.webmanifest">
+<title>Book of Living Waters</title>
+<!-- BOLW CORE: leaves of lines; branches to grow them, folds to gather them, webs to connect them, one map to see it all.
+     A small core plus modules, each its own file with a switch in Settings (see AGENTS.md in the repository):
+     CORE     keep.js storage, rings, export · book.js the book and its one door (actions, who, Undo) · mods.js the switches ·
+              page.js the page · log.js the record of every move · settings.js · update.js · lock.js the lock and sync
+     MODULES  grow.js · clock.js · search.js · fold.js · link.js · map.js · marks.js · socket.js + ai.js · requests.js ·
+              commands.js · autos.js · harvest.js
+     Safe mode is a separate page at ./safe/ that uses none of these. -->
+<link rel="stylesheet" href="core.css?v=1.0.0"></head>
+<body>
+<script>window.CORE_VERSION = "1.0.0";</script>
+<script src="keep.js?v=1.0.0"></script><script src="book.js?v=1.0.0"></script><script src="mods.js?v=1.0.0"></script><script src="page.js?v=1.0.0"></script><script src="log.js?v=1.0.0"></script>
+<script src="settings.js?v=1.0.0"></script><script src="update.js?v=1.0.0"></script><script src="lock.js?v=1.0.0"></script>
+<!--MODULES--><script src="grow.js?v=1.0.0"></script><script src="clock.js?v=1.0.0"></script><script src="search.js?v=1.0.0"></script>
+<!--END-->
+<script>Page.start(); if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(function () {});</script>
+</body></html>
