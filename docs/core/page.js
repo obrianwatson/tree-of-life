@@ -1,5 +1,5 @@
 /* page.js · CORE · THE PAGE: what you see and touch.
-   One leaf at a time: its lines (indented into branches), the cursor, the bar, the top row, menus, sheets.
+   One leaf at a time: its lines (a line indented under another is within it: a fold), the cursor, the bar, the top row, menus, sheets.
    It never changes the book itself: every key, button and menu calls an action (book.js → Book.act).
 
    HOW TYPING STAYS LIGHT: each line is its own block. Typing inside a line is left to the browser, and only that
@@ -63,15 +63,17 @@ function render() {
   const leaf = lf(), lay = Page.layout && Mods.on("fold") ? Page.layout(leaf) : null, used = new Set(); let at = pg.firstChild;
   const put = e => { if (at === e) at = at.nextSibling; else pg.insertBefore(e, at); };
   if (lay && lay.gut) pg.style.setProperty("--gut", lay.gut + "px"); else pg.style.removeProperty("--gut");
-  leaf.lines.forEach((id, i) => {
+  const drawLine = (id, i) => {
     if (lay && lay.gates[i]) lay.gates[i].forEach(F => { const key = "g:" + F.id; let e = els.get(key); if (!e) { e = el("div", "gate"); e.contentEditable = "false"; e.dataset.f = F.id; els.set(key, e); } lay.paintGate(e, F); used.add(key); put(e); });
     if (lay && lay.hidden[i]) return;
     const L = B.D.lines[id]; let e = els.get(id);
     if (!e) { e = el("div", "l"); e.dataset.id = id; e._t = null; els.set(id, e); }
     if (e._t !== L.text) setText(e, L.text);
-    const m = marksOf(L), dk = lay ? lay.decor(i) : "", k = L.d + "|" + (L.by === "ai" ? 1 : L.by === "book" ? 2 : 0) + "|" + m + "|" + dk;
-    if (e._k !== k) { e._k = k; e.className = "l" + (L.by === "ai" ? " by-ai" : L.by === "book" ? " by-book" : "") + (L.leaf ? " lf" : "") + (m ? " mk" : ""); e.style.cssText = "--d:" + L.d + (m ? ";--m:" + m.length : "") + (dk ? ";" + dk : ""); if (m) e.dataset.m = m; else delete e.dataset.m; }
+    const m = marksOf(L), dk = lay ? lay.decor(i) : "", w = lay && lay.twist ? lay.twist[i] || "" : "", k = L.d + "|" + (L.by === "ai" ? 1 : L.by === "book" ? 2 : 0) + "|" + m + "|" + dk + "|" + w;
+    if (e._k !== k) { e._k = k; e.className = "l" + (L.by === "ai" ? " by-ai" : L.by === "book" ? " by-book" : "") + (L.leaf ? " lf" : "") + (m ? " mk" : "") + (w ? " wi" + (w === "▸" ? " shut" : "") : ""); e.style.cssText = "--d:" + L.d + (m ? ";--m:" + m.length : "") + (dk ? ";" + dk : ""); if (m) e.dataset.m = m; else delete e.dataset.m; if (w) e.dataset.w = w; else delete e.dataset.w; }
     used.add(id); put(e);
+  }; leaf.lines.forEach((id, i) => { drawLine(id, i);
+    if (lay && lay.after && lay.after[i]) lay.after[i].forEach(F => { const key = "s:" + F.id; let e = els.get(key); if (!e) { e = el("div", "gate share"); e.contentEditable = "false"; e.dataset.f = F.id; els.set(key, e); if (lay.wireShare) lay.wireShare(e); } lay.paintShare(e, F); used.add(key); put(e); });
   });
   while (at) { const n = at.nextSibling; pg.removeChild(at); at = n; }
   els.forEach((e, key) => { if (!used.has(key)) els.delete(key); });
@@ -169,7 +171,7 @@ function fixLine(e) { const s = getSelection(); let at = null; if (s.rangeCount 
 function resync() {                             // the page no longer matches the book line for line (dictation, an odd keyboard): read the whole page back as one change
   const leaf = lf(), lay = Page.layout && Mods.on("fold") ? Page.layout(leaf) : null, G = "\u0001";
   const dom = []; pg.childNodes.forEach(n => { if (n.nodeType === 1 && n.classList.contains("gate")) dom.push(G); else n.textContent.split(/\r?\n/).forEach(t => dom.push(t)); });
-  const vis = [], mod = []; leaf.lines.forEach((id, i) => { if (lay && lay.gates[i]) lay.gates[i].forEach(() => { mod.push(G); vis.push(null); }); if (lay && lay.hidden[i]) return; mod.push(B.D.lines[id].text); vis.push(id); });
+  const vis = [], mod = []; leaf.lines.forEach((id, i) => { if (lay && lay.gates[i]) lay.gates[i].forEach(() => { mod.push(G); vis.push(null); }); if (!(lay && lay.hidden[i])) { mod.push(B.D.lines[id].text); vis.push(id); } if (lay && lay.after && lay.after[i]) lay.after[i].forEach(() => { mod.push(G); vis.push(null); }); });
   const A = mod.join("\n"), Z = dom.join("\n"); if (A === Z) { render(); return; }
   let p = 0; const max = Math.min(A.length, Z.length); while (p < max && A.charCodeAt(p) === Z.charCodeAt(p)) p++;
   let s = 0; while (s < max - p && A.charCodeAt(A.length - 1 - s) === Z.charCodeAt(Z.length - 1 - s)) s++;
@@ -185,7 +187,7 @@ function enter(s) {
 }
 function backAtStart(a) {                       // Backspace at the very start of a line
   const leaf = lf(), L = B.D.lines[a.line];
-  if (L.d > 0 && Mods.on("grow")) { const r = B.act("grow", { line: L.id, dir: -1 }); if (r.ok) { render(); setCaret({ line: L.id, at: 0 }); } return; }
+  if (L.d > 0 && Mods.on("fold")) { const r = B.act("foldin", { line: L.id, dir: -1 }); if (r.ok) { render(); setCaret({ line: L.id, at: 0 }); } return; }
   if (a.i === 0) return; if (hiddenBetween(a.i - 1, a.i - 1)) return say("The line above is inside a closed fold. Open the fold first.");
   const P = B.D.lines[leaf.lines[a.i - 1]]; if (L.leaf && P.leaf && L.text) return say("Both lines have a leaf of their own, so they can't be joined.");
   splice({ line: P.id, at: P.text.length, i: a.i - 1 }, { line: L.id, at: 0, i: a.i }, "");
@@ -237,15 +239,19 @@ function zone(e, x) {                           // which end-of-line mark an x l
   const L = B.D.lines[e.dataset.id]; if (!L) return null; const ms = markers.filter(m => live(m.mod) && m.has(L)); if (!ms.length) return null;
   const k = Math.floor((e.getBoundingClientRect().right - x) / 30); return k >= 0 && k < ms.length ? { m: ms[ms.length - 1 - k], L } : null;
 }
+const inShared = t => !!(t && t.closest && t.closest(".sl"));
+const onTwist = (e, x) => { if (!e || !e.dataset.w) return false; const r = e.getBoundingClientRect(), pad = parseFloat(getComputedStyle(e).paddingLeft) || 0; return x < r.left + pad + 2 && x > r.left + pad - 30; };
 function tapAt(target, x, y) {
+  if (inShared(target)) return false;
   const gate = target.closest ? target.closest(".gate") : null; if (gate) { fire("gate", gate.dataset.f, target); return true; }
+  const w = lineEl(target); if (onTwist(w, x)) { fire("twist", w.dataset.id); return true; }
   const e = lineEl(target); if (e && e.dataset.m) { const z = zone(e, x); if (z) { z.m.tap(z.L, e); return true; } }
   return false;
 }
 let t0 = null;
 pg.addEventListener("touchstart", e => { const t = e.touches[0]; t0 = e.touches.length === 1 ? { x: t.clientX, y: t.clientY, at: Date.now(), target: e.target } : null; }, { passive: true });
 pg.addEventListener("touchend", e => { if (!t0) return; const t = e.changedTouches[0], still = Math.abs(t.clientX - t0.x) < 10 && Math.abs(t.clientY - t0.y) < 10 && Date.now() - t0.at < 600; const s = t0; t0 = null; if (still && !DEMO && tapAt(s.target, t.clientX, t.clientY)) e.preventDefault(); });
-pg.addEventListener("mousedown", e => { if (e.button === 0 && !DEMO && (e.target.closest(".gate") || (lineEl(e.target) && lineEl(e.target).dataset.m && zone(lineEl(e.target), e.clientX)))) e.preventDefault(); });
+pg.addEventListener("mousedown", e => { if (e.button === 0 && !DEMO && !inShared(e.target) && (e.target.closest(".gate") || onTwist(lineEl(e.target), e.clientX) || (lineEl(e.target) && lineEl(e.target).dataset.m && zone(lineEl(e.target), e.clientX)))) e.preventDefault(); });
 pg.addEventListener("click", e => { if (DEMO || e.detail === 0) return; if (tapAt(e.target, e.clientX, e.clientY)) e.preventDefault(); });
 pg.addEventListener("contextmenu", e => { if (TOUCH || DEMO) return; const le = lineEl(e.target); if (!le) return; e.preventDefault(); const s = readSel(); if (!s || s.collapsed || !pos || le.dataset.id !== pos.line) setCaret({ line: le.dataset.id, at: 0 }, true); openMenu({ left: e.clientX, top: e.clientY, bottom: e.clientY }); });
 
@@ -299,7 +305,7 @@ $("#plus").onclick = newLeaf;
 function doMove(dir) { const c = ctx(); if (!c.has) return; const r = B.act("move", { line: c.line, dir }); if (!r.ok) return say(r.why); render(); setCaret({ line: c.line, at: c.at }); }
 function doDelete() { const c = ctx(); if (!c.has) return; const leaf = lf(), i = leaf.lines.indexOf(c.line), n = B.branchEnd(leaf, i) - i, L = B.D.lines[c.line];
   const r = B.act("prune", { line: c.line }); if (!r.ok) return say(r.why); render(); if (focused() || !TOUCH) setCaret({ line: r.line }); else { pos = null; paintBar(); }
-  toast("Deleted “" + (L ? L.text.slice(0, 24) : "") + "”" + (n > 1 ? " and its branch" : "") + ". It's kept under ☰ → Deleted.", "Undo", doUndo); }
+  toast("Deleted “" + (L ? L.text.slice(0, 24) : "") + "”" + (n > 1 ? " and what was within it" : "") + ". It's kept under ☰ → Deleted.", "Undo", doUndo); }
 function moveTo() { const c = ctx(); if (!c.has) return; pickLeaf("Move to which leaf?", id => { const r = B.act("move", { line: c.line, leaf: id }); if (!r.ok) return say(r.why); render(); toast("Moved to “" + B.title(id) + "”.", "Undo", doUndo); }, c.line); }
 function pickLeaf(title, fn, movingLine) {       // choose a leaf from the whole book
   sheet(title, body => { let q = ""; const draw = () => { const ids = B.leaves().filter(id => !q || B.title(id).toLowerCase().indexOf(q) >= 0);

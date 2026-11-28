@@ -11,8 +11,8 @@ Each stage has a short guided test: the real app on its own sample book (never y
 
 Open `https://obrianwatson.github.io/tree-of-life/core/test/?s=1` and change the number at the end for the stage:
 
-1. The core, Grow, the writing clock and Hold
-2. Fold
+1. The core, the writing clock and Hold
+2. Fold: what's within (closing and opening, a space within a line, trace back, sharing one fold in two places, gates, names)
 3. Link and the Map
 4. Bookmarks
 5. The fast AI and requests

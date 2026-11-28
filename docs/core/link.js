@@ -39,7 +39,7 @@ const labels = () => { const s = {}; Object.values(D().links).forEach(K => { if 
 /* ---------- on the page ---------- */
 Page.marker({ order: 50, mod: "link", glyph: "∞", has: L => !!index()[L.id] && of(L.id).length > 0, tap: (L, e) => { const r = e.getBoundingClientRect(); showLinks(L.id, { left: r.right - 260, top: r.top, bottom: r.bottom }); } });
 function jump(x) { Page.go(x.leaf, x.other, { flash: true }); }
-function showLinks(line, at) { const ls = of(line), items = ls.map(x => [(x.label ? x.label + " → " : "→ ") + clip(x.text.trim() || "(empty)", 26) + "  ·  " + clip(B.title(x.leaf), 14), () => jump(x)]);
+function showLinks(line, at) { const ls = of(line), items = ls.map(x => [(x.label ? x.label + " → " : "→ ") + clip(x.text.trim() || "(empty)", 26) + "  ·  " + clip(B.where(x.other), 24), () => jump(x)]);
   items.push(null); items.push(["Link this line to…", () => pick(line)]); if (ls.length) items.push(["Change or remove a link…", () => manage(line)]); Page.openMenu(at, items); }
 /* the strip: when the cursor rests on a linked line, its links float under the top row (they never push the page down) */
 const strip = Page.$("#strip");
@@ -54,7 +54,7 @@ function pick(from) {
     const inp = el("input"); inp.type = "search"; inp.placeholder = "Find the other line (search the whole book)"; body.appendChild(inp); const out = el("div"); body.appendChild(out);
     const draw = () => { const q = inp.value.trim(); let hits;
       if (q) hits = B.search(q, 60).filter(h => h.line !== from); else { const lf = D().leaves[A.in]; hits = lf.lines.filter(l => l !== from && D().lines[l].text.trim()).slice(0, 40).map(l => ({ leaf: lf.id, line: l, text: D().lines[l].text })); }
-      out.innerHTML = `<h2>${q ? "Lines with those words" : "Lines in this leaf"}</h2><div class="rows">` + (hits.map(h => `<button class="rowi" data-line="${h.line}"><b>${esc(h.text.trim())}</b><small>in ${esc(B.title(h.leaf))}</small></button>`).join("") || `<div class="none">No line found.</div>`) + `</div>`;
+      out.innerHTML = `<h2>${q ? "Lines with those words" : "Lines in this leaf"}</h2><div class="rows">` + (hits.map(h => `<button class="rowi" data-line="${h.line}"><b>${esc(h.text.trim())}</b><small>within ${esc(B.where(h.line))}</small></button>`).join("") || `<div class="none">No line found.</div>`) + `</div>`;
       out.querySelectorAll("[data-line]").forEach(b => { b.onclick = () => askLabel(from, b.dataset.line); }); };
     inp.oninput = draw; draw(); if (!Page.TOUCH) setTimeout(() => inp.focus(), 50); });
 }
@@ -67,7 +67,7 @@ function askLabel(from, to) {
 }
 function manage(line) {
   Page.sheet("Links of this line", body => { const draw = () => { const ls = of(line);
-      body.innerHTML = `<div class="rows">` + (ls.map(x => `<div class="rowi"><button class="go" data-j="${x.id}"><b style="color:${x.color}">${esc(x.label || "∞ (no label)")}</b><small>${esc(clip(x.text.trim(), 60))} · in ${esc(B.title(x.leaf))}</small></button><button class="mini" data-l="${x.id}">Label</button><button class="mini" data-x="${x.id}">Remove</button></div>`).join("") || `<div class="none">This line has no links now.</div>`) + `</div><div class="row"><button id="lkMore">Link this line to…</button></div>`;
+      body.innerHTML = `<div class="rows">` + (ls.map(x => `<div class="rowi"><button class="go" data-j="${x.id}"><b style="color:${x.color}">${esc(x.label || "∞ (no label)")}</b><small>${esc(clip(x.text.trim(), 60))} · within ${esc(B.where(x.other))}</small></button><button class="mini" data-l="${x.id}">Label</button><button class="mini" data-x="${x.id}">Remove</button></div>`).join("") || `<div class="none">This line has no links now.</div>`) + `</div><div class="row"><button id="lkMore">Link this line to…</button></div>`;
       body.querySelectorAll("[data-j]").forEach(b => { b.onclick = () => jump(ls.find(x => x.id === b.dataset.j)); });
       body.querySelectorAll("[data-x]").forEach(b => { b.onclick = () => { B.act("unlink", { link: b.dataset.x }); draw(); }; });
       body.querySelectorAll("[data-l]").forEach(b => { b.onclick = () => { const cur = ls.find(x => x.id === b.dataset.l), v = prompt("Label for this link (empty for none)", cur.label); if (v == null) return; B.act("relabel", { link: b.dataset.l, label: v }); draw(); }; });

@@ -13,7 +13,7 @@ function open(q) {
       const lv = v.toLowerCase(), leaves = B.leaves().filter(id => id !== B.D.trunk && B.title(id).toLowerCase().indexOf(lv) >= 0).slice(0, 12), hits = B.search(v, 120);
       const extra = Page.fire("search", v) || "";
       out.innerHTML = (leaves.length ? `<h2>Leaves</h2><div class="rows">` + leaves.map(id => `<button class="rowi" data-leaf="${id}"><b>${esc(B.title(id))}</b><small>${esc(B.path(id).slice(0, -1).map(B.title).join(" › "))}</small></button>`).join("") + `</div>` : "") + extra +
-        `<h2>Lines</h2><div class="rows">` + (hits.map(h => `<button class="rowi" data-leaf="${h.leaf}" data-line="${h.line}"><b>${esc(h.text.trim() || "(empty)")}</b><small>in ${esc(B.title(h.leaf))}</small></button>`).join("") || `<div class="none">No line has those words.</div>`) + `</div>`;
+        `<h2>Lines</h2><div class="rows">` + (hits.map(h => `<button class="rowi" data-leaf="${h.leaf}" data-line="${h.line}"><b>${esc(h.text.trim() || "(empty)")}</b><small>within ${esc(B.where(h.line))}</small></button>`).join("") || `<div class="none">No line has those words.</div>`) + `</div>`;
       out.querySelectorAll("[data-leaf]").forEach(b => { b.onclick = () => Page.go(b.dataset.leaf, b.dataset.line || null, { flash: true }); }); Page.fire("searchDrawn", out, v); };
     inp.oninput = draw; draw(); if (!Page.TOUCH || !inp.value) setTimeout(() => inp.focus(), 50);
   });

@@ -19,6 +19,7 @@ The plan is `claude/core-v1.md` in the BOLW project; what was built and the choi
 - ✅ **5 · The fast AI** (Claude or any OpenAI-compatible AI) **and requests to a coding AI.**
 - ✅ **6 · Commands, then Automations.**
 - ✅ **7 · The harvest.**
+- ✅ **Folds as "within"** (`claude/folds-within.md`, version 1.7): a fold is what's within a line; branches are the tree of folds; a leaf is a fold on its own page (and can be put back); one fold can be shared within several lines. Grow merged into Fold.
 - ⬜ Views (table, board, calendar) · Seeds as its own module · Redo · putting a lifted leaf back into its branch · import · a real-key check of ChatGPT, Venice and OpenRouter.
 
 All seven are built and pass in Chromium, Safari's engine and Firefox. None has been tried on the real iPhone and MacBook yet: that is the next step.

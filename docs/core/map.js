@@ -1,12 +1,13 @@
 /* map.js · MODULE "map" · THE MAP: one view of where you are.
-   Centered on the line you're on: UP is what it grew from (trace back, all the way to the trunk), DOWN is what
-   grows from it (its branch, and its leaf if it has one), and to the SIDES are its links (the web), in their
+   Centered on the line you're on, the tree of folds: UP is what it is within, fold by fold (trace back, all the way
+   to the trunk), DOWN is what's within it (and its page if it has one, and shared folds placed within it, ↻), and to
+   the SIDES are its links (the web), in their
    labels' colors, filtered by label if you want. Tap anything to center the map on it; "Go there" opens it.
    The map only looks: it changes nothing. (Trace back, the family tree and the web are this one view.) */
 (function (g) {
 "use strict";
 const B = g.Book, Page = g.Page, Mods = g.Mods, D = () => B.D, esc = Page.esc;
-Mods.add({ id: "map", name: "Map", about: "One view centered on where you are: branches up and down, links to the sides." });
+Mods.add({ id: "map", name: "Map", about: "One view centered on where you are: the tree of folds up and down, links to the sides." });
 const clip = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;
 const txt = id => (D().lines[id] && D().lines[id].text.trim()) || "(empty line)";
 /* what the map shows around a line (null = the trunk itself) */
@@ -14,7 +15,8 @@ function around(line) {
   const L = line ? D().lines[line] : null, up = [], down = [];
   if (L) { let cur = L, n = 0; while (cur && n++ < 200) { const lf = D().leaves[cur.in], i = lf.lines.indexOf(cur.id), p = B.parentLine(lf, i); if (p >= 0) cur = D().lines[lf.lines[p]]; else if (lf.parent && D().lines[lf.parent]) cur = D().lines[lf.parent]; else cur = null; if (cur) up.unshift(cur.id); }
     const lf = D().leaves[L.in], i = lf.lines.indexOf(L.id), e = B.branchEnd(lf, i); for (let k = i + 1; k < e; k++) if (D().lines[lf.lines[k]].d === L.d + 1) down.push(lf.lines[k]);
-    if (L.leaf && D().leaves[L.leaf]) D().leaves[L.leaf].lines.forEach(l => { if (D().lines[l].d === 0 && (D().lines[l].text.trim() || D().lines[l].leaf)) down.push(l); }); }
+    if (L.leaf && D().leaves[L.leaf]) D().leaves[L.leaf].lines.forEach(l => { if (D().lines[l].d === 0 && (D().lines[l].text.trim() || D().lines[l].leaf)) down.push(l); });
+    if (g.Fold && Mods.on("fold")) g.Fold.placesIn(L.id).forEach(F => g.Fold.sharedLines(F.place).forEach(x => { if (!x.d && down.indexOf(x.id) < 0) down.push(x.id); })); }
   else D().leaves[D().trunk].lines.forEach(l => { if (D().lines[l].d === 0 && (D().lines[l].text.trim() || D().lines[l].leaf)) down.push(l); });
   const links = L && g.Link && Mods.on("link") ? g.Link.of(L.id) : [];
   return { line: L ? L.id : null, up, down, links };
@@ -33,8 +35,8 @@ function open(line) {
           <div class="mmid"><div class="mside">${left.map(side).join("")}</div>
             <div class="mhere" id="mHere">${L ? `<b>${esc(txt(center))}</b><small>in ${esc(B.title(L.in))}${folds.length ? " · folds: " + esc(folds.join(", ")) : ""}</small>` : `<b>Trunk</b><small>the start of the book</small>`}</div>
             <div class="mside">${right.map(side).join("")}</div></div>
-          <div class="mdown">${m.down.slice(0, 14).map(id => node(id, "down")).join("")}${m.down.length > 14 ? `<span class="nt">and ${m.down.length - 14} more</span>` : ""}${!m.down.length ? `<span class="nt">Nothing grows from here yet.</span>` : ""}</div></div>
-        <div class="row"><button class="go" id="mGo">Go there</button>${trail.length ? '<button id="mBack">Back on the map</button>' : ""}</div><p class="nt">Up: what it grew from. Down: what grows from it. Sides: its links. Tap anything to center the map on it.</p>`;
+          <div class="mdown">${m.down.slice(0, 14).map(id => node(id, "down")).join("")}${m.down.length > 14 ? `<span class="nt">and ${m.down.length - 14} more</span>` : ""}${!m.down.length ? `<span class="nt">Nothing is within it yet.</span>` : ""}</div></div>
+        <div class="row"><button class="go" id="mGo">Go there</button>${trail.length ? '<button id="mBack">Back on the map</button>' : ""}</div><p class="nt">Up: what it is within, fold by fold. Down: what is within it. Sides: its links. Tap anything to center the map on it.</p>`;
       body.querySelectorAll("[data-c]").forEach(b => { b.onclick = () => { trail.push(center); center = b.dataset.c || null; only = ""; draw(); }; });
       body.querySelectorAll("[data-only]").forEach(b => { b.onclick = () => { only = b.dataset.only; draw(); }; });
       body.querySelector("#mGo").onclick = () => { if (center) Page.go(D().lines[center].in, center, { flash: true }); else Page.go(D().trunk); };

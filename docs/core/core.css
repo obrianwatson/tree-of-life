@@ -164,3 +164,13 @@ body.ai-open .bar{display:none}
 .ask.card .fld input{display:block;width:100%;border:1px solid var(--line2);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit;font-size:16px;padding:6px 10px;margin-top:4px}
 .rowi.cmd .go{flex:1 1 100%}.rowi.cmd small{white-space:normal}
 .tl.by-book{color:var(--ink2)}
+/* what's within a line (fold.js): ▾ open, ▸ closed, just before the line */
+.l.wi::before{content:attr(data-w);position:absolute;left:calc(var(--gut) + var(--d,0) * var(--step) - 20px);top:1px;width:18px;text-align:center;font-family:var(--sans);font-size:12px;line-height:calc(1.6 * 19px);color:var(--ink3);pointer-events:none}
+.l.wi.shut::before{color:var(--acc);font-size:14px}
+.crumbs i.wi{color:var(--ink3)}.crumbs button.wi{color:var(--ink2);font-style:italic}
+/* a shared fold, shown where it's placed: one fold, written in anywhere */
+.gate.share{display:block;cursor:default;padding:2px 4px 4px 0;border-left:3px solid var(--acc);border-radius:0 10px 10px 0;background:var(--soft);min-height:0;margin:2px 0 4px}
+.share .sh{display:flex;align-items:center;gap:8px;min-height:30px;padding-left:8px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.share .sh i{font-style:normal;color:var(--acc)}
+.share .sl{font-family:var(--serif);font-size:19px;line-height:1.6;color:var(--ink);white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;min-height:1.6em;outline:none;cursor:text;-webkit-user-select:text;user-select:text;caret-color:var(--acc);border-radius:4px}
+.share .sl:focus{background:var(--accbg)}.share .sl.by-ai{color:var(--ai)}.share .nt{padding-left:8px}

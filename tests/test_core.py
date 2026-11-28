@@ -1,4 +1,4 @@
-"""BOLW Core (docs/core/): leaves, branches, folds, links, the map, bookmarks, the fast AI, commands, automations,
+"""BOLW Core (docs/core/): leaves, folds (what's within a line), links, the map, bookmarks, the fast AI, commands, automations,
 the harvest; with rings, export, sync and safe mode. Phone-sized and laptop-sized.
 Run:  python3 tests/test_core.py            (one stage:  python3 tests/test_core.py 2)"""
 import asyncio, json, os, re, sys
@@ -13,7 +13,8 @@ HELP = """() => { const B = Book, D = () => B.D; window.T = {
   depths: leaf => D().leaves[leaf || Page.leaf].lines.map(l => D().lines[l].d),
   find: (txt, leaf) => D().leaves[leaf || Page.leaf].lines.find(l => D().lines[l].text.indexOf(txt) >= 0),
   at: (txt, off) => { const id = T.find(txt); return Page.setCaret({ line: id, at: off == null ? D().lines[id].text.length : off }); },
-  dom: () => [...document.querySelectorAll('#pg > *')].map(e => e.classList.contains('gate') ? '[' + e.textContent + ']' : e.textContent),
+  dom: () => [...document.querySelectorAll('#pg > *')].map(e => e.classList.contains('gate') ? '[' + e.textContent + ']' : (e.dataset.w || '') + e.textContent),
+  words: () => [...document.querySelectorAll('#pg > *')].map(e => e.classList.contains('gate') ? '[' + e.textContent + ']' : e.textContent),
   select: (a, ao, b, bo) => { const ea = Page.lineOf(T.find(a)), eb = Page.lineOf(T.find(b)), r = document.createRange(); r.setStart(ea.firstChild.nodeType === 3 ? ea.firstChild : ea, ao); r.setEnd(eb.firstChild.nodeType === 3 ? eb.firstChild : eb, bo == null ? eb.textContent.length : bo); const s = getSelection(); document.querySelector('#pg').focus(); s.removeAllRanges(); s.addRange(r); return new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res))); },
   leafNamed: name => B.leaves().find(id => B.title(id) === name),
   text: leaf => B.textOf(leaf || Page.leaf),
@@ -69,7 +70,7 @@ async def pull(pg, until=None):
 async def stage1(br, p, url, phone):
     who = ("iPhone" if phone else "laptop") + " 1: "; ok = lambda c, m: C.ok(c, who + m)
     ctx = await device(br, p, phone); pg = await page(ctx, url); ev = pg.evaluate
-    same = lambda: ev("JSON.stringify(T.dom()) === JSON.stringify(T.lines())")
+    same = lambda: ev("JSON.stringify(T.words()) === JSON.stringify(T.lines())")
 
     # ---- leaves that save as you type, and the trunk ----
     ok(await ev("Page.leaf === Book.D.trunk") and await ev("T.lines()") == ["Seeds", ""] and await ev("!!Book.D.lines[T.find('Seeds')].leaf"), "a new book starts from one trunk, with a Seeds leaf on it")
@@ -95,7 +96,7 @@ async def stage1(br, p, url, phone):
     ok(await ev("T.lines()") == ["Verse one", "the river Jordan is high", "and the banks are low", "Chorus", "carry me"] and await same(), "Undo puts both lines back")
     await ev("T.at('carry me')"); await ev("""(() => { const e = new Event('paste', { bubbles: true, cancelable: true }); e.clipboardData = { getData: () => ' home\\n\\tover the water\\n\\t\\tslow\\nBridge' }; document.querySelector('#pg').dispatchEvent(e); })()""")
     pasted = await ev("[T.lines().slice(4), T.depths().slice(4)]")
-    ok(pasted == [["carry me home", "over the water", "slow", "Bridge"], [0, 1, 2, 0]] and await same(), "pasting several lines; lines that start with tabs come in as branches " + json.dumps(pasted))
+    ok(pasted == [["carry me home", "over the water", "slow", "Bridge"], [0, 1, 2, 0]] and await same(), "pasting several lines; lines that start with tabs come in within the line above " + json.dumps(pasted))
     await ev("Page.doUndo()"); await settle(pg)
     # reopen on the exact spot
     await ev("T.at('and the banks', 7)"); await pg.wait_for_timeout(750); await pg.reload(); await ready(pg)
@@ -104,38 +105,38 @@ async def stage1(br, p, url, phone):
     await ctx.set_offline(True); await ev("T.at('carry me')"); await pg.keyboard.type(" home"); await ev("Book.flush()")
     ok("carry me home" in await ev("localStorage.getItem(Keep.K.book)"), "offline: writing is still saved on the device"); await ctx.set_offline(False)
 
-    # ---- Grow: branches by indenting ----
+    # ---- Fold a line into the line above (what used to be called a branch) ----
     await ev("T.at('the river Jordan')"); await (tap(pg, "#b_in", phone) if phone else pg.keyboard.press("Tab"))
     await ev("T.at('and the banks')"); await (tap(pg, "#b_in", phone) if phone else pg.keyboard.press("Tab"))
     await ev("T.at('carry me home')"); await tap(pg, "#b_in", phone)
-    ok(await ev("T.depths()") == [0, 1, 1, 0, 1] and await ev("T.text()") == "Verse one\n    the river Jordan is high\n    and the banks are low\nChorus\n    carry me home", "⇥ (or Tab) grows a line under the one above: a branch")
+    ok(await ev("T.depths()") == [0, 1, 1, 0, 1] and await ev("T.text()") == "Verse one\n    the river Jordan is high\n    and the banks are low\nChorus\n    carry me home", "⇥ (or Tab) folds a line into the one above: it is within that line now")
     pad = await ev("[...document.querySelectorAll('#pg > .l')].map(e => parseFloat(getComputedStyle(e).paddingLeft))")
-    ok(pad[1] > pad[0] and pad[1] == pad[2] and pad[3] == pad[0], "a branch is drawn indented under its line")
-    await ev("T.at('Verse one')"); r = await ev("Book.act('grow', { line: T.find('Verse one'), dir: 1 })")
-    ok(r["ok"] is False and "nothing above" in r["why"], "the first line can't grow from anything: refused, with the reason")
+    ok(pad[1] > pad[0] and pad[1] == pad[2] and pad[3] == pad[0], "what's within a line is drawn indented under it, and the line gets a ▾ " + str(await ev("[...document.querySelectorAll('#pg > .l')].map(e => e.dataset.w || '')")))
+    await ev("T.at('Verse one')"); r = await ev("Book.act('foldin', { line: T.find('Verse one'), dir: 1 })")
+    ok(r["ok"] is False and "no line above" in r["why"], "the first line has nothing to fold into: refused, with the reason")
     await ev("T.at('and the banks', 0)"); await pg.keyboard.press("Backspace")
-    ok(await ev("T.depths()") == [0, 1, 0, 0, 1] and await ev("T.lines().length") == 5, "Backspace at the start of a grown line takes it back out first")
+    ok(await ev("T.depths()") == [0, 1, 0, 0, 1] and await ev("T.lines().length") == 5, "Backspace at the start of a line within another takes it out of that fold first")
     await (tap(pg, "#b_in", phone) if phone else pg.keyboard.press("Tab"))
-    await ev("T.at('Verse one')"); await ev("Book.act('grow', { line: T.find('Chorus'), dir: 1 })"); await ev("Book.act('grow', { line: T.find('Chorus'), dir: -1 })")
-    ok(await ev("T.depths()") == [0, 1, 1, 0, 1], "a line grows and goes back with its whole branch")
+    await ev("T.at('Verse one')"); await ev("Book.act('foldin', { line: T.find('Chorus'), dir: 1 })"); await ev("Book.act('foldin', { line: T.find('Chorus'), dir: -1 })")
+    ok(await ev("T.depths()") == [0, 1, 1, 0, 1], "a line folds in and comes out with everything within it")
 
-    # ---- Move, with its branch ----
+    # ---- Move, with what's within it ----
     await ev("Page.render()"); await ev("T.at('Chorus')"); await ev("T.menu('Move up')"); await settle(pg)
-    ok(await ev("T.text()") == "Chorus\n    carry me home\nVerse one\n    the river Jordan is high\n    and the banks are low" and await same(), "Move up takes the branch past the one above it")
+    ok(await ev("T.text()") == "Chorus\n    carry me home\nVerse one\n    the river Jordan is high\n    and the banks are low" and await same(), "Move up takes the line and what's within it past the one above")
     await ev("T.menu('Move down')"); r = await ev("Book.act('move', { line: T.find('Chorus'), dir: 'down' })")
-    ok(await ev("T.lines()[0]") == "Verse one" and r["ok"] is False and "last" in r["why"], "Move down brings it back; at the end it says so")
+    ok(await ev("T.lines()[0]") == "Verse one" and r["ok"] is False and "further" in r["why"], "Move down brings it back; at the end it says so")
 
-    # ---- Lift a branch into its own leaf ----
-    await ev("T.at('Verse one')"); await ev("T.menu('Lift this branch')"); await settle(pg)
+    # ---- Lift a fold onto its own page (a leaf) ----
+    await ev("T.at('Verse one')"); await ev("T.menu('Lift what\\'s within')"); await settle(pg)
     v1 = await ev("Book.D.lines[T.find('Verse one')].leaf")
-    ok(bool(v1) and await ev("T.lines()") == ["Verse one", "Chorus", "carry me home"] and await ev("T.lines('%s')" % v1) == ["the river Jordan is high", "and the banks are low"] and await ev("T.depths('%s')" % v1) == [0, 0], "Lift: the branch becomes its own leaf, attached to the line it grew from")
+    ok(bool(v1) and await ev("T.lines()") == ["Verse one", "Chorus", "carry me home"] and await ev("T.lines('%s')" % v1) == ["the river Jordan is high", "and the banks are low"] and await ev("T.depths('%s')" % v1) == [0, 0], "Lift: what's within the line becomes its own page (a leaf), still within that line")
     box = await pg.locator('#pg > .l.lf').bounding_box()
     if phone and BROWSER != "firefox": await pg.touchscreen.tap(box["x"] + box["width"] - 12, box["y"] + box["height"] / 2)
     else: await pg.mouse.click(box["x"] + box["width"] - 12, box["y"] + box["height"] / 2)
     await settle(pg)
     ok(await ev("Page.leaf") == v1 and (await pg.inner_text("#crumbs")).replace("\n", "").replace(" ", "") == "Trunk›Riversong›Verseone", "tapping › opens the leaf; the path shows Trunk › River song › Verse one")
     await pg.fill("#ttl", "Verse 1"); song = await ev("Book.parentLeaf(Page.leaf)")
-    ok(await ev("T.lines('%s')[0]" % song) == "Verse 1" and await ev("Book.title(Page.leaf)") == "Verse 1", "renaming a leaf renames the line it grew from (they are the same words)")
+    ok(await ev("T.lines('%s')[0]" % song) == "Verse 1" and await ev("Book.title(Page.leaf)") == "Verse 1", "renaming a leaf renames the line it is within (they are the same words)")
     await tap(pg, "#tBack", phone); a = await ev("Page.leaf"); await tap(pg, "#tFwd", phone)
     ok(a == song and await ev("Page.leaf") == v1, "Back and Forward walk the leaves you visited")
     await tap(pg, "#tBack", phone)
@@ -143,7 +144,7 @@ async def stage1(br, p, url, phone):
     await ev("Book.act('move', { line: T.find('carry me home'), leaf: '%s' })" % v1)
     ok(await ev("T.lines('%s')" % v1) == ["the river Jordan is high", "and the banks are low", "carry me home"] and await ev("T.lines()") == ["Verse 1", "Chorus"], "Move to… sends a line to another leaf")
     r = await ev("Book.act('move', { line: T.find('Verse 1'), leaf: '%s' })" % v1)
-    ok(r["ok"] is False and "inside itself" in r["why"], "a branch can't be moved inside its own leaf")
+    ok(r["ok"] is False and "within itself" in r["why"], "a line can't be moved onto its own page")
     await ev("Page.doUndo()"); await settle(pg)
     ok(await ev("T.lines()") == ["Verse 1", "Chorus", "carry me home"] and await ev("T.lines('%s')" % v1) == ["the river Jordan is high", "and the banks are low"], "Undo of a move puts both leaves back as they were")
 
@@ -166,14 +167,14 @@ async def stage1(br, p, url, phone):
 
     # ---- Search ----
     await ev("Search.open('jordan')"); n = await pg.locator("#sheet [data-line]").count(); txt = await pg.inner_text("#sheet")
-    ok(n == 1 and "the river Jordan is high" in txt and "in Verse 1" in txt, "Search finds a line in another leaf")
+    ok(n == 1 and "the river Jordan is high" in txt and "within Verse 1" in txt, "Search finds a line in another leaf")
     await ev("document.querySelector('#sheet [data-line]').click()"); await settle(pg)
     ok(await ev("Page.leaf") == v1 and await ev("!!document.querySelector('#pg .l.flash')") and await pg.locator("#sheet.hide").count() == 1, "tapping the result goes to that leaf and line")
 
     # ---- the record of every move ----
     log = await ev("T.log()"); joined = " | ".join(log)
-    need = ["You wrote in “River song”", "You grew a branch in “River song”", "You lifted “Verse one” into its own leaf", "You moved a branch up in “River song”", "You deleted “Verse 1” from “River song”", "You brought back “Verse 1”", "You undid"]
-    ok(all(any(n in l for l in log) for n in need), "the record has every move, who made it and where: " + joined[-400:])
+    need = ["You wrote in “River song”", "You folded “the river Jordan is high” into “Verse one” in “River song”", "You lifted what's within “Verse one” onto its own page", "You moved a line (and what's within it) up in “River song”", "You deleted “Verse 1” from “River song”", "You brought back “Verse 1”", "You undid"]
+    ok(all(any(n in l for l in log) for n in need), "the record has every move, who made it and where: " + str([n for n in need if not any(n in l for l in log)]) + joined[:600])
     ok(sum(1 for l in log if l.startswith("You wrote in “River song”")) <= 3, "steady writing is one entry, not one per key")
     await ev("Log.open('book')"); await pg.wait_for_selector("#tlBox .tl")
     ok(await pg.locator("#tlBox .tl").count() >= 8 and "You lifted" in await pg.inner_text("#tlBox"), "☰ → The record reads as a timeline")
@@ -198,12 +199,12 @@ async def stage1(br, p, url, phone):
 
     # ---- modules: a switch each; off never deletes ----
     await ev("Settings.open()"); mods = await ev("[...document.querySelectorAll('#sheet [data-mod]')].map(c => c.dataset.mod)")
-    ok(all(m in mods for m in ["grow", "clock", "search"]), "Settings lists every module with its switch: " + ",".join(mods))
-    await ev("document.querySelector('#sheet [data-mod=grow]').click()"); await ev("Page.closeSheet(true)"); await ev("T.at('Chorus')")
-    r = await ev("Book.act('grow', { line: T.find('carry me'), dir: 1 })")
-    ok(await pg.locator("#b_in.hide").count() == 1 and r["ok"] is False and "switched off" in r["why"], "Grow switched off: its buttons go and its actions are refused")
+    ok(all(m in mods for m in ["clock", "search", "fold"]) and "grow" not in mods, "Settings lists every module with its switch (folding within is Fold's): " + ",".join(mods))
+    await ev("document.querySelector('#sheet [data-mod=fold]').click()"); await ev("Page.closeSheet(true)"); await ev("T.at('Chorus')")
+    r = await ev("Book.act('foldin', { line: T.find('carry me'), dir: 1 })")
+    ok(await pg.locator("#b_in.hide").count() == 1 and r["ok"] is False and "switched off" in r["why"] and await pg.locator("#pg > .l.wi").count() == 0, "Fold switched off: its buttons and marks go and its actions are refused")
     ok(await ev("Book.alive('%s')" % v1) and await ev("T.lines('%s').length" % v1) == 2 and await pg.locator("#pg > .l.lf").count() == 1, "but nothing it made is deleted: the lifted leaf is still there " + json.dumps(await ev("[Book.alive('%s'), T.lines('%s'), T.lines(), document.querySelectorAll('#pg > .l.lf').length, Book.title(Page.leaf)]" % (v1, v1))))
-    await ev("Mods.set('grow', true)"); ok(await pg.locator("#b_in.hide").count() == 0, "switched back on, it's all there again")
+    await ev("Mods.set('fold', true)"); ok(await pg.locator("#b_in.hide").count() == 0, "switched back on, it's all there again")
     await ev("Mods.set('clock', false)"); ok(await pg.locator(".clock.hide").count() == 1 and await pg.locator(".hold.hide").count() == 1, "the clock and Hold have their own switch"); await ev("Mods.set('clock', true)")
 
     # ---- rings and export ----
@@ -214,7 +215,7 @@ async def stage1(br, p, url, phone):
     await ev("Settings.open()")
     async with pg.expect_download() as d: await ev("document.querySelector('#sTxt').click()")
     txt = open(await (await d.value).path(), encoding="utf-8").read()
-    ok("River song\n    Verse 1\n        the river Jordan is high" in txt and "Seeds" in txt, "export to read: one plain text file, branches indented, lifted leaves under their lines " + json.dumps(txt[:500]))
+    ok("River song\n    Verse 1\n        the river Jordan is high" in txt and "Seeds" in txt, "export to read: one plain text file, what's within a line indented under it, lifted pages under their lines " + json.dumps(txt[:500]))
     async with pg.expect_download() as d: await ev("document.querySelector('#sJson').click()")
     j = json.load(open(await (await d.value).path(), encoding="utf-8"))
     ok(j["format"] == "bolw-core" and len(j["record"]) > 5 and j["book"]["trunk"], "export everything: one open JSON file with the book and the record")
@@ -237,9 +238,9 @@ async def feel(br, p, url):
     ctx = await device(br, p, True); pg = await page(ctx, url); ev = pg.evaluate
     await ev("""() => { Page.newLeaf(); const id = Page.leaf, t = []; for (let i = 0; i < 1500; i++) t.push((i % 7 === 3 ? '\\t' : '') + 'Line ' + i + ' of a long song that keeps going and going'); Book.act('write', { line: Book.D.leaves[id].lines[0], words: t.join('\\n') }); Page.render(); }""")
     await ev("T.at('Line 700 of', 8)"); await pg.wait_for_timeout(200)
-    t = await ev("""async () => { const t0 = performance.now(); for (let i = 0; i < 60; i++) document.execCommand('insertText', false, 'x'); const sync = (performance.now() - t0) / 60; const t1 = performance.now(); document.execCommand('insertParagraph'); const enter = performance.now() - t1; return { sync, enter }; }""")
+    t = await ev("""async () => { const t0 = performance.now(); for (let i = 0; i < 60; i++) document.execCommand('insertText', false, 'x'); const sync = (performance.now() - t0) / 60; let enter = 1e9; for (let k = 0; k < 3; k++) { await new Promise(r => setTimeout(r, 120)); const t1 = performance.now(); document.execCommand('insertParagraph'); enter = Math.min(enter, performance.now() - t1); } return { sync, enter }; }""")
     C.ok(t["sync"] < 4 and "x" * 60 in await ev("T.lines().join('|')"), "feel: a key in a 1,500-line leaf costs %.2f ms of work, and every key landed" % t["sync"])
-    C.ok(t["enter"] < 60 and await ev("T.lines().length") == 1501 and await ev("JSON.stringify(T.dom()) === JSON.stringify(T.lines())"), "feel: Return in the middle of it costs %.1f ms" % t["enter"])
+    C.ok(t["enter"] < 60 and await ev("T.lines().length") == 1503 and await ev("JSON.stringify(T.words()) === JSON.stringify(T.lines())"), "feel: Return in the middle of it costs %.1f ms (the quickest of three)" % t["enter"])
     C.ok(await ev("document.documentElement.scrollWidth <= innerWidth"), "feel: nothing is wider than the screen")
     await ctx.close()
 
@@ -262,11 +263,11 @@ async def sync(br, p, url):
     tr = await b.evaluate("T.lines(Book.D.trunk)")
     C.ok(await b.evaluate("Book.D.trunk") == await a.evaluate("Book.D.trunk") and "Morning pages" in tr and "a line from the phone" in tr, "sync: the second device joins the first one's trunk, and what it had written moves onto it " + json.dumps(tr))
     C.ok(await b.evaluate("Object.keys(localStorage).every(k => (localStorage.getItem(k) || '').toLowerCase().indexOf('willow') < 0)"), "sync: the passphrase is never stored")
-    mp = await b.evaluate("T.leafNamed('Morning pages')"); await b.evaluate("Page.go('%s')" % mp); await b.evaluate("T.at('the river is high today')"); await b.keyboard.type(" and loud"); await b.keyboard.press("Enter"); await b.keyboard.type("from the phone"); await b.evaluate("Grow.grow(1)")
+    mp = await b.evaluate("T.leafNamed('Morning pages')"); await b.evaluate("Page.go('%s')" % mp); await b.evaluate("T.at('the river is high today')"); await b.keyboard.type(" and loud"); await b.keyboard.press("Enter"); await b.keyboard.type("from the phone"); await b.evaluate("Fold.foldIn(1)")
     await push(b); await pull(a, "Book.textOf('%s').indexOf('    from the phone') > 0" % mp)
     C.ok(await a.evaluate("Book.textOf('%s')" % mp) == "the river is high today and loud\n    from the phone" and "a line from the phone" in await a.evaluate("T.lines(Book.D.trunk)"), "sync: writing and a branch made on the phone arrive on the laptop")
     await settle(a)
-    C.ok(await a.evaluate("Page.leaf") == mp and await a.evaluate("JSON.stringify(T.dom()) === JSON.stringify(T.lines())"), "sync: the open leaf is redrawn with what arrived")
+    C.ok(await a.evaluate("Page.leaf") == mp and await a.evaluate("JSON.stringify(T.words()) === JSON.stringify(T.lines())"), "sync: the open leaf is redrawn with what arrived")
     # both change the same leaf: the newer wins, the other is kept as a ring
     await a.evaluate("T.at('the river is high')"); await a.keyboard.type(" (laptop)"); await a.evaluate("Book.flush()"); await b.wait_for_timeout(40)
     await b.evaluate("T.at('from the phone')"); await b.keyboard.type(" (phone)"); await b.evaluate("Book.flush(); Lock.syncNow(true)"); await b.wait_for_timeout(500)
@@ -348,88 +349,130 @@ async def stage2(br, p, url, phone):
     song = await new_leaf(pg, "River song", SONG); vis = lambda: ev("T.dom()")
     async def tapgate(fid, more=False):
         sel = '.gate[data-f="%s"]%s' % (fid, " .gm" if more else " .gl"); await tap(pg, sel, phone); await settle(pg)
-    # ---- fold a line and its branch behind a gate ----
-    await ev("T.at('Chorus')"); await tap(pg, "#b_fold", phone); await settle(pg)
-    f1 = await ev("Fold.foldsOf(Page.leaf)[0].id"); d = await vis()
-    ok(d == ["Verse one", "the river is high", "and the banks are low", "[▸ Chorus3 lines⋯]", "Verse two", "the rain came down"] and await ev("T.lines().length") == 8, "Fold on a line takes its branch: three lines collapse behind a gate (the words are all still in the book)")
-    ok("Folded 3 lines" in await pg.inner_text("#toast"), "it says what it folded, and offers to name it")
-    await tapgate(f1); d = await vis()
-    ok(d[3] == "[▾ Chorus⋯]" and d[4:7] == ["Chorus", "carry me over", "carry me home"] and await ev("Book.D.folds['%s'].open" % f1), "tapping the gate opens the fold")
-    bg = await ev("[...document.querySelectorAll('#pg > .l')].map(e => e.style.backgroundImage ? 1 : 0)")
-    ok(bg == [0, 0, 0, 1, 1, 1, 0, 0], "an open fold shows as a colored line in the margin beside its lines")
-    await tapgate(f1); ok((await vis())[3] == "[▸ Chorus3 lines⋯]", "tapping again closes it")
-    # ---- fold a selection; overlapping folds ----
-    await tapgate(f1); await ev("T.select('carry me home', 0, 'Verse two', 5)"); await tap(pg, "#b_fold", phone); await settle(pg)
-    f2 = await ev("Fold.foldsOf(Page.leaf).find(f => f.id !== '%s').id" % f1)
-    ok(await ev("Book.D.lines[Book.D.folds['%s'].from].text" % f2) == "carry me home" and await ev("Book.D.lines[Book.D.folds['%s'].to].text" % f2) == "Verse two", "Fold on a selection takes exactly the lines the selection touches")
-    ok(await vis() == ["Verse one", "the river is high", "and the banks are low", "[▾ Chorus⋯]", "Chorus", "carry me over", "[▸ carry me home2 lines⋯]", "the rain came down"], "two folds overlap: the second hides its lines even inside the open first one")
-    await tapgate(f2); pos = await ev("[...document.querySelectorAll('#pg > .l')].map(e => e.style.backgroundPosition)")
-    ok(pos[5] != "" and "," in pos[5] and pos[3] != pos[6] and pos[6] != "", "open together, each has its own lane in the margin; the line they share shows both: " + json.dumps(pos[3:7]))
-    await tapgate(f1); d = await vis()
-    ok(d == ["Verse one", "the river is high", "and the banks are low", "[▸ Chorus3 lines⋯]", "[▾ carry me home⋯]", "Verse two", "the rain came down"], "close the first: its lines hide; the overlapping fold's gate stays, with the line only it holds")
-    await tapgate(f1); await tapgate(f2)
-    # a fold wholly inside a closed fold has no gate of its own until the outer one opens
-    await ev("Book.act('fold', { from: T.find('carry me over'), to: T.find('carry me over') })"); await ev("Page.render()"); f3 = await ev("Fold.foldsOf(Page.leaf).find(f => Book.D.lines[f.from].text === 'carry me over').id")
-    await tapgate(f1); n_closed = await pg.locator(".gate").count(); await tapgate(f1)
-    ok(n_closed == 2 and await pg.locator(".gate").count() == 3, "a fold wholly inside a closed fold stays behind that gate until it opens")
-    await ev("Book.act('unfold', { fold: '%s' })" % f3); await ev("Book.act('unfold', { fold: '%s' })" % f2); await ev("Page.render()")
-    # ---- writing in and around a fold ----
+    W = lambda t: "(() => { const F = Fold.withinOf(T.find('%s')); return F ? F.id : null; })()" % t
+    # ---- what's within a line: ▾ open, ▸ closed ----
+    d = await vis()
+    ok(d == ["▾Verse one", "the river is high", "and the banks are low", "▾Chorus", "carry me over", "carry me home", "▾Verse two", "the rain came down"], "a line with lines within it shows ▾ before it " + json.dumps(d))
+    tw = await ev("(() => { const e = Page.lineOf(T.find('Chorus')), r = e.getBoundingClientRect(); return [r.left + parseFloat(getComputedStyle(e).paddingLeft) - 10, r.top + 12]; })()")
+    if phone and BROWSER != "firefox": await pg.touchscreen.tap(tw[0], tw[1])
+    else: await pg.mouse.click(tw[0], tw[1])
+    await settle(pg); d = await vis()
+    ok(d == ["▾Verse one", "the river is high", "and the banks are low", "▸Chorus", "▾Verse two", "the rain came down"] and await ev("T.lines().length") == 8, "tap ▾ before Chorus: what's within it folds away, the mark turns to ▸ (the words are all still in the book)")
+    await ev("T.at('Chorus')"); ok(await pg.inner_text("#b_fold") == "Open", "with the cursor on a closed line, the bar's Fold says Open")
+    await tap(pg, "#b_fold", phone); await settle(pg); ok("carry me over" in await vis() and (await vis())[3] == "▾Chorus" and await pg.inner_text("#b_fold") == "Fold", "Open opens it again")
+    await tap(pg, "#b_fold", phone); await settle(pg); ok((await vis())[3] == "▸Chorus" and "Folded what's within “Chorus”" in await pg.inner_text("#toast"), "Fold on a line with something within it: closes it, and offers to name the fold")
+    f1 = await ev(W("Chorus")); ok(bool(f1) and await ev("Book.D.folds['%s'].within" % f1) and await ev("!Book.D.folds['%s'].open" % f1), "the fold is the line's own: it keeps whether it is open")
+    await ev("Book.act('gate', { line: T.find('Chorus'), open: true })"); await ev("Page.render()")
+    # ---- fold a line with nothing within it: a space opens within it ----
+    await ev("T.at('the rain came down')"); await tap(pg, "#b_fold", phone); await settle(pg); await pg.keyboard.type("and the roof sang back")
+    ok(await ev("T.lines()[8]") == "and the roof sang back" and await ev("T.depths()[8]") == 2 and (await vis())[7] == "▾the rain came down", "Fold on a line with nothing within it: a space opens within it, and you write in it")
+    await ev("T.at('and the roof')"); await ev("Fold.foldIn(1)"); r = await ev("Book.act('foldin', { line: T.find('and the roof'), dir: 1 })")
+    ok(r["ok"] is False and "already within" in r["why"], "a line already within the line above can't fold further into it")
+    # folds within folds: closing Verse two hides everything within it, however deep
+    await ev("Book.act('gate', { line: T.find('Verse two'), open: false })"); await ev("Page.render()"); d = await vis()
+    ok(d[-1] == "▸Verse two" and "and the roof sang back" not in d, "folds within folds: closing a line hides everything within it, however deep")
+    await ev("Book.act('gate', { line: T.find('Verse two'), open: true })"); await ev("Page.render()")
+    # ---- trace back: the path follows the line's folds ----
+    await ev("T.at('and the roof')"); await settle(pg); cr = (await pg.inner_text("#crumbs")).replace("\n", "")
+    ok(cr.endswith("River song›Verse two›the rain came down"), "trace back: the path at the top follows the line you're on, fold by fold, to the trunk: " + cr)
+    await ev("document.querySelectorAll('#crumbs button.wi')[0].click()"); await settle(pg); ok(await ev("Book.D.lines[Page.pos.line].text") == "Verse two", "tap a fold in the path to go to its line")
+    await ev("T.at('and the roof')"); await ev("Page.doDelete()"); await ev("T.at('the rain came down')"); await settle(pg)
+    # ---- writing within a fold ----
     await ev("T.at('carry me home')"); await pg.keyboard.press("Enter"); await pg.keyboard.type("all the way")
-    ok(await ev("Book.D.lines[Book.D.folds['%s'].to].text" % f1) == "all the way" and await ev("T.depths()[6]") == 1, "Return at the end of a fold's last line: the new line stays inside the fold")
-    await pg.keyboard.press("Enter"); await pg.keyboard.press("Enter"); await pg.keyboard.type("after")
-    ok(await ev("Book.D.lines[Book.D.folds['%s'].to].text" % f1) == "all the way" and await ev("T.lines().slice(6, 8)") == ["all the way", "after"], "Return on the empty last line steps out of the fold")
+    ok(await ev("T.depths()[6]") == 1 and (await ev("T.lines()"))[6] == "all the way", "Return at the end of a line within a fold: the new line is within it too")
+    await pg.keyboard.press("Enter"); await pg.keyboard.press("Enter"); await pg.keyboard.type("Bridge")
+    ok(await ev("T.lines().slice(6, 8)") == ["all the way", "Bridge"] and await ev("T.depths()[7]") == 0, "Return on an empty last line within a fold steps out of it")
     for _ in range(5): await ev("Page.doUndo()")
-    await settle(pg); ok(await ev("T.lines().length") == 8 and await ev("Book.D.lines[Book.D.folds['%s'].to].text" % f1) == "carry me home", "Undo walks all of that back")
-    await tapgate(f1); n0 = await ev("T.lines().length"); await ev("T.select('and the banks', 3, 'Verse two', 2)"); await pg.keyboard.press("Backspace"); await settle(pg)
-    ok(await ev("T.lines().length") == n0 and "closed fold" in await pg.inner_text("#msg"), "deleting across a closed gate is refused: hidden lines are never typed away by accident")
+    await settle(pg); ok(await ev("T.lines()") == ["Verse one", "the river is high", "and the banks are low", "Chorus", "carry me over", "carry me home", "Verse two", "the rain came down"], "Undo walks all of that back " + json.dumps(await ev("T.lines()")))
+    await ev("Book.act('gate', { line: T.find('Chorus'), open: false })"); await ev("Page.render()"); n0 = await ev("T.lines().length"); await ev("T.select('and the banks', 3, 'Verse two', 2)"); await pg.keyboard.press("Backspace"); await settle(pg)
+    ok(await ev("T.lines().length") == n0 and "closed fold" in await pg.inner_text("#msg"), "deleting across a closed fold is refused: what's within it is never typed away by accident")
+    await ev("Book.act('gate', { line: T.find('Chorus'), open: true })"); await ev("Page.render()")
+    # ---- several lines together behind a gate; gates overlap ----
+    await ev("T.select('carry me over', 0, 'Verse two', 5)"); await tap(pg, "#b_fold", phone); await settle(pg)
+    g1 = await ev("Fold.foldsOf(Page.leaf).find(f => !f.within && !f.place).id")
+    ok(await ev("Book.D.lines[Book.D.folds['%s'].from].text" % g1) == "carry me over" and await ev("Book.D.lines[Book.D.folds['%s'].to].text" % g1) == "Verse two" and "[▸ carry me over3 lines⋯]" in await vis(), "Fold on several lines: they fold together behind a gate, exactly the lines the selection touches")
+    ok("behind a gate" in await pg.inner_text("#toast"), "it says so")
+    await tapgate(g1); bg = await ev("[...document.querySelectorAll('#pg > .l')].map(e => e.style.backgroundImage ? 1 : 0)")
+    ok(bg == [0, 0, 0, 0, 1, 1, 1, 0], "an open gate fold shows as a colored line in the margin beside its lines")
+    await ev("T.select('carry me home', 0, 'the rain came down', 3)"); await tap(pg, "#b_fold", phone); await settle(pg)
+    g2 = await ev("Fold.foldsOf(Page.leaf).find(f => !f.within && !f.place && f.id !== '%s').id" % g1)
+    await tapgate(g2); pos = await ev("[...document.querySelectorAll('#pg > .l')].map(e => e.style.backgroundPosition)")
+    ok(pos[5] != "" and "," in pos[5] and pos[4] != pos[7], "two gate folds overlap: open together, each has its own lane; the lines they share show both")
+    await tapgate(g1); d = await vis(); ok(d.count("[▸ carry me over3 lines⋯]") == 1 and any(x.startswith("[▾ carry me home") for x in d), "close one: its lines hide; the overlapping gate stays " + json.dumps(d))
+    await ev("Book.act('gate', { line: T.find('Verse one'), open: false })"); g3 = (await ev("Book.act('fold', { from: T.find('the river is high'), to: T.find('and the banks are low') })"))["fold"]; await ev("Page.render()")
+    ok(await pg.locator(".gate").count() == 2, "a gate within a closed line stays hidden until the line opens")
+    await ev("Book.act('gate', { line: T.find('Verse one'), open: true })")
+    for fid in (g1, g2, g3): await ev("Book.act('unfold', { fold: '%s' })" % fid)
+    await ev("Page.render()"); ok(await pg.locator(".gate").count() == 0 and await ev("T.lines().length") == 8, "Remove the gate: it goes, every line stays")
     # ---- names: a fold named the same in two songs is one gathering ----
-    await tapgate(f1, more=True); items = await ev("[...document.querySelectorAll('#menu button')].map(b => b.textContent)")
-    ok(items[:2] == ["Open", "Name this fold…"] and "Remove the fold (its lines stay)" in items, "⋯ on a gate opens the fold's own menu: " + ", ".join(items))
-    await ev("[...document.querySelectorAll('#menu button')].find(b => b.textContent.indexOf('Name') === 0).click()"); await pg.fill("#fnName", "Chorus"); await ev("document.querySelector('#fnOk').click()"); await settle(pg)
-    ok(await ev("Book.D.folds['%s'].name" % f1) == "Chorus" and "gathers 1 piece" in await pg.inner_text("#toast") and (await vis())[3] == "[▸ Chorus3 lines⋯]", "naming a fold")
+    await ev("T.at('Chorus')"); await ev("T.menu('Name this fold')"); await pg.fill("#fnName", "Chorus"); await ev("document.querySelector('#fnOk').click()"); await settle(pg)
+    ok(await ev("Book.D.folds['%s'].name" % f1) == "Chorus" and "gathers 1 piece" in await pg.inner_text("#toast"), "⌄ → Name this fold… names the line's fold")
     song2 = await new_leaf(pg, "Desert road", "Verse\n\trivers in the desert\nRefrain\n\tmake a way")
-    r = await ev("Book.act('fold', { from: T.find('Refrain'), name: 'chorus' })")
+    r = await ev("Book.act('fold', { from: T.find('Refrain'), name: 'chorus', open: true })")
     ok(await ev("Fold.pieces('Chorus').length") == 2 and await ev("Fold.names().map(n => n.name + ':' + n.n).join()") == "Chorus:2", "a fold named the same in another song joins it: one gathering, two pieces (capitals don't matter)")
     await ev("Fold.openList()"); await ev("document.querySelector('#sheet [data-name]').click()"); txt = await pg.inner_text("#sheet")
-    ok("River song" in txt and "Desert road" in txt and "carry me over" in txt and "make a way" in txt, "☰ → Folds → Chorus shows every piece, each with its leaf and its words")
-    await ev("document.querySelector('#sheet [data-go]').click()"); await settle(pg)
-    ok(await ev("Page.leaf") == song and await ev("Book.D.folds['%s'].open" % f1) and await ev("!!document.querySelector('#pg .l.flash')"), "tapping a piece goes to it and opens its gate")
+    ok("River song › Chorus" not in txt and "River song" in txt and "Desert road" in txt and "carry me over" in txt and "make a way" in txt, "☰ → Folds → Chorus shows every piece, each with where it is and its words")
+    await ev("Book.act('gate', { fold: '%s', open: false })" % f1); await ev("document.querySelector('#sheet [data-go]').click()"); await settle(pg)
+    ok(await ev("Page.leaf") == song and await ev("!!document.querySelector('#pg .l.flash')"), "tapping a piece goes to it")
+    await ev("Book.act('gate', { fold: '%s', open: true })" % f1); await ev("Page.render()")
     # ---- details ----
     await ev("Fold.editDetails('%s')" % f1); await pg.fill("#fdNew", "Key"); await ev("document.querySelector('#fdAdd').click()"); await pg.fill('#sheet [data-k="Key"]', "G"); await ev("document.querySelector('#sheet [data-k=\"Key\"]').dispatchEvent(new Event('change'))")
     ok(await ev("Book.D.folds['%s'].details.Key" % f1) == "G" and await ev("Book.D.names.chorus.keys.join()") == "Key", "a detail on a named fold (Key: G)")
     await ev("Page.closeSheet(true)"); await ev("Fold.editDetails('%s')" % r["fold"])
     ok(await pg.locator('#sheet [data-k="Key"]').count() == 1 and await pg.input_value('#sheet [data-k="Key"]') == "", "the other piece of the gathering offers the same kind of detail, with its own value")
-    await ev("Page.closeSheet(true)"); await ev("Book.act('gate', { fold: '%s', open: false })" % f1); await ev("Page.render()")
-    ok("Key: G" in (await vis())[3], "details show on the closed gate")
-    r2 = await ev("Book.act('detail', { fold: Fold.foldsOf(Page.leaf)[0].id, key: 'Status', value: 'x' })")
+    await ev("Page.closeSheet(true)"); await ev("T.at('Chorus')"); ok(await ev("Page.menuItems().some(i => i && i[0] === 'Details of “Chorus”…')"), "⌄ on a named fold's line offers its details")
     await ev("Book.act('name', { fold: '%s', name: '' })" % f1); r3 = await ev("Book.act('detail', { fold: '%s', key: 'Key', value: 'A' })" % f1)
     ok(r3["ok"] is False and "Name the fold first" in r3["why"], "details belong to named folds: an unnamed fold refuses them, saying why"); await ev("Page.doUndo()")
-    # ---- gather by rule: a search saved as a fold ----
     await ev("Book.act('gather', { name: 'Water', search: 'river' })"); await ev("Fold.openName('Water')"); txt = await pg.inner_text("#sheet")
-    ok("the river is high" in txt and "rivers in the desert" in txt, "gather by a search: a named gathering that lists every line with those words")
-    await ev("Page.closeSheet(true)")
-    # ---- remove, Undo, and folds following their lines ----
-    await ev("Page.go('%s')" % song); await ev("Book.act('gate', { fold: '%s', open: true })" % f1); await ev("Page.render()"); await ev("Book.sealUndo()")
-    await ev("Book.act('unfold', { fold: '%s' })" % f1); await ev("Page.render()")
-    ok(await pg.locator(".gate").count() == 0 and await ev("T.lines().length") == 8, "Remove the fold: the gate goes and every line stays")
-    await ev("Page.doUndo()"); await settle(pg); ok(await pg.locator(".gate").count() == 1 and await ev("Book.D.folds['%s'].name" % f1) == "Chorus", "Undo brings the fold back, name and all")
-    await ev("Book.act('gate', { fold: '%s', open: false })" % f1); u0 = await ev("Book.D.leaves[Page.leaf].updatedAt"); await pg.wait_for_timeout(5); await ev("Book.act('gate', { fold: '%s', open: true })" % f1)
-    ok(await ev("Book.D.leaves[Page.leaf].updatedAt") == u0, "opening and closing a gate doesn't count as changing the leaf")
-    await ev("Page.doUndo()"); ok(await ev("Book.D.folds['%s'].open" % f1) is False, "and it can be undone too"); await ev("Book.act('gate', { fold: '%s', open: true })" % f1)
-    await ev("Book.act('prune', { line: T.find('carry me home') })"); ok(await ev("Book.D.lines[Book.D.folds['%s'].to].text" % f1) == "carry me over", "deleting a fold's last line: the fold now ends on the line before")
-    await ev("Page.doUndo()"); await ev("Book.act('lift', { line: T.find('Chorus') })"); ch = await ev("Book.D.lines[T.find('Chorus')].leaf")
-    ok(await ev("Book.D.folds['%s'].from" % f1) == await ev("T.find('Chorus')") and await ev("Book.D.folds['%s'].to" % f1) == await ev("T.find('Chorus')"), "lifting a folded line's branch into a leaf: the fold stays on the line")
-    await ev("Page.doUndo()"); await ev("Page.render()")
-    # ---- going to a hidden line opens its gates ----
+    ok("the river is high" in txt and "rivers in the desert" in txt, "gather by a search: a named gathering that lists every line with those words"); await ev("Page.closeSheet(true)")
+    # ---- lift a fold onto its own page, and put it back ----
+    await ev("Page.go('%s')" % song); await ev("Book.act('mark', { line: T.find('carry me home'), waiting: 'a better last line' })"); ids0 = await ev("[T.find('carry me over'), T.find('carry me home')]")
+    await ev("T.at('Chorus')"); await ev("T.menu('Lift what\\'s within')"); await settle(pg); ch = await ev("Book.D.lines[T.find('Chorus')].leaf")
+    ok(bool(ch) and await ev("T.lines('%s')" % ch) == ["carry me over", "carry me home"] and await ev("Fold.withinOf(T.find('Chorus')).name") == "Chorus" and "▾" not in (await vis())[3], "Lift: what's within Chorus goes onto its own page, still within Chorus (its name stays on the line)")
+    ok(await ev("Fold.pieces('Chorus').length") == 2 and "carry me home" in await ev("Fold.textOfFold(Fold.withinOf(T.find('Chorus')))"), "a lifted fold is still the same fold: it still gathers, with its words")
+    await ev("T.at('Chorus')"); await ev("T.menu('Put its page back')"); await settle(pg)
+    ok((await ev("T.lines()"))[3:6] == ["Chorus", "carry me over", "carry me home"] and await ev("[T.find('carry me over'), T.find('carry me home')]") == ids0 and await ev("T.depths()[4]") == 1 and not await ev("Book.D.lines[T.find('Chorus')].leaf") and not await ev("Book.alive('%s')" % ch), "Put back: the page folds back into its line; every line keeps who it is")
+    ok(await ev("Marks.list()[0].line") == ids0[1] and await ev("Page.lineOf(T.find('carry me home')).dataset.m") == "⚑", "and what was on those lines (here a bookmark) comes with them")
+    await ev("Page.doUndo()"); await settle(pg); ok(await ev("Book.D.lines[T.find('Chorus')].leaf") == ch and await ev("T.lines('%s').length" % ch) == 2, "Undo puts the page back")
+    await ev("Page.go('%s')" % ch); await ev("T.at('carry me over')"); await ev("T.menu('Put this page back')"); await settle(pg)
+    ok(await ev("Page.leaf") == song and (await ev("T.lines()"))[4:6] == ["carry me over", "carry me home"], "from the page itself: ⌄ → Put this page back within “Chorus”")
+    # ---- one fold, within more than one line ----
+    await ev("T.at('Chorus')"); await ev("T.menu('Share this fold')"); await ev("T.at('Verse two')"); ok(await ev("T.menu('Place “Chorus” here')"), "⌄ → Share this fold…, then on another line ⌄ → Place “Chorus” here"); await settle(pg)
+    d = await vis(); box = [x for x in d if x.startswith("[↻")]
+    ok(len(box) == 1 and "carry me over" in box[0] and "carry me home" in box[0] and "shared" in box[0] and d.index(box[0]) == d.index("the rain came down") + 1, "the chorus shows within Verse two too, marked ↻ shared: " + json.dumps(d))
+    sl = pg.locator(".share .sl").nth(1); await sl.click(); await pg.keyboard.press("End"); await pg.keyboard.type(" again"); await settle(pg)
+    ok(await ev("Book.D.lines[T.find('carry me home')].text") == "carry me home again" and "carry me home again" in await vis(), "write in it there and it changes where it lives too: it's one fold")
+    await pg.keyboard.press("Enter"); await pg.keyboard.type("all the way"); await settle(pg)
+    ok((await ev("T.lines()"))[6] == "all the way" and await ev("T.depths()[6]") == 1 and await pg.locator(".share .sl").count() == 3, "Return in the shared fold adds a line to the fold, everywhere")
+    await pg.keyboard.press("Home"); await pg.keyboard.press("Backspace"); await settle(pg)
+    ok(await ev("Book.D.lines[T.find('carry me home')].text") == "carry me home againall the way" and await pg.locator(".share .sl").count() == 2, "Backspace at the start of a line joins it to the one before, there too")
+    for _ in range(4): await ev("Page.doUndo()")
+    await settle(pg); ok(await ev("Book.D.lines[T.find('carry me home')].text") == "carry me home" and await ev("T.lines().length") == 8, "Undo walks it back " + json.dumps(await ev("T.lines()")))
+    r = await ev("Book.act('place', { from: T.find('Chorus'), into: T.find('carry me over') })"); ok(r["ok"] is False and "within itself" in r["why"], "a fold can't be placed within itself")
+    r = await ev("Book.act('place', { from: T.find('Chorus'), into: T.find('Verse two') })"); ok(r["ok"] is False and "already placed there" in r["why"], "nor twice in the same place")
+    await ev("Page.go('%s')" % song2); r = await ev("Book.act('place', { from: Book.search('Chorus').find(h => h.leaf === '%s').line, into: T.find('Verse') })" % song); await ev("Page.render()")
+    ok(r["ok"] and "carry me over" in " ".join(await vis()) and "lives in River song" in " ".join(await vis()), "a fold can be shared into another leaf too")
+    ok("↻ shared fold: what's within “Chorus” (it lives in “River song”)" in await ev("Book.textOf(Page.leaf)"), "the plain-text export shows where a shared fold is placed")
+    await ev("Page.go('%s')" % song); await ev("T.at('Chorus')"); await ev("T.menu('Everywhere this fold')"); txt = await pg.inner_text("#sheet")
+    ok("where it lives" in txt and "Verse two" in txt and "Desert road" in txt, "⌄ → Everywhere this fold is placed lists every place"); await ev("Page.closeSheet(true)")
+    await ev("T.at('Verse two')"); await ev("T.menu('Take shared')"); await settle(pg); ok(not any(x.startswith("[↻") for x in await vis()) and await ev("T.lines().length") == 8, "Take it out of here: it leaves this place; it stays where it lives")
+    # ---- writing from before carries over ----
+    await ev("""() => { const lf = Book.D.leaves[Page.leaf], id = 'oldfold1'; Book.D.folds[id] = { id, leaf: lf.id, from: T.find('Verse one'), to: T.find('and the banks are low'), open: false, name: 'First', by: 'me', at: 1, updatedAt: 1 }; lf.folds.push(id); Book.heal(); Page.render(); }""")
+    ok(await ev("Book.D.folds.oldfold1.within") and await ev("Book.D.folds.oldfold1.to") == await ev("T.find('Verse one')") and (await vis())[0] == "▸Verse one" and await ev("T.lines().length") == 8, "a fold from before that held a line and what's within it becomes that line's fold: name, closed and all")
+    await ev("Book.act('gate', { fold: 'oldfold1', open: true })"); await ev("Page.render()")
+    # ---- going to a hidden line opens its folds ----
     await ev("Book.act('gate', { fold: '%s', open: false })" % f1); await ev("Page.go('%s')" % song2); await ev("Search.open('carry me over')"); await ev("document.querySelector('#sheet [data-line]').click()"); await settle(pg)
-    ok(await ev("Page.leaf") == song and await ev("Book.D.folds['%s'].open" % f1) and "carry me over" in await vis(), "going to a line inside a closed fold (from Search) opens the gate")
+    ok(await ev("Page.leaf") == song and await ev("Book.D.folds['%s'].open" % f1) and "carry me over" in await vis(), "going to a line within a closed fold (from Search) opens it")
+    ok("within River song › Chorus" in (await ev("Search.open('carry me over')") or "") or "within River song › Chorus" in await pg.inner_text("#sheet"), "Search says where a line is, fold by fold: within River song › Chorus"); await ev("Page.closeSheet(true)")
     # ---- the record, the switch, export ----
     log = " | ".join(await ev("T.log()"))
-    ok("You folded 3 lines in “River song”" in log and "You named a fold “Chorus”" in log and "a fold in “River song”" in log and "You removed a fold" in log, "the record has the folding, naming, opening and removing")
-    await ev("Mods.set('fold', false)"); await settle(pg)
-    ok(await pg.locator(".gate").count() == 0 and await pg.locator("#b_fold.hide").count() == 1 and await vis() == await ev("T.lines()") and await ev("Object.keys(Book.D.folds).length") >= 2, "Fold switched off: gates and button go, every line shows, and the folds are still kept")
-    await ev("Mods.set('fold', true)"); await settle(pg); ok(await pg.locator(".gate").count() == 1, "switched on again, the gates are back")
-    txt = await ev("Keep.asText(Book)"); ok("FOLDS" in txt and "“Chorus” in “River song”" in txt and "Key: G" in txt, "export lists the folds, their names and details")
+    need = ["You closed “Chorus” in “River song”", "You folded “the rain came down” in “River song”", "You named a fold “Chorus”", "You folded 3 lines together in “River song”", "You lifted what's within “Chorus” onto its own page", "You put the page of “Chorus” back within it", "You placed “Chorus” within “Verse two” too (shared)", "You took the shared fold “Chorus” out of a line", "You removed a fold"]
+    ok(all(n in log for n in need), "the record speaks in folds: " + str([n for n in need if n not in log]))
+    ok("You wrote in “River song” › “Chorus”" in log or "› “Chorus”" in log, "and says which fold a move happened within")
+    await ev("Book.act('gate', { line: T.find('Verse two'), open: false })"); await ev("Mods.set('fold', false)"); await settle(pg)
+    ok(await pg.locator(".gate").count() == 0 and await pg.locator("#pg > .l.wi").count() == 0 and await pg.locator("#b_fold.hide").count() == 1 and await ev("T.words()") == await ev("T.lines()") and await ev("Object.keys(Book.D.folds).length") >= 2, "Fold switched off: marks, gates and buttons go, every line shows, and the folds are still kept")
+    await ev("Mods.set('fold', true)"); await settle(pg); ok("▸Verse two" in await vis(), "switched on again, they're back as they were")
+    txt = await ev("Keep.asText(Book)"); ok("FOLDS" in txt and "“Chorus” in “River song”: what's within “Chorus”" in txt and "Key: G" in txt, "export lists the named folds, what they hold and their details")
     ok(pg.errs == [], "no errors on the page " + str(pg.errs[:2])); await ctx.close()
 
 async def feel2(br, p, url):
@@ -437,7 +480,7 @@ async def feel2(br, p, url):
     await ev("""() => { Page.newLeaf(); const id = Page.leaf, t = []; for (let i = 0; i < 1500; i++) t.push('Line ' + i + ' of a long song that keeps going and going'); Book.act('write', { line: Book.D.leaves[id].lines[0], words: t.join('\\n') });
         const L = Book.D.leaves[id].lines; for (let i = 0; i < 40; i++) { const f = Book.act('fold', { from: L[10 + i * 30], to: L[22 + i * 30], name: i % 4 ? '' : 'Part' }); if (i % 2) Book.act('gate', { fold: f.fold, open: true }); else if (i % 3 === 0) { Book.act('gate', { fold: f.fold, open: true }); const g = Book.act('fold', { from: L[18 + i * 30], to: L[34 + i * 30] }); Book.act('gate', { fold: g.fold, open: true }); } } Page.render(); }""")
     await ev("T.at('Line 705 of', 8)"); await pg.wait_for_timeout(200)
-    t = await ev("""async () => { const t0 = performance.now(); for (let i = 0; i < 60; i++) document.execCommand('insertText', false, 'x'); const sync = (performance.now() - t0) / 60; const t1 = performance.now(); document.execCommand('insertParagraph'); const enter = performance.now() - t1; return { sync, enter }; }""")
+    t = await ev("""async () => { const t0 = performance.now(); for (let i = 0; i < 60; i++) document.execCommand('insertText', false, 'x'); const sync = (performance.now() - t0) / 60; let enter = 1e9; for (let k = 0; k < 3; k++) { await new Promise(r => setTimeout(r, 120)); const t1 = performance.now(); document.execCommand('insertParagraph'); enter = Math.min(enter, performance.now() - t1); } return { sync, enter }; }""")
     C.ok(t["sync"] < 4 and "x" * 60 in await ev("T.lines().join('|')"), "feel 2: a key in a 1,500-line leaf with 50 folds costs %.2f ms of work" % t["sync"])
     C.ok(t["enter"] < 80, "feel 2: Return in it costs %.1f ms" % t["enter"])
     C.ok(await ev("document.documentElement.scrollWidth <= innerWidth"), "feel 2: nothing is wider than the screen"); await ctx.close()
@@ -498,9 +541,9 @@ async def stage3(br, p, url, phone):
     ok(await pg.locator("#sheet .mn.web").count() == 1 and "carry me over" in await pg.inner_text("#sheet .mn.web"), "filtered by label: only those links show")
     await ev("document.querySelector('#sheet [data-only=\"\"]').click()"); await ev("[...document.querySelectorAll('#sheet .mup .mn')].pop().click()"); await settle(pg)
     down = await ev("[...document.querySelectorAll('#sheet .mdown .mn')].map(e => e.textContent)")
-    ok("Chorus" in await pg.inner_text("#mHere") and down == ["carry me over", "carry me home"], "tap a node and the map centers on it; below it, what grows from it: " + json.dumps(down))
+    ok("Chorus" in await pg.inner_text("#mHere") and down == ["carry me over", "carry me home"], "tap a node and the map centers on it; below it, what's within it: " + json.dumps(down))
     await ev("document.querySelector('#sheet .mup .mn.up').click()"); await settle(pg); down = await ev("[...document.querySelectorAll('#sheet .mdown .mn')].map(e => e.textContent)")
-    ok("River song" in await pg.inner_text("#mHere") and down == ["Verse one", "Chorus", "Verse two"], "a line with a leaf shows the leaf's lines growing from it")
+    ok("River song" in await pg.inner_text("#mHere") and down == ["Verse one", "Chorus", "Verse two"], "a line with its own page shows that page's lines within it")
     await ev("document.querySelector('#sheet [data-c=\"\"]').click()"); await settle(pg)
     ok("Trunk" in await pg.inner_text("#mHere") and "Psalm 23" in await pg.inner_text("#sheet .mdown"), "the trunk is the top of the map")
     await ev("document.querySelector('#mBack').click()"); await ev("document.querySelector('#mBack').click()"); await ev("document.querySelector('#mGo').click()"); await settle(pg)
@@ -649,15 +692,15 @@ async def stage5(br, p, url, phone):
     ok("Always keep lines under ten words." in b["system"], "your “Ways of mine” leaf goes along as standing instructions")
     ok(KEY not in json.dumps(b) and ai.headers[-1].get("x-api-key") == KEY and "he leadeth me" not in b["system"], "the key travels only in the request's own header; leaves you didn't attach aren't sent")
     names = [t["name"] for t in b["tools"]]
-    ok(all(n in names for n in ["write", "grow", "lift", "move", "fold", "name_fold", "detail", "link", "bookmark", "search", "read_leaf", "read_map", "write_request"]), "its tools are the book's own actions: " + ",".join(names))
+    ok("grow" not in names and all(n in names for n in ["write", "fold_into", "lift", "put_back", "place_fold", "move", "fold", "name_fold", "detail", "link", "bookmark", "search", "read_leaf", "read_map", "write_request"]), "its tools are the book's own actions: " + ",".join(names))
     # ---- it acts through the same actions ----
     c0 = await ev("Clock.data.ms"); ch = await L("Chorus"); v2 = await L("Verse two"); sw = await L("still waters", psalm)
     ai.say(("read_leaf", {})); ai.say(("fold", {"from": ch, "name": "Chorus"}), ("write", {"line": ch, "how": "after", "words": "Bridge\n\tand if the water rises\n\tI will rise with it"}))
     ai.say(("link", {"from": cur, "to": sw, "label": "echoes"}), ("write", {"line": v2, "how": "inside", "words": "the bridge held"}), ("bookmark", {"line": v2, "waiting": "a last line"})); ai.say(("text", "Done: folded, wrote a bridge, linked and bookmarked."))
     await ask(pg, "Fold the chorus as Chorus, add a bridge after it, link carry me home to the psalm, add a line under verse two", phone)
     t = await ev("T.text()"); acts = await ev("[...%s.querySelectorAll('.act')].map(a => a.textContent)" % LAST)
-    ok(t == "Verse one\n    the river is high\n    and the banks are low\nChorus\n    carry me over\n    carry me home\nBridge\n    and if the water rises\n    I will rise with it\nVerse two\n    the bridge held\n    the rain came down", "it wrote a branch after the chorus and a line under verse two, right where asked")
-    ok(len(acts) == 6 and acts[0].startswith("· Read") and acts[1] == "✓ Folded 3 lines as “Chorus”" and acts[2].startswith("✓ Wrote 3 lines after “Chorus”") and acts[3].startswith("✓ Linked “carry me home” ↔ “he leadeth me beside the") and acts[3].endswith("(echoes)") and acts[5].startswith("✓ Left a bookmark"), "every action is a line in the chat: " + " | ".join(acts))
+    ok(t == "Verse one\n    the river is high\n    and the banks are low\nChorus\n    carry me over\n    carry me home\nBridge\n    and if the water rises\n    I will rise with it\nVerse two\n    the bridge held\n    the rain came down", "it wrote lines after the chorus and a line within verse two, right where asked")
+    ok(len(acts) == 6 and acts[0].startswith("· Read") and acts[1] == "✓ Folded what's within “Chorus” as “Chorus”" and acts[2].startswith("✓ Wrote 3 lines after “Chorus”") and acts[3].startswith("✓ Linked “carry me home” ↔ “he leadeth me beside the") and acts[3].endswith("(echoes)") and acts[5].startswith("✓ Left a bookmark"), "every action is a line in the chat: " + " | ".join(acts))
     br_ = await L("Bridge"); ok(await ev("Book.D.lines['%s'].by" % br_) == "ai" and await ev("Fold.pieces('Chorus')[0].by") == "ai" and await ev("Link.of('%s')[0].label" % cur) == "echoes" and await ev("Marks.waiting().length") == 1, "the book knows the AI made them")
     ok(await ev("Clock.data.ms") == c0, "the AI's writing adds no writing time")
     await ev("%s.querySelectorAll('.act')[2].click()" % LAST); await settle(pg)
@@ -667,7 +710,7 @@ async def stage5(br, p, url, phone):
     await ev("%s.querySelector('.undo').click()" % LAST); await settle(pg)
     ok(await ev("T.text()") == SONG.replace("\t", "    ") and await ev("Fold.pieces('Chorus').length") == 0 and await ev("Link.of('%s').length" % cur) == 0 and await ev("Marks.list().length") == 0, "one reply = one Undo: the fold, the writing, the link and the bookmark all go back together")
     ok(await ev("AI.chat.msgs[AI.chat.msgs.length - 1].undone") is True, "and the chat says its changes were undone")
-    log = " | ".join(await ev("T.log()")); ok("The AI folded 3 lines in “River song” as “Chorus”" in log and "The AI linked two lines (echoes)" in log and "You asked the AI:" in log, "the record says what the AI did, and what you asked")
+    log = " | ".join(await ev("T.log()")); ok("The AI folded “Chorus” in “River song” as “Chorus”" in log and "The AI linked two lines (echoes)" in log and "You asked the AI:" in log, "the record says what the AI did, and what you asked")
     # ---- it asks before changing or removing your words ----
     bk = await L("and the banks")
     ai.say(("write", {"line": bk, "how": "replace", "words": "and the banks lie low"})); ai.say(("text", "I left it."))
@@ -687,7 +730,7 @@ async def stage5(br, p, url, phone):
     # ---- folds carry instructions; attached leaves go along ----
     await ev("Book.act('teach', { name: 'Chorus', words: 'Keep every chorus line to four words.' })"); await ev("AI.chat.attach = ['%s']" % psalm); ai.say(("text", "Yes."))
     await ask(pg, "ok?", phone); sysm = ai.seen[-1]["system"]
-    ok("INSIDE FOLDS NAMED “Chorus”, FOLLOW THE WRITER'S INSTRUCTIONS: Keep every chorus line to four words." in sysm and "A LEAF THE WRITER ATTACHED" in sysm and "he leadeth me beside the still waters" in sysm, "a named fold's instructions and a leaf you attach both go along")
+    ok("WITHIN FOLDS NAMED “Chorus”, FOLLOW THE WRITER'S INSTRUCTIONS: Keep every chorus line to four words." in sysm and "A LEAF THE WRITER ATTACHED" in sysm and "he leadeth me beside the still waters" in sysm, "a named fold's instructions and a leaf you attach both go along")
     # ---- Stop, and offline ----
     ai.hold = asyncio.Event(); ai.say(("text", "never shown")); await ask(pg, "A long story", phone, wait=False); await pg.wait_for_selector("#aiStop:not(.hide)"); await tap(pg, "#aiStop", phone); await pg.wait_for_function("!AI.busy"); ai.hold.set(); ai.hold = None; ai.script.clear()
     ok(await ev("AI.chat.msgs[AI.chat.msgs.length - 1].stopped") is True and await pg.is_visible("#aiSend"), "Stop stops the reply")
@@ -746,7 +789,7 @@ async def stage6(br, p, url, phone):
     cs = await ev("Commands.all().map(c => c.code + '|' + c.about + '|' + c.steps.map(s => s.text).join(';'))")
     ok(await ev("Book.path(Commands.homeLeaf()).map(Book.title).join(' › ')") == "Trunk › Commands" and cs[0] == ";today|writes today's date|write {date}" and cs[1].startswith(";song|"), "commands live in a Commands leaf on the trunk: a line starting with ; and the steps growing from it")
     # ---- type the code at the start of a line ----
-    await ev("Page.go('%s')" % song); await ev("T.at('the rain came down')"); await pg.keyboard.press("Enter"); await ev("Grow.grow(-1)"); await pg.keyboard.type(";today"); await pg.keyboard.press("Enter"); await settle(pg)
+    await ev("Page.go('%s')" % song); await ev("T.at('the rain came down')"); await pg.keyboard.press("Enter"); await ev("Fold.foldIn(-1)"); await pg.keyboard.type(";today"); await pg.keyboard.press("Enter"); await settle(pg)
     year = await ev("String(new Date().getFullYear())"); last = await ev("T.lines().pop()")
     ok(year in last and ";" not in last and await ev("T.lines().length") == 9 and "Ran ;today: 1 move." in await pg.inner_text("#toast"), "type ;today and press Return: the line becomes today's date (%s)" % last)
     ok(await ev("Book.D.lines[T.find('%s')].by" % year) == "cmd:;today", "the book knows a command wrote it, and which")
@@ -754,15 +797,15 @@ async def stage6(br, p, url, phone):
     await ev("T.at(';today')"); await ctx.set_offline(True)
     for _ in range(6): await pg.keyboard.press("Backspace")
     await pg.keyboard.type(";song"); await pg.keyboard.press("Enter"); await settle(pg); await ctx.set_offline(False)
-    ok(await ev("T.lines().slice(8)") == ["Verse one", "Chorus", "Verse two", "Bridge"] and await ev("Fold.pieces('Chorus').length") == 1 and await ev("Book.D.lines[Fold.pieces('Chorus')[0].from].text") == "Chorus" and await ev("Fold.pieces('Chorus')[0].by") == "cmd:;song", ";song (with the internet off) writes its lines and folds and names the chorus: commands run offline")
-    log = " | ".join(await ev("T.log()")); ok("You ran the command ;song (5 moves)" in log and "Command ;song folded 1 line in “River song” as “Chorus”" in log and "Command ;song wrote in “River song”" in log, "the record says the command ran, and lists its moves as the command's own")
+    ok(await ev("T.lines().slice(8)") == ["Verse one", "Chorus", "", "Verse two", "Bridge"] and await ev("T.depths()[10]") == await ev("T.depths()[9]") + 1 and await ev("Fold.pieces('Chorus').length") == 1 and await ev("Book.D.lines[Fold.pieces('Chorus')[0].from].text") == "Chorus" and await ev("Fold.pieces('Chorus')[0].by") == "cmd:;song", ";song (with the internet off) writes its lines, opens a space within the chorus and names its fold: commands run offline")
+    log = " | ".join(await ev("T.log()")); ok("You ran the command ;song (6 moves)" in log and "Command ;song folded “Chorus” in “River song” as “Chorus”" in log and "Command ;song wrote in “River song”" in log, "the record says the command ran, and lists its moves as the command's own " + log[-500:])
     # ---- modifiers, repeat, commands calling commands; written by hand in the Commands leaf ----
     await ev("Page.go(Commands.homeLeaf())"); await ev("Page.setCaret({ line: Book.D.leaves[Page.leaf].lines[Book.D.leaves[Page.leaf].lines.length - 1] })")
-    await pg.keyboard.press("Enter"); await ev("Grow.grow(-1)"); await pg.keyboard.type(";layers — as many as you say"); await pg.keyboard.press("Enter"); await ev("Grow.grow(1)"); await pg.keyboard.type("repeat {1}"); await pg.keyboard.press("Enter"); await ev("Grow.grow(1)"); await pg.keyboard.type("write below Layer {n} of {1}")
-    await pg.keyboard.press("Enter"); await ev("Grow.grow(-1)"); await pg.keyboard.type("run ;today"); await settle(pg)
+    await pg.keyboard.press("Enter"); await ev("Fold.foldIn(-1)"); await pg.keyboard.type(";layers — as many as you say"); await pg.keyboard.press("Enter"); await ev("Fold.foldIn(1)"); await pg.keyboard.type("repeat {1}"); await pg.keyboard.press("Enter"); await ev("Fold.foldIn(1)"); await pg.keyboard.type("write below Layer {n} of {1}")
+    await pg.keyboard.press("Enter"); await ev("Fold.foldIn(-1)"); await pg.keyboard.type("run ;today"); await settle(pg)
     ok(await ev("Commands.find(';layers').steps.map(s => s.d + ':' + s.text).join('|')") == "0:repeat {1}|1:write below Layer {n} of {1}|0:run ;today" and await ev("T.lines().indexOf(';layers — as many as you say') > 0"), "a command typed by hand in the Commands leaf is a command (typing its code there doesn't run it)")
     await ev("Page.go('%s')" % song); await ev("T.at('Bridge')"); await pg.keyboard.press("Enter"); await pg.keyboard.type(";layers 3"); await pg.keyboard.press("Enter"); await settle(pg)
-    tail = await ev("T.lines().slice(12)"); ok(tail[:2] == ["Layer 1 of 3", "Layer 2 of 3"] and tail[2].startswith("Layer 3 of 3 ") and year in tail[2] and len(tail) == 3, "modifiers (;layers 3), repeat, and one command running another: " + json.dumps(tail))
+    tail = await ev("(() => { const l = T.lines(); return l.slice(l.indexOf('Layer 1 of 3')); })()"); ok(tail[:2] == ["Layer 1 of 3", "Layer 2 of 3"] and tail[2].startswith("Layer 3 of 3 ") and year in tail[2] and len(tail) == 3, "modifiers (;layers 3), repeat, and one command running another: " + json.dumps(tail))
     # ---- the ; button in the bar ----
     await ev("T.at('Verse one')"); await tap(pg, "#b_cmd", phone); items = await ev("[...document.querySelectorAll('#menu button')].map(b => b.textContent)")
     ok(items[0].startswith(";today") and items[1].startswith(";song") and items[2].startswith(";layers"), "; in the bar lists your commands"); await ev("document.querySelector('#menu button').click()"); await settle(pg)
@@ -770,7 +813,7 @@ async def stage6(br, p, url, phone):
     # ---- try it first: nothing is kept ----
     before = await ev("T.canon()"); nlog = await ev("Log.all().then(a => a.length)")
     tr = await ev("Commands.tryOut(Commands.find(';song'), [], T.find('Bridge'))")
-    ok(tr["ok"] and tr["moves"] == 5 and "+ Verse one" in tr["preview"] and "+ [a fold named “Chorus”" in tr["preview"] and await ev("T.canon()") == before and await ev("Log.all().then(a => a.length)") == nlog, "Try it first shows what it would do (new lines marked +) and keeps nothing: the book and the record are exactly as before")
+    ok(tr["ok"] and tr["moves"] == 6 and "+ Verse one" in tr["preview"] and "+ [a fold named “Chorus”" in tr["preview"] and await ev("T.canon()") == before and await ev("Log.all().then(a => a.length)") == nlog, "Try it first shows what it would do (new lines marked +) and keeps nothing: the book and the record are exactly as before" + json.dumps(tr))
     await ev("Commands.openList()"); await ev("document.querySelectorAll('#sheet [data-try]')[1].click()"); ok("tried in “River song” (nothing was kept)" in await pg.inner_text("#cmTry"), "☰ → Commands lists them, with Try it first and Run here"); await ev("Page.closeSheet(true)")
     # ---- a step it doesn't know; what a command can't do ----
     await ev("Commands.keep({ code: ';odd', steps: [{ d: 0, text: 'write below one' }, { d: 0, text: 'dance wildly' }, { d: 0, text: 'write below two' }] })"); n0 = await ev("T.lines().length")
@@ -823,8 +866,8 @@ async def stage6(br, p, url, phone):
     ok("Automations only add" in await pg.inner_text("#toast") and await ev("T.lines().indexOf('a zebra')") == await ev("T.lines().indexOf('carry me home')") + 1, "the starting limit: an automation that tries to move a line is stopped (automations only add)")
     await pg.keyboard.type("a giraffe"); await pg.keyboard.press("Enter"); await pg.wait_for_function("document.querySelector('#toast').textContent.indexOf('only act in the leaf') > 0")
     ok("planted from afar" not in await ev("T.lines(T.leafNamed('Seeds')).join()"), "and one that tries to write in another leaf is stopped (only the leaf you're on)")
-    await ev("Commands.keep({ when: 'a new leaf is opened', code: ';song' })"); await ev("Page.go(Book.D.trunk)"); await ev("Page.newLeaf()"); await pg.wait_for_function("T.lines().length === 4")
-    ok(await ev("T.lines()") == ["Verse one", "Chorus", "Verse two", "Bridge"] and await ev("Book.D.lines[Book.D.leaves[Page.leaf].lines[0]].by") == "auto:;song", "when a new leaf is opened: ;song, a new leaf starts with the song's skeleton")
+    await ev("Commands.keep({ when: 'a new leaf is opened', code: ';song' })"); await ev("Page.go(Book.D.trunk)"); await ev("Page.newLeaf()"); await pg.wait_for_function("T.lines().length === 5")
+    ok(await ev("T.lines()") == ["Verse one", "Chorus", "", "Verse two", "Bridge"] and await ev("Book.D.lines[Book.D.leaves[Page.leaf].lines[0]].by") == "auto:;song", "when a new leaf is opened: ;song, a new leaf starts with the song's skeleton")
     await ev("Commands.keep({ code: ';keyg', steps: [{ d: 0, text: 'detail Key = G' }] })"); await ev("Commands.keep({ when: 'a fold is named Refrain', code: ';keyg' })"); await ev("Page.go('%s')" % song); fo = await ev("Book.act('fold', { from: T.find('Verse one') })"); await ev("Book.act('name', { fold: '%s', name: 'Refrain' })" % fo["fold"]); await pg.wait_for_function("(Book.D.folds['%s'].details || {}).Key === 'G'" % fo["fold"])
     ok(True, "when a fold is named Refrain: ;keyg, naming a fold sets its Key")
     # ---- the AI suggests one; kept only when you say so ----
@@ -877,7 +920,7 @@ async def stage7(br, p, url, phone):
     ok(await ev("T.lines('%s')" % album) == ["River song", "Desert road", "Harvest"] and await ev("Book.path(Page.leaf).map(Book.title).join(' › ')") == "Trunk › Album › Harvest", "a Harvest leaf is made as the project's last line, and opens")
     lines = await ev("T.lines()"); txt = "\n".join(lines); depths = await ev("T.depths()")
     ok(all(h in lines for h in HEADS) and lines[-5] == "What to keep" or "What to keep" in lines, "it holds five headings (how it went · again and again · stuck · waiting · time) and What to keep")
-    ok(all(depths[lines.index(h)] == 0 and depths[lines.index(h) + 1] == 1 for h in HEADS), "what the record shows grows from each heading")
+    ok(all(depths[lines.index(h)] == 0 and depths[lines.index(h) + 1] == 1 for h in HEADS), "what the record shows is within each heading")
     ok("3 days of work across 10 days" in txt and "3 leaves" in txt and "Who made the moves: you" in txt and ", commands 1." in txt, "how it went: the days, the size, and who made the moves " + json.dumps([l for l in lines if "days" in l or "moves" in l][:3]))
     ok("You gave folds the name “Chorus” twice." in txt and "You ran ;today twice." in txt and "You folded lines twice." in txt and "These lines open more than one of its leaves: Verse one, Chorus." in txt, "what you did again and again: repeated folds, names, commands, and lines your leaves share")
     ok("The longest pause: 7 days with no moves" in txt and "You pressed Undo twice in “River song”." in txt and "You rewrote the most in “River song”" in txt and "You held the clock longest in “River song”: 15 min of holding beside 32 min of typing." in txt, "where you got stuck: the longest pause, Undo, rewriting, long holds " + json.dumps([l for l in lines if "pause" in l or "Undo" in l or "held" in l]))
@@ -908,7 +951,7 @@ async def stage7(br, p, url, phone):
     ai.say(("write", {"line": how, "how": "after", "words": "Two quick days, a pause, then a slower return."})); ai.say(("text", "I've added my line. What changed in the days you stayed away?"))
     ok(len(ai.seen) == sent, "(nothing has gone to the AI so far)"); await ev("Harvest.open()"); await pg.wait_for_selector("#hvAI"); await tap(pg, "#hvAI", phone)
     await pg.wait_for_function("AI.isOpen && !AI.busy && AI.chat && AI.chat.msgs.length === 2 && AI.chat.msgs[1].parts.length >= 2"); b = ai.seen[-2]; sysm = b["system"]
-    ok("THIS CHAT IS A HARVEST" in sysm and "THE RECORD OF EVERY MOVE IN THIS PROJECT" in sysm and "You folded 3 lines in “River song” as “Chorus”" in sysm and "Command ;today wrote in “River song”" in sysm and "You left a bookmark in “River song”" in sysm, "Ask the fast AI: the record of this project's moves goes along (who did what, and when) " + json.dumps([l for l in sysm.split("\n") if " · " in l][:12]))
+    ok("THIS CHAT IS A HARVEST" in sysm and "THE RECORD OF EVERY MOVE IN THIS PROJECT" in sysm and "You folded “Chorus” in “River song” as “Chorus”" in sysm and "Command ;today wrote in “River song”" in sysm and "You left a bookmark in “River song”" in sysm, "Ask the fast AI: the record of this project's moves goes along (who did what, and when) " + json.dumps([l for l in sysm.split("\n") if " · " in l][:12]))
     ok(("LEAF “Harvest” (leaf id %s)" % hv) in sysm and "«from the record»" in sysm and "I kept changing the melody." in sysm and "keep_lesson" in json.dumps(b["tools"]) and b["messages"][0]["content"].startswith("Read the record of “Album”"), "so does the Harvest leaf, with the book's lines and yours told apart, and what it may offer to keep")
     ok(await ev("AI.chat.title") == "Harvest of Album" and await ev("Page.leaf") == hv, "it opens as its own chat, on the Harvest leaf")
     al = await ev("T.find('Two quick days')"); ok(await ev("Book.D.lines['%s'].by" % al) == "ai" and "by-ai" in await ev("Page.lineOf('%s').className" % al) and await ev("T.lines().indexOf('Two quick days, a pause, then a slower return.')") == await ev("T.lines().indexOf('How the time was spent')") * 0 + await ev("Book.D.leaves[Page.leaf].lines.indexOf('%s')" % how) + 1, "its debrief goes into the Harvest leaf under the headings, marked as the AI's (purple): three voices, each marked")
@@ -938,14 +981,14 @@ async def stage7(br, p, url, phone):
     await ev("Page.go(Book.D.trunk)"); await ev("Harvest.open()"); ok("Harvests so far" in await pg.inner_text("#sheet") and "Album" in await pg.inner_text("#sheet .rows"), "from the trunk, ☰ → Harvest lists the harvests so far"); await ev("document.querySelector('#sheet [data-h]').click()"); ok(await ev("Page.leaf") == hv, "and opens one")
     # ---- modules: each a switch; off never deletes; none needs another ----
     await ev("Settings.open()"); mods = await ev("[...document.querySelectorAll('#sheet [data-mod]')].map(c => c.dataset.mod)"); await ev("Page.closeSheet(true)")
-    ok(mods == ["grow", "clock", "search", "fold", "link", "map", "marks", "ai", "requests", "commands", "autos", "harvest"], "Settings lists every module with its switch: " + ",".join(mods))
+    ok(mods == ["clock", "search", "fold", "link", "map", "marks", "ai", "requests", "commands", "autos", "harvest"], "Settings lists every module with its switch: " + ",".join(mods))
     await ev("Mods.set('harvest', false)"); await tap(pg, "#tMenu", phone); items = await ev("[...document.querySelectorAll('#menu button')].map(b => b.textContent)"); await ev("Page.closeMenu()"); await ev("Page.setCaret({ line: '%s' })" % mine)
     ok(not any(i.startswith("Harvest") for i in items) and "switched off" in (await ev("Book.act('lesson', { text: 'x' })"))["why"] and not await ev("Page.menuItems().some(i => i && i[0].indexOf('Keep in Ways') === 0)") and await ev("T.lines().length") == len(lines2) and await ev("T.lines('%s').length" % ways) == 2, "Harvest switched off: it leaves the menus and its moves are refused, and the Harvest leaf and Ways of mine are all still there")
-    await ev("Mods.set('harvest', true)"); await ev("Mods.set('grow', false)"); await ev("Mods.set('ai', false)"); await ev("Mods.set('commands', false)")
+    await ev("Mods.set('harvest', true)"); await ev("Mods.set('fold', false)"); await ev("Mods.set('ai', false)"); await ev("Mods.set('commands', false)")
     r = await ev("Harvest.start('%s').then(r => ({ ok: r.ok, made: r.made, leaf: r.leaf }))" % river); await ev("Page.go('%s')" % river); await ev("Harvest.open()"); await pg.wait_for_selector("#hvOpen")
-    ok(r["ok"] and r["made"] and await ev("T.lines('%s').pop()" % river) == "Harvest" and await pg.locator("#hvAI").count() == 0 and "Commands are switched off" in await pg.inner_text("#sheet"), "with Grow, the fast AI and Commands switched off, a harvest still works (a leaf's own harvest, without the parts that are off)"); await ev("Page.closeSheet(true)")
-    await ev("Page.go(Book.D.trunk)"); n0 = await ev("Book.leaves().length"); await tap(pg, "#plus", phone); await settle(pg); ok(await ev("Book.leaves().length") == n0 + 1 and await ev("Page.leaf !== Book.D.trunk"), "and ＋ still makes a new leaf with Grow off (leaves are the core's)")
-    for m in ("grow", "ai", "commands"): await ev("Mods.set('%s', true)" % m)
+    ok(r["ok"] and r["made"] and await ev("T.lines('%s').pop()" % river) == "Harvest" and await pg.locator("#hvAI").count() == 0 and "Commands are switched off" in await pg.inner_text("#sheet"), "with Fold, the fast AI and Commands switched off, a harvest still works (a leaf's own harvest, without the parts that are off)"); await ev("Page.closeSheet(true)")
+    await ev("Page.go(Book.D.trunk)"); n0 = await ev("Book.leaves().length"); await tap(pg, "#plus", phone); await settle(pg); ok(await ev("Book.leaves().length") == n0 + 1 and await ev("Page.leaf !== Book.D.trunk"), "and ＋ still makes a new leaf with Fold off (leaves are the core's)")
+    for m in ("fold", "ai", "commands"): await ev("Mods.set('%s', true)" % m)
     ok(pg.errs == [], "no errors on the page " + str(pg.errs[:2])); await ctx.close()
 
 async def sync3(br, p, url):

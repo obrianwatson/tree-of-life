@@ -20,15 +20,15 @@ B.action("request", function (needs, who, T) { if (!D().leaves[needs.leaf]) thro
 B.action("requestdone", function (needs, who, T) { const R = tbl()[needs.request]; if (!R) throw B.plain("That request isn't there."); T.more("requests"); tbl()[R.id] = Object.assign({}, R, { status: needs.done === false ? "notyet" : "done", updatedAt: now() }); return { request: R.id, status: tbl()[R.id].status }; }, "requests");
 
 const FIELDS = [["want", "What I want", 3, "What should BOLW do that it can't do now?"], ["doneLooks", "Done looks like", 2, "How will I know it's done?"], ["why", "Why", 2, "optional"], ["module", "Which part of BOLW", 1, "Fold, Link, the page, the AI… (optional)"]];
-const whereNow = () => { const c = Page.ctx(), leaf = Page.leaf; return { leaf, line: c.has ? c.line : null, text: B.path(leaf).map(B.title).join(" › ") + (c.has && D().lines[c.line].text.trim() ? " · " + clip(D().lines[c.line].text.trim(), 50) : "") }; };
+const whereNow = () => { const c = Page.ctx(), leaf = Page.leaf; return { leaf, line: c.has ? c.line : null, text: B.path(leaf).map(B.title).concat(c.has ? B.trail(c.line).map(id => clip(D().lines[id].text.trim() || "…", 30)) : []).join(" › ") + (c.has && D().lines[c.line].text.trim() ? " · " + clip(D().lines[c.line].text.trim(), 50) : "") }; };
 const requestsLeaf = () => B.leaves().find(id => id !== D().trunk && B.parentLeaf(id) === D().trunk && B.title(id).trim().toLowerCase() === "requests");
 /* make the request's leaf (on a Requests leaf on the trunk) and record it. A = the hand that makes the moves (yours, or the AI's inside a reply). */
 async function create(f, A, where) {
   A = A || ((name, needs) => B.act(name, needs)); where = where || whereNow(); const mine = !arguments[1]; if (mine) B.begin("request");
   try {
     let home = requestsLeaf();
-    if (!home) { const tr = D().leaves[D().trunk], last = tr.lines[tr.lines.length - 1], LL = D().lines[last]; let line = last; if (LL.text || LL.leaf) { line = (await A("write", { line: last, at: LL.text.length, words: "\n" })).line; if (D().lines[line].d) await A("grow", { line, dir: -9 }); } await A("write", { line, at: 0, words: "Requests" }); home = (await A("leaf", { line })).leaf; }
-    const hl = D().leaves[home], last = hl.lines[hl.lines.length - 1], LL = D().lines[last]; let line = last; if (LL.text || LL.leaf) { line = (await A("write", { line: last, at: LL.text.length, words: "\n" })).line; if (D().lines[line].d) await A("grow", { line, dir: -9 }); }
+    if (!home) { const tr = D().leaves[D().trunk], last = tr.lines[tr.lines.length - 1], LL = D().lines[last]; let line = last; if (LL.text || LL.leaf) { line = (await A("write", { line: last, at: LL.text.length, words: "\n" })).line; if (D().lines[line].d) await A("foldin", { line, dir: -9 }); } await A("write", { line, at: 0, words: "Requests" }); home = (await A("leaf", { line })).leaf; }
+    const hl = D().leaves[home], last = hl.lines[hl.lines.length - 1], LL = D().lines[last]; let line = last; if (LL.text || LL.leaf) { line = (await A("write", { line: last, at: LL.text.length, words: "\n" })).line; if (D().lines[line].d) await A("foldin", { line, dir: -9 }); }
     await A("write", { line, at: 0, words: clip(String(f.want || "A request").replace(/\n/g, " "), 70) }); const leaf = (await A("leaf", { line })).leaf;
     const text = ["What I want: " + (f.want || ""), "Done looks like: " + (f.doneLooks || ""), "Why: " + (f.why || ""), "Which part of BOLW: " + (f.module || ""), "Where I was: " + (where.text || ""), "Status: Not yet"].map(t => t.replace(/\n/g, " ")).join("\n");
     await A("write", { line: D().leaves[leaf].lines[0], at: 0, words: text }); const r = await A("request", { leaf, want: f.want || "", where: { leaf: where.leaf, line: where.line } });
@@ -59,7 +59,7 @@ function openList() {
 }
 Page.view({ mod: "requests", order: 50, label: "Requests (to a coding AI)", open: openList });
 if (g.AI) g.AI.tool({ name: "write_request", mod: "requests", description: "When the writer wants BOLW itself to do something it can't (a new ability, a change to how it works), write a request for a coding AI with him: what he wants, what done looks like, why, and which part of BOLW it touches. Ask him first if any of these is unclear. You cannot change BOLW yourself.",
-  input_schema: { type: "object", properties: { want: { type: "string" }, done_looks_like: { type: "string" }, why: { type: "string" }, module: { type: "string", description: "Which part of BOLW: Grow, Fold, Link, Map, Bookmarks, the AI, Commands, the page…" } }, required: ["want", "done_looks_like"] },
+  input_schema: { type: "object", properties: { want: { type: "string" }, done_looks_like: { type: "string" }, why: { type: "string" }, module: { type: "string", description: "Which part of BOLW: Fold, Link, Map, Bookmarks, the AI, Commands, the page…" } }, required: ["want", "done_looks_like"] },
   run: async (a, env) => { const where = whereNow(); const r = await create({ want: a.want, doneLooks: a.done_looks_like, why: a.why, module: a.module }, (name, needs) => g.AI.act(name, needs, env), where); return { ok: true, label: "Wrote a request: " + g.AI.q(a.want), go: { leaf: r.leaf }, text: "Done. The request is saved as a leaf on the Requests leaf (☰ → Requests). Tell the writer he can tap “Copy for coding AI” there and paste it to Claude Code or any coding AI, then mark it Done when the change lands." }; } });
 g.Requests = { create, list, prompt, openList, newCard, setDone };
 })(window);

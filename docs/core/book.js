@@ -1,9 +1,9 @@
 /* book.js · CORE · THE BOOK: leaves of lines, and the one door every move goes through.
 
    The book:
-     leaves{id}  { id, lines:[line ids in order], folds:[fold ids], parent: line id it grew from (null for the trunk), at, updatedAt }
-     lines{id}   { id, text, d: depth (how far it is indented = which line it grows from), by: who wrote it, in: its leaf, leaf?: a leaf lifted from it }
-     folds{id}   (Fold module)   links{id} (Link module)   marks{id} (Bookmarks)   names{name} (named folds)   more{} (other modules)
+     leaves{id}  { id, lines:[line ids in order], folds:[fold ids], parent: the line it is within (null for the trunk), at, updatedAt }
+     lines{id}   { id, text, d: depth (how far it is indented = which line it is within), by: who wrote it, in: its leaf, leaf?: its fold lifted onto a page of its own }
+     folds{id}   (Fold module: what's within a line, shared folds, gate folds)   links{id} (Link module)   marks{id} (Bookmarks)   names{name} (named folds)   more{} (other modules)
      pruned[]    what was deleted, whole, so it can always be brought back
      trunk       the id of the one leaf the book starts from
 
@@ -53,11 +53,19 @@ g.makeBook = function (store) {
     walk(D.trunk); return out;
   }
   const depth = (lf, i) => D.lines[lf.lines[i]].d;
-  function branchEnd(lf, i) { let j = i + 1; const d = depth(lf, i); while (j < lf.lines.length && depth(lf, j) > d) j++; return j; }     // a branch = a line and every line after it that is indented deeper
+  function branchEnd(lf, i) { let j = i + 1; const d = depth(lf, i); while (j < lf.lines.length && depth(lf, j) > d) j++; return j; }     // a line and every line after it that is indented deeper: the line and what's within it
   function parentLine(lf, i) { const d = depth(lf, i); for (let k = i - 1; k >= 0; k--) if (depth(lf, k) < d) return k; return -1; }
-  function textOf(id, pad, deep, seen) {    // a leaf as plain words: branches indented, lifted leaves under their line
+  function trail(line) {                    // the lines this line is within on its page, outermost first (trace back follows these, then the page's own line)
+    const L = D.lines[line]; if (!L) return []; const lf = D.leaves[L.in], out = []; let d = L.d;
+    for (let k = lf.lines.indexOf(line) - 1; k >= 0 && d > 0; k--) { const R = D.lines[lf.lines[k]]; if (R.d < d) { out.unshift(R.id); d = R.d; } } return out;
+  }
+  const clipT = (t, n) => { t = String(t || "").trim() || "…"; return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+  const where = line => { const L = D.lines[line]; if (!L) return ""; return [title(L.in)].concat(trail(line).map(id => clipT(D.lines[id].text, 28))).join(" › "); };      // "River song › Chorus": the page, then the folds it is within
+  function textOf(id, pad, deep, seen) {    // a leaf as plain words: what's within a line indented under it, a lifted page under its line
     pad = pad || ""; seen = seen || {}; const lf = D.leaves[id]; if (!lf || seen[id]) return ""; seen[id] = 1; const out = [];
-    lf.lines.forEach(l => { const L = D.lines[l]; if (!L) return; const p = pad + "    ".repeat(L.d); out.push(p + L.text); if (deep && L.leaf && D.leaves[L.leaf]) { const t = textOf(L.leaf, p + "    ", true, seen); if (t.trim()) out.push(t); } });
+    const shared = {}; (lf.folds || []).forEach(f => { const F = D.folds[f]; if (F && F.place && D.lines[F.place]) (shared[F.from] = shared[F.from] || []).push(F.place); });
+    lf.lines.forEach((l, i) => { const L = D.lines[l]; if (!L) return; const p = pad + "    ".repeat(L.d); out.push(p + L.text); if (deep && L.leaf && D.leaves[L.leaf]) { const t = textOf(L.leaf, p + "    ", true, seen); if (t.trim()) out.push(t); }
+      if (shared[l]) shared[l].forEach(src => out.push(p + "    ↻ shared fold: what's within “" + D.lines[src].text.trim() + "” (it lives in “" + title(D.lines[src].in) + "”)")); });
     return out.join("\n");
   }
   function search(q, max) {
@@ -66,7 +74,7 @@ g.makeBook = function (store) {
     return out;
   }
   const hasWriting = id => { const lf = D.leaves[id]; return !!lf && lf.lines.some(l => D.lines[l] && (D.lines[l].text.trim() || D.lines[l].leaf)); };
-  Object.assign(B, { leafOf, title, parentLeaf, alive, path, leaves, branchEnd, parentLine, textOf, search, hasWriting });
+  Object.assign(B, { leafOf, title, parentLeaf, alive, path, leaves, branchEnd, parentLine, trail, where, textOf, search, hasWriting });
 
   /* ---------- keeping things whole (at start, and after another device's book is merged in) ---------- */
   function heal() {
@@ -79,9 +87,11 @@ g.makeBook = function (store) {
       if (!lf.lines.length) { const l = uid("l"); D.lines[l] = { id: l, text: "", d: 0, by: "me", in: lf.id }; lf.lines.push(l); }
       if (D.lines[lf.lines[0]].d !== 0) D.lines[lf.lines[0]].d = 0;
       for (let i = 1; i < lf.lines.length; i++) { const L = D.lines[lf.lines[i]], max = D.lines[lf.lines[i - 1]].d + 1; if (!(L.d >= 0)) L.d = 0; if (L.d > max) L.d = max; }
-      lf.folds = (lf.folds || []).filter(f => { const F = D.folds[f]; if (!F) return false; const a = lf.lines.indexOf(F.from), b = lf.lines.indexOf(F.to); if (a < 0 || b < 0 || a > b) { delete D.folds[f]; return false; } F.leaf = lf.id; return true; });
+      lf.folds = (lf.folds || []).filter(f => { const F = D.folds[f]; if (!F) return false; if (F.within || F.place) F.to = F.from; const a = lf.lines.indexOf(F.from), b = lf.lines.indexOf(F.to); if (a < 0 || b < 0 || a > b) { delete D.folds[f]; return false; } F.leaf = lf.id;
+        if (!F.within && !F.place && b > a && b === branchEnd(lf, a) - 1) { F.within = true; F.to = F.from; }      // (writing from before folds-within: a gate fold that held exactly a line and what's within it is that line's fold)
+        return true; });
     });
-    Object.values(D.leaves).forEach(lf => {                       // a leaf that lost the line it grew from (and wasn't deleted with it) goes back on the trunk
+    Object.values(D.leaves).forEach(lf => {                       // a leaf that lost the line it is within (and wasn't deleted with it) goes back on the trunk
       if (lf.id === D.trunk) return; const P = D.lines[lf.parent];
       if (P && P.leaf === lf.id) return; if (prunedLines[lf.parent]) return; if (!hasWriting(lf.id)) return;
       if (P && !P.leaf) { P.leaf = lf.id; return; }
@@ -195,7 +205,7 @@ g.makeBook = function (store) {
     while (j < lf.lines.length - 1 && end > D.lines[lf.lines[j]].text.length) { end -= D.lines[lf.lines[j]].text.length + 1; j++; }
     const last = D.lines[lf.lines[j]]; end = Math.max(0, Math.min(end, last.text.length));
     const head = L.text.slice(0, at), tail = last.text.slice(end), mid = words.split("\n"), extra = [0];
-    for (let k = 1; k < mid.length; k++) { const m = /^\t+/.exec(mid[k]); extra[k] = m ? m[0].length : 0; if (m) mid[k] = mid[k].slice(m[0].length); }      // pasted lines that start with tabs come in as branches
+    for (let k = 1; k < mid.length; k++) { const m = /^\t+/.exec(mid[k]); extra[k] = m ? m[0].length : 0; if (m) mid[k] = mid[k].slice(m[0].length); }      // pasted lines that start with tabs come in within the line above
     const texts = mid.slice(); texts[0] = head + texts[0]; texts[texts.length - 1] += tail;
     const old = lf.lines.slice(), next = D.lines[old[j + 1]], childD = (!tail && next && next.d > L.d) ? next.d : L.d;
     const keepLast = j > i && texts.length > 1;   // when lines are joined around new lines, the last line keeps its own id (and what hangs on it)
@@ -224,7 +234,7 @@ g.makeBook = function (store) {
   });
 
   /* LEAF: a new, empty leaf. needs: line (that line gets its own leaf), or under + name (a new line of that name at the end of
-     the leaf `under`, with its own leaf). Making a leaf is the core's; lifting a BRANCH into one is Grow's. */
+     the leaf `under`, with its own leaf). Making a leaf is the core's; lifting what's within a line onto a page is Fold's. */
   B.action("leaf", function (needs, who, T) {
     let L = needs.line && D.lines[needs.line], lf;
     if (L) { if (L.leaf && D.leaves[L.leaf]) throw plain("This line already has its own leaf. Tap › to open it."); lf = T.leaf(L.in); }
@@ -236,21 +246,21 @@ g.makeBook = function (store) {
     return { leaf: id, line: L.id, first: D.leaves[id].lines[0], structural: true, log: { what: "newleaf", leaf: lf.id, line: L.id, n: L.text.slice(0, 60) } };
   });
 
-  /* MOVE (grafting): a line goes somewhere else, and its branch goes with it.
-     needs: line, and either dir ("up" | "down": past the branch beside it) or leaf (+ after: a line there; without it, the end). */
+  /* MOVE: a line goes somewhere else, and what's within it goes with it.
+     needs: line, and either dir ("up" | "down": past the line beside it, and what's within that) or leaf (+ after: a line there; without it, the end). */
   B.action("move", function (needs, who, T) {
     const L = D.lines[needs.line]; if (!L) throw plain("That line isn't there.");
     const src = D.leaves[L.in], i = src.lines.indexOf(L.id), e = branchEnd(src, i), d = L.d;
     if (needs.dir) {
       let to;
-      if (needs.dir === "up") { let p = i - 1; while (p >= 0 && depth(src, p) > d) p--; if (p < 0 || depth(src, p) !== d) throw plain("It's already the first in its branch."); to = p; }
-      else { if (e >= src.lines.length || depth(src, e) !== d) throw plain("It's already the last in its branch."); to = branchEnd(src, e) - (e - i); }
+      if (needs.dir === "up") { let p = i - 1; while (p >= 0 && depth(src, p) > d) p--; if (p < 0 || depth(src, p) !== d) throw plain("It can't go up any further here."); to = p; }
+      else { if (e >= src.lines.length || depth(src, e) !== d) throw plain("It can't go down any further here."); to = branchEnd(src, e) - (e - i); }
       T.leaf(src.id); const br = src.lines.splice(i, e - i); src.lines.splice(to, 0, ...br);
       return { line: L.id, leaf: src.id, structural: true, log: { what: "move", leaf: src.id, line: L.id, n: needs.dir } };
     }
     const dest = D.leaves[needs.leaf || src.id]; if (!dest || !alive(dest.id)) throw plain("That leaf isn't there.");
     const moving = src.lines.slice(i, e), under = leafIdsUnder(moving);
-    if (path(dest.id).some(id => under[id])) throw plain("A branch can't be moved inside itself.");
+    if (path(dest.id).some(id => under[id])) throw plain("A line can't be moved within itself.");
     if (needs.after && (leafOf(needs.after) !== dest.id || moving.indexOf(needs.after) >= 0)) throw plain("It can't go there.");
     T.leaf(src.id); if (dest !== src) T.leaf(dest.id);
     const old = src.lines.slice(), gone = {}; moving.forEach(l => { gone[l] = true; });
@@ -264,7 +274,7 @@ g.makeBook = function (store) {
     return { line: L.id, leaf: dest.id, structural: true, log: { what: "move", leaf: dest.id, line: L.id, n: title(dest.id), from: src.id } };
   });
 
-  /* PRUNE (delete): a line and its branch are taken out, whole, and kept so they can be brought back. needs: line. */
+  /* PRUNE (delete): a line and what's within it are taken out, whole, and kept so they can be brought back. needs: line. */
   B.action("prune", function (needs, who, T) {
     const L = D.lines[needs.line]; if (!L) throw plain("That line isn't there.");
     const lf = T.leaf(L.in), i = lf.lines.indexOf(L.id), e = branchEnd(lf, i), old = lf.lines.slice(), gone = {}, recs = [];

@@ -7,14 +7,14 @@
    - Each has a switch (☰ → Commands); switched off, its line reads "paused when …". It shows what it did, and one
      run is one Undo.
    - Suggested or written by the fast AI (make_automation), kept only when you say so.
-   THE STARTING LIMIT: an automation only ADDS (writes new words, grows, folds, names, details, links, bookmarks),
+   THE STARTING LIMIT: an automation only ADDS (writes new words, folds lines into lines, folds, names, details, links, bookmarks),
    and only in the leaf you're on. It can't move, delete, rewrite, lift, or touch another leaf. */
 (function (g) {
 "use strict";
 const B = g.Book, Page = g.Page, Mods = g.Mods, C = g.Commands, D = () => B.D, esc = Page.esc;
 Mods.add({ id: "autos", name: "Automations", about: "When this happens, run that command. They only add, and only in the leaf you're on." });
 const hand = B.hand("auto"); let running = 0;
-const ADDS = { write: 1, grow: 1, fold: 1, name: 1, detail: 1, link: 1, mark: 1, gather: 1, gate: 1, stretch: 1 };
+const ADDS = { write: 1, foldin: 1, fold: 1, place: 1, name: 1, detail: 1, link: 1, mark: 1, gather: 1, gate: 1, stretch: 1 };
 B.guard((name, needs, who) => { if (who.indexOf("auto") !== 0) return true; if (!running) return "An automation only acts while it is running.";
   if (!ADDS[name] || (name === "write" && (needs.remove | 0) > 0) || (name === "name" && !String(needs.name || "").trim())) return "Automations only add: they don't move, delete, rewrite or lift.";
   const leaf = needs.line ? B.leafOf(needs.line) : needs.from ? B.leafOf(needs.from) : needs.fold ? (D().folds[needs.fold] || {}).leaf : Page.leaf;

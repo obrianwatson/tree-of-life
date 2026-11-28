@@ -45,9 +45,9 @@ function attach(B) { B.before = leaf => { keepRing(B, leaf); }; }
 /* ---------- export: take your book with you ---------- */
 const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, "0"); return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); };
 function asText(B) {
-  const D = B.D, out = ["THE BOOK OF LIVING WATERS", "Taken out " + new Date().toLocaleString(), "Branches are indented under the line they grow from. A lifted leaf is shown under its line.", "", B.textOf(D.trunk, "", true)];
-  const folds = Object.values(D.folds || {}).filter(f => B.alive(f.leaf));
-  if (folds.length) { out.push("", "=".repeat(60), "FOLDS", ""); folds.forEach(f => { const a = D.lines[f.from], b = D.lines[f.to]; out.push("- " + (f.name ? "“" + f.name + "”" : "(no name)") + " in “" + B.title(f.leaf) + "”: from “" + (a ? a.text : "") + "” to “" + (b ? b.text : "") + "”" + (f.details && Object.keys(f.details).length ? "  [" + Object.keys(f.details).map(k => k + ": " + f.details[k]).join(", ") + "]" : "")); }); }
+  const D = B.D, out = ["THE BOOK OF LIVING WATERS", "Taken out " + new Date().toLocaleString(), "What is within a line is indented under it. A page lifted from a line is shown under its line.", "", B.textOf(D.trunk, "", true)];
+  const folds = Object.values(D.folds || {}).filter(f => B.alive(f.leaf) && D.lines[f.from] && (f.name || f.place || !f.within));      // (a line's fold with no name is just its indent, already in the words above)
+  if (folds.length) { out.push("", "=".repeat(60), "FOLDS", ""); folds.forEach(f => { const a = D.lines[f.from], b = D.lines[f.to]; out.push("- " + (f.name ? "“" + f.name + "”" : "(no name)") + " in “" + B.title(f.leaf) + "”: " + (f.within ? "what's within “" + a.text + "”" : f.place ? "shared: what's within “" + (D.lines[f.place] ? D.lines[f.place].text : "") + "”, placed within “" + a.text + "”" : "from “" + (a ? a.text : "") + "” to “" + (b ? b.text : "") + "”") + (f.details && Object.keys(f.details).length ? "  [" + Object.keys(f.details).map(k => k + ": " + f.details[k]).join(", ") + "]" : "")); }); }
   const links = Object.values(D.links || {}).filter(l => !l.gone && D.lines[l.a] && D.lines[l.b]);
   if (links.length) { out.push("", "=".repeat(60), "LINKS", ""); links.forEach(l => out.push("- “" + D.lines[l.a].text + "” <-> “" + D.lines[l.b].text + "”" + (l.label ? "  (" + l.label + ")" : ""))); }
   const marks = Object.values(D.marks || {});
@@ -56,7 +56,7 @@ function asText(B) {
   return out.join("\n");
 }
 function asJSON(B, extra) { return JSON.stringify(Object.assign({ format: "bolw-core", v: 1, takenOut: new Date().toISOString(),
-  about: "The Book of Living Waters. leaves: each leaf's lines in order, and the line it grew from (parent). lines: the words, how far each is indented (d), who wrote it (by) and a leaf lifted from it (leaf). folds: from line, to line, an optional name and details. links: two lines and an optional label. pruned: what was deleted.", book: B.D }, extra || {}), null, 1); }
+  about: "The Book of Living Waters. leaves: each leaf's lines in order, and the line it is within (parent). lines: the words, how far each is indented (d: a line is within the nearest line above it that is indented less), who wrote it (by) and the page lifted from what's within it (leaf). folds: within (what's within the line from: open or closed, name, details), place (that line's fold, shared within the line from), or neither (the lines from…to behind a gate), with an optional name and details. links: two lines and an optional label. pruned: what was deleted.", book: B.D }, extra || {}), null, 1); }
 function download(name, text, type) {
   const a = document.createElement("a"), url = URL.createObjectURL(new Blob([text], { type: type || "text/plain;charset=utf-8" }));
   a.href = url; a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 4000);

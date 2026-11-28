@@ -1,6 +1,6 @@
 /* harvest.js · MODULE "harvest" · THE HARVEST: a joint debrief of a finished project, made from the record of every move.
-   1. START the harvest on a project's branch (a leaf and everything under it): ☰ → Harvest.
-   2. BOLW reads the record of every move for that branch and writes WHAT THE RECORD SHOWS into a HARVEST LEAF, the last
+   1. START the harvest on a project (a leaf and everything within it, its lifted pages too): ☰ → Harvest.
+   2. BOLW reads the record of every move for that project and writes WHAT THE RECORD SHOWS into a HARVEST LEAF, the last
       line of the project's leaf, under five headings: how it went · what you did again and again · where you got stuck ·
       what you were waiting on · how the time was spent. This needs no AI and no internet. The book's own hand writes
       it, so those lines are marked as the book's (grey), never as yours.
@@ -8,7 +8,7 @@
       heading (purple), and you talk it through. Your own lines stay plain. Three voices, each marked.
    4. YOU CHOOSE WHAT TO KEEP:  repeated moves → commands (or automations) · lessons → lines in your "Ways of mine" leaf
       (the AI follows that leaf in every chat) · things BOLW couldn't do → requests to a coding AI.
-   5. The Harvest leaf stays on the branch as the project's last leaf.
+   5. The Harvest leaf stays within the project as its last leaf.
    Starting a harvest sends nothing anywhere. Only the button that says so sends the record to the AI.
    What it adds to the book: the Harvest leaf (ordinary lines), a note of which leaf is whose harvest (more.harvests),
    and lines in "Ways of mine". Switching the module off hides ☰ → Harvest; every leaf and line stays. */
@@ -35,7 +35,7 @@ function addLines(lf, rows, who) {                  // (inside an action) lines 
 }
 /* HARVEST: the project's leaf gets a Harvest leaf as its last line (once), and lines are added at its end. needs: leaf (the project), lines [{ d, text }]. */
 B.action("harvest", function (needs, who, T) {
-  const P = D().leaves[needs.leaf]; if (!P || !B.alive(P.id)) throw B.plain("That leaf isn't there."); if (P.id === D().trunk) throw B.plain("Open the project's own leaf first: a harvest looks at one leaf and everything under it.");
+  const P = D().leaves[needs.leaf]; if (!P || !B.alive(P.id)) throw B.plain("That leaf isn't there."); if (P.id === D().trunk) throw B.plain("Open the project's own leaf first: a harvest looks at one leaf and everything within it.");
   if (projectOf(P.id)) throw B.plain("This is a Harvest leaf. Harvest the project it belongs to.");
   const rows = (needs.lines || []).filter(r => r && r.text != null), had = harvestOf(P.id); let H = had && D().leaves[had];
   if (H) T.leaf(H.id); else { H = leafAtEnd(P, "Harvest", who, T); T.more("harvests"); const now = Date.now(); D().more.harvests = Object.assign({}, D().more.harvests, { [P.id]: { id: P.id, leaf: H.id, at: now, updatedAt: now } }); }
@@ -65,7 +65,7 @@ const tops = (o, n) => Object.keys(o).sort((a, b) => o[b] - o[a]).slice(0, n);
 const total = o => Object.keys(o).reduce((s, k) => s + o[k], 0);
 function branch(P) { const set = Log.under(P), hv = harvestOf(P); if (hv) Object.keys(Log.under(hv)).forEach(k => { delete set[k]; }); return set; }      // the project's leaves (its Harvest leaf is not part of what is harvested)
 const entries = P => { const set = branch(P); return Log.all().then(a => a.filter(e => e.leaf && set[e.leaf] && e.what !== "harvest" && e.what !== "facts")); };
-const DID = { fold: "folded lines", name: "named a fold", lift: "lifted a branch into its own leaf", newleaf: "made a new leaf", grow: "grew a branch (or moved one back)", move: "moved a branch", link: "linked two lines", mark: "left a bookmark", detail: "set a detail on a fold" };
+const DID = { fold: "folded lines", name: "named a fold", lift: "lifted a fold onto its own page", putback: "put a page back within its line", place: "shared a fold in another place", newleaf: "made a new leaf", foldin: "folded a line into another (or took one out)", grow: "folded a line into another (or took one out)", move: "moved a line (and what's within it)", link: "linked two lines", mark: "left a bookmark", detail: "set a detail on a fold" };
 
 async function digest(P) {
   const set = branch(P), es = await entries(P), dg = { project: P, title: B.title(P), moves: 0, leaves: Object.keys(set).length, lines: 0, words: 0, went: [], again: [], stuck: [], waiting: [], time: [], ideas: [] };
@@ -109,7 +109,7 @@ async function digest(P) {
   const undos = total(undoIn), u2 = tops(undoIn, 2); if (undos) dg.stuck.push("You pressed Undo " + times(undos) + (u2.length === 1 ? " in " + q(u2[0]) : undoIn[u2[0]] > undoIn[u2[1]] ? ", most in " + q(u2[0]) + " (" + undoIn[u2[0]] + ")" : "") + ".");
   const rw = Object.keys(took).filter(k => took[k] >= 40 && took[k] >= wrote[k] * 0.3).sort((a, b) => took[b] - took[a])[0]; if (rw) dg.stuck.push("You rewrote the most in " + q(rw) + ": " + wrote[rw] + " letters written, " + took[rw] + " taken away.");
   const hk = Object.keys(held).filter(k => held[k] >= 300000 && held[k] >= (typed[k] || 0) * 0.3).sort((a, b) => held[b] - held[a])[0]; if (hk) dg.stuck.push("You held the clock longest in " + q(hk) + ": " + dur(held[hk]) + " of holding beside " + dur(typed[hk] || 0) + " of typing.");
-  if (did.prune) dg.stuck.push("You deleted " + some(did.prune, "branch", "branches") + (did.restore ? " and brought " + did.restore + " back" : "") + ".");
+  if (did.prune) dg.stuck.push("You deleted " + some(did.prune, "line", "lines") + " (with what was within them)" + (did.restore ? " and brought " + did.restore + " back" : "") + ".");
   if (!dg.stuck.length) dg.stuck.push("Nothing in the record stands out. Where did it feel stuck to you?");
   /* what you were waiting on */
   Object.values(D().marks || {}).filter(m => set[m.leaf] && (m.waiting || m.doing)).sort((a, b) => a.at - b.at).slice(0, 12).forEach(m => { const n = Math.round(((m.done || Date.now()) - m.at) / DAY);
@@ -175,11 +175,11 @@ function open() {
     const draw = async () => {
       const here = Page.leaf, P = projectOf(here) || (here === D().trunk ? null : here);
       if (!P) { const hs = Object.values(tbl()).filter(r => harvestOf(r.id)).sort((a, b) => b.at - a.at);
-        body.innerHTML = `<p class="nt">A harvest is a look back at a finished project, made from the record of every move. Open the project's own leaf first (a harvest looks at one leaf and everything under it), then come back here.</p>` + (hs.length ? `<h2>Harvests so far</h2><div class="rows">` + hs.map(r => `<button class="rowi" data-h="${esc(r.leaf)}"><b>${esc(B.title(r.id))}</b><small>${esc(dateY(r.at))}</small></button>`).join("") + `</div>` : "");
+        body.innerHTML = `<p class="nt">A harvest is a look back at a finished project, made from the record of every move. Open the project's own leaf first (a harvest looks at one leaf and everything within it), then come back here.</p>` + (hs.length ? `<h2>Harvests so far</h2><div class="rows">` + hs.map(r => `<button class="rowi" data-h="${esc(r.leaf)}"><b>${esc(B.title(r.id))}</b><small>${esc(dateY(r.at))}</small></button>`).join("") + `</div>` : "");
         body.querySelectorAll("[data-h]").forEach(b => { b.onclick = () => Page.go(b.dataset.h); }); return; }
       const H = harvestOf(P), t = B.title(P);
       if (!H) { body.innerHTML = `<p class="nt">A harvest is a look back at a finished project, made together from the record of every move: how it went, what you did again and again, where you got stuck, what you were waiting on, and how the time was spent. Then you choose what to keep.</p>
-          <p class="nt">It looks at “${esc(t)}” and everything under it, and adds a Harvest leaf as its last line. Nothing is sent anywhere.</p><div class="row"><button class="go" id="hvStart">Start the harvest of “${esc(clip(t, 30))}”</button></div><p class="nt" id="hvMsg"></p>`;
+          <p class="nt">It looks at “${esc(t)}” and everything within it, and adds a Harvest leaf as its last line. Nothing is sent anywhere.</p><div class="row"><button class="go" id="hvStart">Start the harvest of “${esc(clip(t, 30))}”</button></div><p class="nt" id="hvMsg"></p>`;
         body.querySelector("#hvStart").onclick = async () => { const r = await start(P); if (!r.ok) { body.querySelector("#hvMsg").textContent = r.why; return; } Page.go(r.leaf, r.first); Page.toast("The harvest of “" + clip(t, 30) + "” has begun. What's next: ☰ → Harvest.", "Next", open); }; return; }
       body.innerHTML = `<p class="nt">Loading…</p>`; const dg = await digest(P), C = g.Commands, canAI = g.AI && Mods.on("ai"); if (!body.isConnected) return;
       body.innerHTML = `<p class="nt">The Harvest leaf is the last line of “${esc(t)}”. It holds what the record shows. Write your own lines under any heading.</p><div class="row"><button class="go" id="hvOpen">Open the Harvest leaf</button><button id="hvAgain">Write today's facts again</button></div><p class="nt" id="hvMsg">${esc(msg)}</p>` +

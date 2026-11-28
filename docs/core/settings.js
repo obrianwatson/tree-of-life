@@ -12,7 +12,7 @@ add({ order: 10, title: "Modules", id: "mods", build(box) {
   box.innerHTML = `<p class="nt">BOLW is a small core plus modules. Switching one off hides it; it never deletes what it made.</p>` + Mods.list.map(m => `<label class="ck"><input type="checkbox" data-mod="${m.id}"${Mods.on(m.id) ? " checked" : ""}><span>${esc(m.name)}<small>${esc(m.about || "")}</small></span></label>`).join("");
   box.querySelectorAll("[data-mod]").forEach(c => { c.onchange = () => Mods.set(c.dataset.mod, c.checked); }); } });
 add({ order: 60, title: "Take your book with you", id: "export", build(box) {
-  box.innerHTML = `<div class="row"><button id="sTxt">Export to read (.txt)</button><button id="sJson">Export everything (.json)</button></div><p class="nt">The .txt opens anywhere: branches indented, lifted leaves under their lines. The .json holds everything (folds, links, bookmarks, deleted things, the record).</p>`;
+  box.innerHTML = `<div class="row"><button id="sTxt">Export to read (.txt)</button><button id="sJson">Export everything (.json)</button></div><p class="nt">The .txt opens anywhere: what is within a line indented under it, lifted pages under their lines. The .json holds everything (folds, links, bookmarks, deleted things, the record).</p>`;
   box.querySelector("#sTxt").onclick = () => Keep.download("book-of-living-waters-" + Keep.stamp() + ".txt", Keep.asText(B));
   box.querySelector("#sJson").onclick = () => g.Log.all().then(log => Keep.download("book-of-living-waters-" + Keep.stamp() + ".json", Keep.asJSON(B, { record: log, clock: g.Clock ? g.Clock.days : null, chats: Keep.lsGet(Keep.K.chats) }), "application/json")); } });
 add({ order: 70, title: "The way back", id: "back", build(box) {

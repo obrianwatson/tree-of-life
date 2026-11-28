@@ -16,7 +16,7 @@ const pickFields = (needs, into) => { FIELDS.forEach(f => { if (needs[f[0]] != n
 
 B.action("mark", function (needs, who, T) {
   const L = D().lines[needs.line]; if (!L) throw B.plain("That line isn't there."); T.table("marks"); const id = B.uid("m");
-  D().marks[id] = pickFields(needs, { id, leaf: L.in, line: L.id, at: now(), title: clip(B.title(L.in) + (L.text.trim() ? " · " + L.text.trim() : ""), 80), by: who, updatedAt: now() });
+  D().marks[id] = pickFields(needs, { id, leaf: L.in, line: L.id, at: now(), title: clip(B.where(L.id) + (L.text.trim() ? " · " + L.text.trim() : ""), 80), by: who, updatedAt: now() });
   return { mark: id, title: D().marks[id].title, structural: true, log: { what: "mark", leaf: L.in, line: L.id, n: needs.waiting || needs.doing || "" } };
 }, "marks");
 B.action("markedit", function (needs, who, T) {

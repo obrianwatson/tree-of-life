@@ -8,15 +8,29 @@ Read this before you change anything. `CLAUDE.md` is the short version of the sa
 One writer's own book. He is a writer and songwriter, not a programmer. Writing is "to enscribe oneself into life"
 (keep that spelling).
 
-> Leaves of lines. Branches to grow them, folds to gather them, webs to connect them, and one map to see it all.
-> A fast AI inside the book, a slow AI outside it, and commands that keep working offline.
+> Leaves of lines. Folds hold what's within a line; branches are how folds look as a tree; webs connect them; one map
+> shows it all. A fast AI inside the book, a slow AI outside it, and commands that keep working offline.
 
-- **A leaf** is a page of lines. **A line** indented under another grows from it: **a branch**. A branch can be
-  **lifted** into its own leaf, attached to the line it grew from. The book starts from one **trunk** leaf. No folders.
-- **A fold** hides lines behind a gate. Folds overlap. **Naming** a fold makes it **gather** across the book: every fold
-  of that name is one gathering. Named folds carry **details** (Status, Key…).
+**Fold, branch and leaf** (from `claude/folds-within.md`, which supersedes the Grow and Fold parts of `core-v1.md`):
+
+| | What it is | In a book |
+|---|---|---|
+| **Fold** | **What's within.** Every line can hold lines within it. Open the fold to find what's inside; close it to tuck it back. Folds within folds without end. | What lies within a line |
+| **Branch** | **The path of folds,** seen from above: the tree of what's within what, from the trunk out to any line. Trace back and the Map follow branches. | The table of contents |
+| **Leaf** | **A fold given its own page.** Lifting a fold makes it a leaf; it is still within its line, one tap away, and it can be put back. | A chapter |
+
+There is **one mechanism for "within": the fold.**
+- A line indented under another **is within it** (Tab / ⇥ folds a line into the line above; Shift-Tab / ⇤ takes it out).
+  The mark before a line (▾ open, ▸ closed) opens and closes what's within it. The book starts from one **trunk** leaf.
+- **Lift** puts what's within a line onto its own page (a leaf, still within its line: tap ›). **Put back** folds it back.
+- **Shared:** the same fold can be placed within more than one line. It is one fold, shown in each place (↻); editing it
+  anywhere edits it everywhere. It lives within the line it began in.
+- **Several lines** can still be folded together behind a gate; those gate folds can overlap.
+- **Naming** a fold (a use of folds, not their purpose) makes it **gather** across the book: every fold of that name is one
+  gathering, listed under ☰ → Folds. Named folds carry **details** (Status, Key…).
+- Speak in folds everywhere: "fold this line", "within *River song* › *Chorus*" (`Book.where(line)`).
 - **A link** joins any line to any other, with an optional label. Both ends know.
-- **The Map** is one view centered on where you are: branches up and down, links to the sides.
+- **The Map** is one view centered on where you are: the tree of folds up and down, links to the sides.
 - **The fast AI** lives in the book and acts only through the book's own actions. **The slow AI** is you: a coding AI
   outside the app, working from a **request** the writer wrote in the app.
 - **Commands** (`;song`) are the writer's own moves, saved as plain steps; they run on the device with no AI.
@@ -85,10 +99,9 @@ copies that list to the guided test page and the offline list in `sw.js`.
 
 | Switch id | File | What it adds | Actions it owns |
 |---|---|---|---|
-| `grow` | `grow.js` | Branches by indenting; lifting a branch into its own leaf | `grow`, `lift` |
 | `clock` | `clock.js` | The writing clock, Hold, the daily goal | (none: it never changes the book) |
 | `search` | `search.js` | Search across the book | (none) |
-| `fold` | `fold.js` | Folds, gates, names that gather, details, the fold list | `fold`, `gate`, `unfold`, `name`, `detail`, `stretch`, `gather`, `teach` |
+| `fold` | `fold.js` | What's within: folding lines into lines, open/close (▾ ▸), trace back in the path, lift onto a page and put back, shared folds (↻), gate folds of several lines, names that gather, details, the fold list | `foldin`, `lift`, `putback`, `fold`, `gate`, `place`, `unfold`, `name`, `detail`, `stretch`, `gather`, `teach` |
 | `link` | `link.js` | Links with labels and colors | `link`, `unlink`, `relabel` |
 | `map` | `map.js` | The Map | (none) |
 | `marks` | `marks.js` | Bookmarks 🔖 | `mark`, `markedit`, `markdone` |
@@ -130,6 +143,11 @@ B.action("mark", function (needs, who, T) {
   A whole AI reply, a command run, an automation run: one Undo each.
 - **A trial:** `Book.trial(fn)` really runs moves, then puts everything back exactly, keeping nothing (no Undo entry,
   no record, no sync). This is how a command "runs on a copy first".
+- **Folds in the data:** a line's depth `d` says what it is within (the nearest line above it that is indented less).
+  A fold record is `{ id, leaf, from, to, open, name?, details? }` plus one of `within: true` (the state and name of
+  what's within line `from`; `to` is `from`), `place: lineId` (that line's fold, shared within line `from`), or neither
+  (a gate over the lines `from`…`to`). `Book.heal()` carries older writing over: a gate fold that held exactly a line
+  and what's within it becomes that line's fold. `Book.trail(line)` / `Book.where(line)` give the folds a line is within.
 - **Data** (`Book.D`): `leaves`, `lines`, `folds`, `names`, `links`, `marks`, `pruned`, and `more` (a table per module:
   `more.requests`, `more.harvests`, …). **Only add fields; never rename or remove one.** Records in tables carry
   `updatedAt` (sync is newest-wins per record; a whole leaf is newest-wins, with a ring kept when both sides changed).
@@ -145,7 +163,7 @@ B.action("mark", function (needs, who, T) {
    items, views, keys and bar buttons the same id, so the switch hides all of it.
 3. Keep its data in `D.more.<name>` or in ordinary lines and leaves. Switching it off must delete nothing.
 4. It must not need another module to be on. Check with `Mods.on("other")` before using another module's things.
-   (To make a leaf, use the core's `leaf` action, not Grow's `lift`.)
+   (To make a leaf, use the core's `leaf` action, not Fold's `lift`.)
 5. List the file in `docs/core/index.html` between `<!--MODULES-->` and `<!--END-->`, then run `tools/core-version.py`.
 6. Add a stage to `tests/test_core.py` and a few guided checks to `docs/core/test/guide.js`.
 
