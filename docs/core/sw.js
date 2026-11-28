@@ -1,8 +1,8 @@
 /* Offline for BOLW Core (only this folder: /core/). The network comes first, so a new version arrives whenever
    you're online; the copy saved on this device is used when the network fails or hangs. Safe mode (./safe/) is
    saved too, so the way back works offline. If you add a file the app needs, add it to SHELL (tools/core-version.py bumps CACHE). */
-const CACHE = "core-1.0.0";
-const SHELL = ["./", "./index.html", "./core.css", "./keep.js", "./book.js", "./mods.js", "./page.js", "./log.js", "./settings.js", "./update.js", "./lock.js", "./grow.js", "./clock.js", "./search.js", "./manifest.webmanifest", "./safe/", "./safe/index.html"];
+const CACHE = "core-1.1.0";
+const SHELL = ["./", "./index.html", "./core.css", "./keep.js", "./book.js", "./mods.js", "./page.js", "./log.js", "./settings.js", "./update.js", "./lock.js", "./grow.js", "./clock.js", "./search.js", "./fold.js", "./manifest.webmanifest", "./safe/", "./safe/index.html"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("core-") && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {

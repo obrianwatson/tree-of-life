@@ -93,16 +93,19 @@ g.makeBook = function (store) {
 
   /* ---------- Undo: the leaves an action touches are kept as they were ---------- */
   const undos = []; let cur = null, group = null;
-  const pieceOf = id => { const lf = D.leaves[id]; if (!lf) return null; const p = { leaf: lf, lines: {}, folds: {} }; lf.lines.forEach(l => { p.lines[l] = D.lines[l]; }); (lf.folds || []).forEach(f => { p.folds[f] = D.folds[f]; }); return copy(p); };
+  /* a leaf as it is right now, kept apart from the book (line records are flat, so a plain copy of each is a whole copy: quick even for a long leaf) */
+  const pieceOf = id => { const lf = D.leaves[id]; if (!lf) return null; const p = { leaf: Object.assign({}, lf, { lines: lf.lines.slice(), folds: (lf.folds || []).slice() }), lines: {}, folds: {} };
+    lf.lines.forEach(l => { if (D.lines[l]) p.lines[l] = Object.assign({}, D.lines[l]); }); (lf.folds || []).forEach(f => { if (D.folds[f]) p.folds[f] = copy(D.folds[f]); }); return p; };
   const T = {
     leaf(id) { if (cur && !cur.leaves.has(id)) cur.leaves.set(id, pieceOf(id)); if (D.leaves[id]) { D.leaves[id].updatedAt = Date.now(); try { B.before(id); } catch (e) {} } return D.leaves[id]; },
     table(name) { if (cur && !(name in cur.tables)) cur.tables[name] = Array.isArray(D[name]) ? D[name].slice() : Object.assign({}, D[name]); return D[name]; },     // (records in tables are replaced, never changed in place)
+    rec(table, id) { const k = "rec:" + table + ":" + id; if (cur && !(k in cur.tables)) cur.tables[k] = D[table][id] === undefined ? undefined : copy(D[table][id]); return D[table][id]; },     // one record, kept as it was (a light Undo that doesn't mark its leaf as changed)
     more(name) { if (cur && !("more:" + name in cur.tables)) cur.tables["more:" + name] = D.more[name] === undefined ? undefined : copy(D.more[name]); }
   };
   function putBack(snap) {
     snap.leaves.forEach((p, id) => { const lf = D.leaves[id]; if (!lf) return; lf.lines.forEach(l => { if (D.lines[l] && D.lines[l].in === id) delete D.lines[l]; }); (lf.folds || []).forEach(f => delete D.folds[f]); delete D.leaves[id]; });
-    snap.leaves.forEach((p, id) => { if (!p) return; const q = copy(p); D.leaves[id] = q.leaf; Object.assign(D.lines, q.lines); Object.assign(D.folds, q.folds); });
-    Object.keys(snap.tables).forEach(k => { if (k.indexOf("more:") === 0) { const n = k.slice(5); if (snap.tables[k] === undefined) delete D.more[n]; else D.more[n] = copy(snap.tables[k]); } else D[k] = snap.tables[k]; });
+    snap.leaves.forEach((p, id) => { if (!p) return; D.leaves[id] = p.leaf; Object.assign(D.lines, p.lines); Object.assign(D.folds, p.folds); });      // (a kept leaf is put back once and never used again)
+    Object.keys(snap.tables).forEach(k => { if (k.indexOf("rec:") === 0) { const p = k.split(":"); if (snap.tables[k] === undefined) delete D[p[1]][p[2]]; else if (p[1] !== "folds" || D.leaves[snap.tables[k].leaf]) D[p[1]][p[2]] = copy(snap.tables[k]); } else if (k.indexOf("more:") === 0) { const n = k.slice(5); if (snap.tables[k] === undefined) delete D.more[n]; else D.more[n] = copy(snap.tables[k]); } else D[k] = snap.tables[k]; });
   }
   B.before = function (leaf) {};                      // told before a leaf changes (keep.js keeps a ring)
   B.checkpoint = function (name, needs, who, grant) { return true; };      // true = go · a sentence = refused (why) · { ask } = the writer must allow it first

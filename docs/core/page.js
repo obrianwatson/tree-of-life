@@ -62,6 +62,7 @@ function marksOf(L) { let s = ""; markers.forEach(m => { if (live(m.mod) && m.ha
 function render() {
   const leaf = lf(), lay = Page.layout && Mods.on("fold") ? Page.layout(leaf) : null, used = new Set(); let at = pg.firstChild;
   const put = e => { if (at === e) at = at.nextSibling; else pg.insertBefore(e, at); };
+  if (lay && lay.gut) pg.style.setProperty("--gut", lay.gut + "px"); else pg.style.removeProperty("--gut");
   leaf.lines.forEach((id, i) => {
     if (lay && lay.gates[i]) lay.gates[i].forEach(F => { const key = "g:" + F.id; let e = els.get(key); if (!e) { e = el("div", "gate"); e.contentEditable = "false"; e.dataset.f = F.id; els.set(key, e); } lay.paintGate(e, F); used.add(key); put(e); });
     if (lay && lay.hidden[i]) return;
@@ -355,7 +356,8 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) { B.f
 addEventListener("pagehide", () => { B.flush(); saveSpot(); });
 let lastType = 0; on("typed", () => { lastType = Date.now(); });
 
-window.Page = { B, TOUCH, el, esc, press, $, on, fire, say, toast, sheet, closeSheet, openMenu, closeMenu, menuItems, render, redraw, refresh, start, show, go, step, newLeaf, setCaret, keepInView, ctx, readSel, doUndo, doMove, doDelete, pickLeaf, placeBar, saveSpot, paintBar, paintTop, lineOf: id => els.get(id),
+function demoSelect(a, b) { const leaf = lf(), i = leaf.lines.indexOf(a), j = leaf.lines.indexOf(b); pos = { leaf: ui.leaf, line: b, at: 0 }; sel = { a: i, b: j, collapsed: false }; pg.querySelectorAll(".cur").forEach(x => x.classList.remove("cur")); leaf.lines.slice(i, j + 1).forEach(l => { const e = els.get(l); if (e) e.classList.add("cur"); }); paintBar(); }
+window.Page = { B, TOUCH, demoSelect, el, esc, press, $, on, fire, say, toast, sheet, closeSheet, openMenu, closeMenu, menuItems, render, redraw, refresh, start, show, go, step, newLeaf, setCaret, keepInView, ctx, readSel, doUndo, doMove, doDelete, pickLeaf, placeBar, saveSpot, paintBar, paintTop, lineOf: id => els.get(id),
   bar: it => bars.push(it), menu: (fn, mod, order) => { menus.push({ fn, mod, order: order || 50 }); menus.sort((a, b) => a.order - b.order); }, view: v => views.push(v), key: (fn, mod, global) => keys.push({ fn, mod, global }), marker: m => { markers.push(m); markers.sort((a, b) => a.order - b.order); }, top: (e, mod, order) => { e.dataset.mod = mod || ""; e.style.order = order || 5; $("#topRight").appendChild(e); },
   layout: null, get leaf() { return ui.leaf; }, get pos() { return pos; }, get sel() { return sel; }, get ui() { return ui; }, set ui(u) { ui = u; saveUi(); }, get idle() { return Date.now() - lastType; }, get typing() { return composing || Date.now() - lastType < 4000; },
   get demo() { return DEMO; }, set demo(v) { DEMO = !!v; pg.querySelectorAll(".cur").forEach(x => x.classList.remove("cur")); if (v && document.activeElement && document.activeElement.blur) document.activeElement.blur(); closeMenu(); } };

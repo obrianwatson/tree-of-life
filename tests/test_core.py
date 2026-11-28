@@ -72,7 +72,7 @@ async def stage1(br, p, url, phone):
     ok(await ev("T.lines()") == ["Verse one", "the Xbanks are low", "Chorus", "carry me"] and await same(), "typing over a selection that spans lines")
     await ev("Page.doUndo()"); await settle(pg)
     ok(await ev("T.lines()") == ["Verse one", "the river Jordan is high", "and the banks are low", "Chorus", "carry me"] and await same(), "Undo puts both lines back")
-    await ev("T.at('carry me')"); await ev("""(() => { const dt = new DataTransfer(); dt.setData('text/plain', ' home\\n\\tover the water\\n\\t\\tslow\\nBridge'); document.querySelector('#pg').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); })()""")
+    await ev("T.at('carry me')"); await ev("""(() => { const e = new Event('paste', { bubbles: true, cancelable: true }); e.clipboardData = { getData: () => ' home\\n\\tover the water\\n\\t\\tslow\\nBridge' }; document.querySelector('#pg').dispatchEvent(e); })()""")
     pasted = await ev("[T.lines().slice(4), T.depths().slice(4)]")
     ok(pasted == [["carry me home", "over the water", "slow", "Bridge"], [0, 1, 2, 0]] and await same(), "pasting several lines; lines that start with tabs come in as branches " + json.dumps(pasted))
     await ev("Page.doUndo()"); await settle(pg)
@@ -315,6 +315,118 @@ async def _s1(br, p, url):
         await pg.evaluate("Guide.task = 6"); await pg.evaluate("document.querySelector('#gLong').click()")
         C.ok(await pg.evaluate("T.lines().length") == 1200 and await pg.evaluate("T.depths()[1]") == 1, who + "the feel check can add a long leaf")
     for phone in (True, False): await guide(br, p, url, 1, phone, more=more)
+
+# ====================================================================== stage 2: Fold
+SONG = "Verse one\n\tthe river is high\n\tand the banks are low\nChorus\n\tcarry me over\n\tcarry me home\nVerse two\n\tthe rain came down"
+async def new_leaf(pg, name, text):
+    await pg.evaluate("(() => { Page.go(Book.D.trunk); Page.newLeaf(); Book.act('write', { line: Book.D.leaves[Page.leaf].parent, at: 0, words: %s }); Book.act('write', { line: Book.D.leaves[Page.leaf].lines[0], words: %s }); Book.clearUndo(); Page.show(Page.leaf); })()" % (json.dumps(name), json.dumps(text)))
+    return await pg.evaluate("Page.leaf")
+
+async def stage2(br, p, url, phone):
+    who = ("iPhone" if phone else "laptop") + " 2: "; ok = lambda c, m: C.ok(c, who + m)
+    ctx = await device(br, p, phone); pg = await page(ctx, url); ev = pg.evaluate
+    song = await new_leaf(pg, "River song", SONG); vis = lambda: ev("T.dom()")
+    async def tapgate(fid, more=False):
+        sel = '.gate[data-f="%s"]%s' % (fid, " .gm" if more else " .gl"); await tap(pg, sel, phone); await settle(pg)
+    # ---- fold a line and its branch behind a gate ----
+    await ev("T.at('Chorus')"); await tap(pg, "#b_fold", phone); await settle(pg)
+    f1 = await ev("Fold.foldsOf(Page.leaf)[0].id"); d = await vis()
+    ok(d == ["Verse one", "the river is high", "and the banks are low", "[▸ Chorus3 lines⋯]", "Verse two", "the rain came down"] and await ev("T.lines().length") == 8, "Fold on a line takes its branch: three lines collapse behind a gate (the words are all still in the book)")
+    ok("Folded 3 lines" in await pg.inner_text("#toast"), "it says what it folded, and offers to name it")
+    await tapgate(f1); d = await vis()
+    ok(d[3] == "[▾ Chorus⋯]" and d[4:7] == ["Chorus", "carry me over", "carry me home"] and await ev("Book.D.folds['%s'].open" % f1), "tapping the gate opens the fold")
+    bg = await ev("[...document.querySelectorAll('#pg > .l')].map(e => e.style.backgroundImage ? 1 : 0)")
+    ok(bg == [0, 0, 0, 1, 1, 1, 0, 0], "an open fold shows as a colored line in the margin beside its lines")
+    await tapgate(f1); ok((await vis())[3] == "[▸ Chorus3 lines⋯]", "tapping again closes it")
+    # ---- fold a selection; overlapping folds ----
+    await tapgate(f1); await ev("T.select('carry me home', 0, 'Verse two', 5)"); await tap(pg, "#b_fold", phone); await settle(pg)
+    f2 = await ev("Fold.foldsOf(Page.leaf).find(f => f.id !== '%s').id" % f1)
+    ok(await ev("Book.D.lines[Book.D.folds['%s'].from].text" % f2) == "carry me home" and await ev("Book.D.lines[Book.D.folds['%s'].to].text" % f2) == "Verse two", "Fold on a selection takes exactly the lines the selection touches")
+    ok(await vis() == ["Verse one", "the river is high", "and the banks are low", "[▾ Chorus⋯]", "Chorus", "carry me over", "[▸ carry me home2 lines⋯]", "the rain came down"], "two folds overlap: the second hides its lines even inside the open first one")
+    await tapgate(f2); pos = await ev("[...document.querySelectorAll('#pg > .l')].map(e => e.style.backgroundPosition)")
+    ok(pos[5] != "" and "," in pos[5] and pos[3] != pos[6] and pos[6] != "", "open together, each has its own lane in the margin; the line they share shows both: " + json.dumps(pos[3:7]))
+    await tapgate(f1); d = await vis()
+    ok(d == ["Verse one", "the river is high", "and the banks are low", "[▸ Chorus3 lines⋯]", "[▾ carry me home⋯]", "Verse two", "the rain came down"], "close the first: its lines hide; the overlapping fold's gate stays, with the line only it holds")
+    await tapgate(f1); await tapgate(f2)
+    # a fold wholly inside a closed fold has no gate of its own until the outer one opens
+    await ev("Book.act('fold', { from: T.find('carry me over'), to: T.find('carry me over') })"); await ev("Page.render()"); f3 = await ev("Fold.foldsOf(Page.leaf).find(f => Book.D.lines[f.from].text === 'carry me over').id")
+    await tapgate(f1); n_closed = await pg.locator(".gate").count(); await tapgate(f1)
+    ok(n_closed == 2 and await pg.locator(".gate").count() == 3, "a fold wholly inside a closed fold stays behind that gate until it opens")
+    await ev("Book.act('unfold', { fold: '%s' })" % f3); await ev("Book.act('unfold', { fold: '%s' })" % f2); await ev("Page.render()")
+    # ---- writing in and around a fold ----
+    await ev("T.at('carry me home')"); await pg.keyboard.press("Enter"); await pg.keyboard.type("all the way")
+    ok(await ev("Book.D.lines[Book.D.folds['%s'].to].text" % f1) == "all the way" and await ev("T.depths()[6]") == 1, "Return at the end of a fold's last line: the new line stays inside the fold")
+    await pg.keyboard.press("Enter"); await pg.keyboard.press("Enter"); await pg.keyboard.type("after")
+    ok(await ev("Book.D.lines[Book.D.folds['%s'].to].text" % f1) == "all the way" and await ev("T.lines().slice(6, 8)") == ["all the way", "after"], "Return on the empty last line steps out of the fold")
+    for _ in range(5): await ev("Page.doUndo()")
+    await settle(pg); ok(await ev("T.lines().length") == 8 and await ev("Book.D.lines[Book.D.folds['%s'].to].text" % f1) == "carry me home", "Undo walks all of that back")
+    await tapgate(f1); n0 = await ev("T.lines().length"); await ev("T.select('and the banks', 3, 'Verse two', 2)"); await pg.keyboard.press("Backspace"); await settle(pg)
+    ok(await ev("T.lines().length") == n0 and "closed fold" in await pg.inner_text("#msg"), "deleting across a closed gate is refused: hidden lines are never typed away by accident")
+    # ---- names: a fold named the same in two songs is one gathering ----
+    await tapgate(f1, more=True); items = await ev("[...document.querySelectorAll('#menu button')].map(b => b.textContent)")
+    ok(items[:2] == ["Open", "Name this fold…"] and "Remove the fold (its lines stay)" in items, "⋯ on a gate opens the fold's own menu: " + ", ".join(items))
+    await ev("[...document.querySelectorAll('#menu button')].find(b => b.textContent.indexOf('Name') === 0).click()"); await pg.fill("#fnName", "Chorus"); await ev("document.querySelector('#fnOk').click()"); await settle(pg)
+    ok(await ev("Book.D.folds['%s'].name" % f1) == "Chorus" and "gathers 1 piece" in await pg.inner_text("#toast") and (await vis())[3] == "[▸ Chorus3 lines⋯]", "naming a fold")
+    song2 = await new_leaf(pg, "Desert road", "Verse\n\trivers in the desert\nRefrain\n\tmake a way")
+    r = await ev("Book.act('fold', { from: T.find('Refrain'), name: 'chorus' })")
+    ok(await ev("Fold.pieces('Chorus').length") == 2 and await ev("Fold.names().map(n => n.name + ':' + n.n).join()") == "Chorus:2", "a fold named the same in another song joins it: one gathering, two pieces (capitals don't matter)")
+    await ev("Fold.openList()"); await ev("document.querySelector('#sheet [data-name]').click()"); txt = await pg.inner_text("#sheet")
+    ok("River song" in txt and "Desert road" in txt and "carry me over" in txt and "make a way" in txt, "☰ → Folds → Chorus shows every piece, each with its leaf and its words")
+    await ev("document.querySelector('#sheet [data-go]').click()"); await settle(pg)
+    ok(await ev("Page.leaf") == song and await ev("Book.D.folds['%s'].open" % f1) and await ev("!!document.querySelector('#pg .l.flash')"), "tapping a piece goes to it and opens its gate")
+    # ---- details ----
+    await ev("Fold.editDetails('%s')" % f1); await pg.fill("#fdNew", "Key"); await ev("document.querySelector('#fdAdd').click()"); await pg.fill('#sheet [data-k="Key"]', "G"); await ev("document.querySelector('#sheet [data-k=\"Key\"]').dispatchEvent(new Event('change'))")
+    ok(await ev("Book.D.folds['%s'].details.Key" % f1) == "G" and await ev("Book.D.names.chorus.keys.join()") == "Key", "a detail on a named fold (Key: G)")
+    await ev("Page.closeSheet(true)"); await ev("Fold.editDetails('%s')" % r["fold"])
+    ok(await pg.locator('#sheet [data-k="Key"]').count() == 1 and await pg.input_value('#sheet [data-k="Key"]') == "", "the other piece of the gathering offers the same kind of detail, with its own value")
+    await ev("Page.closeSheet(true)"); await ev("Book.act('gate', { fold: '%s', open: false })" % f1); await ev("Page.render()")
+    ok("Key: G" in (await vis())[3], "details show on the closed gate")
+    r2 = await ev("Book.act('detail', { fold: Fold.foldsOf(Page.leaf)[0].id, key: 'Status', value: 'x' })")
+    await ev("Book.act('name', { fold: '%s', name: '' })" % f1); r3 = await ev("Book.act('detail', { fold: '%s', key: 'Key', value: 'A' })" % f1)
+    ok(r3["ok"] is False and "Name the fold first" in r3["why"], "details belong to named folds: an unnamed fold refuses them, saying why"); await ev("Page.doUndo()")
+    # ---- gather by rule: a search saved as a fold ----
+    await ev("Book.act('gather', { name: 'Water', search: 'river' })"); await ev("Fold.openName('Water')"); txt = await pg.inner_text("#sheet")
+    ok("the river is high" in txt and "rivers in the desert" in txt, "gather by a search: a named gathering that lists every line with those words")
+    await ev("Page.closeSheet(true)")
+    # ---- remove, Undo, and folds following their lines ----
+    await ev("Page.go('%s')" % song); await ev("Book.act('gate', { fold: '%s', open: true })" % f1); await ev("Page.render()"); await ev("Book.sealUndo()")
+    await ev("Book.act('unfold', { fold: '%s' })" % f1); await ev("Page.render()")
+    ok(await pg.locator(".gate").count() == 0 and await ev("T.lines().length") == 8, "Remove the fold: the gate goes and every line stays")
+    await ev("Page.doUndo()"); await settle(pg); ok(await pg.locator(".gate").count() == 1 and await ev("Book.D.folds['%s'].name" % f1) == "Chorus", "Undo brings the fold back, name and all")
+    await ev("Book.act('gate', { fold: '%s', open: false })" % f1); u0 = await ev("Book.D.leaves[Page.leaf].updatedAt"); await pg.wait_for_timeout(5); await ev("Book.act('gate', { fold: '%s', open: true })" % f1)
+    ok(await ev("Book.D.leaves[Page.leaf].updatedAt") == u0, "opening and closing a gate doesn't count as changing the leaf")
+    await ev("Page.doUndo()"); ok(await ev("Book.D.folds['%s'].open" % f1) is False, "and it can be undone too"); await ev("Book.act('gate', { fold: '%s', open: true })" % f1)
+    await ev("Book.act('prune', { line: T.find('carry me home') })"); ok(await ev("Book.D.lines[Book.D.folds['%s'].to].text" % f1) == "carry me over", "deleting a fold's last line: the fold now ends on the line before")
+    await ev("Page.doUndo()"); await ev("Book.act('lift', { line: T.find('Chorus') })"); ch = await ev("Book.D.lines[T.find('Chorus')].leaf")
+    ok(await ev("Book.D.folds['%s'].from" % f1) == await ev("T.find('Chorus')") and await ev("Book.D.folds['%s'].to" % f1) == await ev("T.find('Chorus')"), "lifting a folded line's branch into a leaf: the fold stays on the line")
+    await ev("Page.doUndo()"); await ev("Page.render()")
+    # ---- going to a hidden line opens its gates ----
+    await ev("Book.act('gate', { fold: '%s', open: false })" % f1); await ev("Page.go('%s')" % song2); await ev("Search.open('carry me over')"); await ev("document.querySelector('#sheet [data-line]').click()"); await settle(pg)
+    ok(await ev("Page.leaf") == song and await ev("Book.D.folds['%s'].open" % f1) and "carry me over" in await vis(), "going to a line inside a closed fold (from Search) opens the gate")
+    # ---- the record, the switch, export ----
+    log = " | ".join(await ev("T.log()"))
+    ok("You folded 3 lines in “River song”" in log and "You named a fold “Chorus”" in log and "a fold in “River song”" in log and "You removed a fold" in log, "the record has the folding, naming, opening and removing")
+    await ev("Mods.set('fold', false)"); await settle(pg)
+    ok(await pg.locator(".gate").count() == 0 and await pg.locator("#b_fold.hide").count() == 1 and await vis() == await ev("T.lines()") and await ev("Object.keys(Book.D.folds).length") >= 2, "Fold switched off: gates and button go, every line shows, and the folds are still kept")
+    await ev("Mods.set('fold', true)"); await settle(pg); ok(await pg.locator(".gate").count() == 1, "switched on again, the gates are back")
+    txt = await ev("Keep.asText(Book)"); ok("FOLDS" in txt and "“Chorus” in “River song”" in txt and "Key: G" in txt, "export lists the folds, their names and details")
+    ok(pg.errs == [], "no errors on the page " + str(pg.errs[:2])); await ctx.close()
+
+async def feel2(br, p, url):
+    ctx = await device(br, p, True); pg = await page(ctx, url); ev = pg.evaluate
+    await ev("""() => { Page.newLeaf(); const id = Page.leaf, t = []; for (let i = 0; i < 1500; i++) t.push('Line ' + i + ' of a long song that keeps going and going'); Book.act('write', { line: Book.D.leaves[id].lines[0], words: t.join('\\n') });
+        const L = Book.D.leaves[id].lines; for (let i = 0; i < 40; i++) { const f = Book.act('fold', { from: L[10 + i * 30], to: L[22 + i * 30], name: i % 4 ? '' : 'Part' }); if (i % 2) Book.act('gate', { fold: f.fold, open: true }); else if (i % 3 === 0) { Book.act('gate', { fold: f.fold, open: true }); const g = Book.act('fold', { from: L[18 + i * 30], to: L[34 + i * 30] }); Book.act('gate', { fold: g.fold, open: true }); } } Page.render(); }""")
+    await ev("T.at('Line 705 of', 8)"); await pg.wait_for_timeout(200)
+    t = await ev("""async () => { const t0 = performance.now(); for (let i = 0; i < 60; i++) document.execCommand('insertText', false, 'x'); const sync = (performance.now() - t0) / 60; const t1 = performance.now(); document.execCommand('insertParagraph'); const enter = performance.now() - t1; return { sync, enter }; }""")
+    C.ok(t["sync"] < 4 and "x" * 60 in await ev("T.lines().join('|')"), "feel 2: a key in a 1,500-line leaf with 50 folds costs %.2f ms of work" % t["sync"])
+    C.ok(t["enter"] < 80, "feel 2: Return in it costs %.1f ms" % t["enter"])
+    C.ok(await ev("document.documentElement.scrollWidth <= innerWidth"), "feel 2: nothing is wider than the screen"); await ctx.close()
+
+@stage("2")
+async def _s2(br, p, url):
+    for phone in (True, False): await stage2(br, p, url, phone)
+    await feel2(br, p, url)
+    for phone in (True, False): await guide(br, p, url, 2, phone)
 
 #STAGES-BELOW
 

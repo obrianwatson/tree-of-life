@@ -14,7 +14,7 @@ function mk(parentLeaf, name, text) { const lf = D().leaves[parentLeaf], last = 
   B.act("write", { line, at: 0, remove: D().lines[line].text.length, words: name }); const r = B.act("lift", { line }); if (text) B.act("write", { line: D().leaves[r.leaf].lines[0], words: text }); return r.leaf; }
 function seed() {
   const songs = mk(D().trunk, "Songs", ""), river = mk(songs, "River song", "Verse one\n\tthe river is high today\n\tand the banks are low\nChorus\n\tcarry me over\n\tcarry me home\nVerse two\n\tthe rain came down all night");
-  mk(songs, "Desert road", "rivers in the desert\na road where there was none");
+  mk(songs, "Desert road", "Verse one\n\trivers in the desert\n\ta road where there was none\nChorus\n\tmake a way\n\tmake a way again");
   const scr = mk(D().trunk, "Scripture", ""); mk(scr, "Psalm 23", "The Lord is my shepherd; I shall not want.\nHe maketh me to lie down in green pastures:\nhe leadeth me beside the still waters.\nHe restoreth my soul.");
   mk(D().trunk, "Journal", "Friday\n\tWrote by the window. The light was good.");
   B.clearUndo(); B.flush(); Page.show(river);
@@ -47,6 +47,8 @@ async function demo(fn) {
     async chip(txt) { const id = find(txt), e = Page.lineOf(id), rc = e.getBoundingClientRect(); fg.style.left = (rc.right - 14) + "px"; fg.style.top = (rc.top + rc.height / 2) + "px"; await sleep(900, r); fg.classList.add("down"); await sleep(240, r); fg.classList.remove("down"); Page.go(D().lines[id].leaf); await sleep(900, r); },
     async click(sel) { const e = typeof sel === "string" ? document.querySelector(sel) : sel; if (!e) return; await f.tap(e); e.click(); await sleep(800, r); },
     async go(leaf, line) { Page.go(leaf, line); await sleep(700, r); },
+    async select(a, b) { const ia = find(a), ib = find(b); await f.point(Page.lineOf(ia)); fg.classList.add("down"); await sleep(300, r); await f.point(Page.lineOf(ib)); fg.classList.remove("down"); Page.demoSelect(ia, ib); await sleep(500, r); },
+    async gate(fid, more) { const e = document.querySelector('.gate[data-f="' + fid + '"]' + (more ? " .gm" : "")); await f.tap(e); if (!more) window.Fold.toggle(fid); await sleep(800, r); },
     async undo() { await f.tap($("#b_undo")); Page.doUndo(); await sleep(900, r); },
     async away() { const a = $("#col"); a.style.transition = "opacity .6s"; a.style.opacity = 0; await sleep(1300, r); a.style.opacity = ""; await sleep(900, r); a.style.transition = ""; }
   };
@@ -74,6 +76,21 @@ const STAGES = {
     { t: "Feel", d: "Tap <b>Add a long leaf</b>, then type fast in the middle of it, press Return a few times, scroll top to bottom. Nothing should lag or jump. The bar should sit right on top of the keyboard.", feel: true }
   ] }
 };
+STAGES[2] = { name: "Fold", tasks: [
+  { t: "Fold lines behind a gate", d: "Put the cursor on <i>Chorus</i> and tap <b>Fold</b>: the line and its branch collapse behind a gate. Tap the gate to open it, tap again to close. Open, the fold shows as a colored line in the margin.", dLaptop: "Put the cursor on <i>Chorus</i> and click <b>Fold</b>: the line and its branch collapse behind a gate. Click the gate to open and close it. Open, the fold shows as a colored line in the margin.",
+    show: async f => { await f.go(river()); await f.caret("Chorus"); let r; await f.bar("fold", () => { r = B.act("fold", { from: find("Chorus") }); }); await f.gate(r.fold); await f.gate(r.fold); await f.gate(r.fold); } },
+  { t: "Fold a selection, and folds that overlap", d: "Select a few lines (touch and hold a word, then drag the handles across lines) and tap <b>Fold</b>. Then fold another stretch that overlaps the first. Each fold has its own gate and its own colored line; open and close them separately.", dLaptop: "Drag across a few lines to select them and click <b>Fold</b>. Then fold another stretch that overlaps the first. Each fold has its own gate and its own colored line; open and close them separately.",
+    show: async f => { await f.go(river()); await f.select("Chorus", "carry me home"); let a, b; await f.bar("fold", () => { a = B.act("fold", { from: find("Chorus"), to: find("carry me home") }); }); await f.gate(a.fold); await f.select("carry me home", "Verse two"); await f.bar("fold", () => { b = B.act("fold", { from: find("carry me home"), to: find("Verse two") }); }); await f.gate(b.fold); await f.gate(a.fold); await f.gate(a.fold); } },
+  { t: "Name a fold: it gathers across the book", d: "Tap <b>⋯</b> on a gate → <b>Name this fold…</b> and call it <i>Chorus</i>. Open <i>Desert road</i> (☰ → Search), fold its chorus and give it the same name. Then <b>☰</b> → <b>Folds</b> → <b>Chorus</b>: both pieces are there, each from its own song. Tap one to go to it.",
+    show: async f => { await f.go(river()); await f.caret("Chorus"); let a, b; await f.bar("fold", () => { a = B.act("fold", { from: find("Chorus") }); }); await f.gate(a.fold, true); f.say("⋯ → Name this fold… → Chorus"); B.act("name", { fold: a.fold, name: "Chorus" }); Page.render(); await f.sleep(1200);
+      await f.go(leafNamed("Desert road")); await f.caret("Chorus"); await f.bar("fold", () => { b = B.act("fold", { from: find("Chorus"), name: "Chorus" }); }); await f.top("Folds"); await f.click('#sheet [data-name="Chorus"]'); await f.sleep(1800); await f.click("#sheet [data-go]"); await f.sleep(900); } },
+  { t: "Details on a named fold", d: "On a named fold: <b>⋯</b> → <b>Details…</b>. Add a detail called <i>Key</i> and give it a value (G). Add <i>Status</i> too. They show on the closed gate and in ☰ → Folds → Chorus. The other Chorus offers the same kinds of detail.",
+    show: async f => { await f.go(river()); await f.caret("Chorus"); let a; await f.bar("fold", () => { a = B.act("fold", { from: find("Chorus"), name: "Chorus" }); }); await f.gate(a.fold, true); f.say("⋯ → Details… → Key: G, Status: draft"); B.act("detail", { fold: a.fold, key: "Key", value: "G" }); B.act("detail", { fold: a.fold, key: "Status", value: "draft" }); Page.render(); await f.sleep(1500); await f.top("Folds"); await f.click('#sheet [data-name="Chorus"]'); await f.sleep(1800); } },
+  { t: "Gather by a search", d: "<b>☰</b> → <b>Folds</b> → <b>Gather by a search…</b>. Name it <i>Water</i> and search for <i>river</i>. The gathering lists every line in the book with that word, and keeps up as you write more.",
+    show: async f => { await f.go(river()); await f.top("Folds"); await f.point(document.querySelector("#flRule")); B.act("gather", { name: "Water", search: "river" }); window.Fold.openName("Water"); await f.sleep(2200); } },
+  { t: "Writing in and around a fold", d: "Open a fold. Press Return at the end of its last line: the new line stays inside the fold (the colored line follows). Press Return again on the empty line: you step out of the fold. Then <b>⋯</b> → <b>Remove the fold</b>: the gate goes, every line stays. <b>Undo</b> brings the fold back.",
+    show: async f => { await f.go(river()); await f.caret("Chorus"); let a; await f.bar("fold", () => { a = B.act("fold", { from: find("Chorus") }); }); await f.gate(a.fold); await f.caret("carry me home"); B.begin("x"); const w = B.act("write", { line: find("carry me home"), words: "\n" }); B.act("stretch", { fold: a.fold, to: w.line }); B.end(); Page.render(); Page.setCaret(w.caret); await f.type("all the way home"); f.say("⋯ → Remove the fold: the lines stay"); await f.gate(a.fold, true); B.act("unfold", { fold: a.fold }); Page.render(); await f.sleep(1200); await f.undo(); } }
+] };
 window.GuideStages = STAGES;
 function addLong() { Page.go(D().trunk); Page.newLeaf(); const id = Page.leaf, t = []; B.act("write", { line: D().leaves[id].parent, at: 0, words: "A long leaf for the feel check" }); for (let i = 1; i <= 1200; i++) t.push((i % 6 === 2 ? "\t" : "") + "Line " + i + ": the river keeps on running and the page keeps up with it."); B.act("write", { line: D().leaves[id].lines[0], words: t.join("\n") }); B.clearUndo(); Page.show(id); openTask(false); }
 
